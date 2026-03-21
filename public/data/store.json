@@ -1,0 +1,175 @@
+{
+  "site": {
+    "name": "Others.",
+    "tagline": "For those who move different.",
+    "description": "Streetwear rooted in culture, built for everyone else.",
+    "announcement": "FREE SHIPPING ON ORDERS ABOVE €150",
+    "currency": "€",
+    "hero": {
+      "label": "Spring Summer 2026 Drop 1",
+      "heading": "New Arrivals",
+      "cta": "SHOP NOW",
+      "image": "/images/hero-main.jpg"
+    },
+    "socials": {
+      "instagram": "#",
+      "twitter": "#",
+      "tiktok": "#"
+    }
+  },
+  "categories": [
+    { "id": "hoodies", "name": "Hoodies", "slug": "hoodies" },
+    { "id": "tees", "name": "T-Shirts", "slug": "t-shirts" },
+    { "id": "pants", "name": "Pants", "slug": "pants" },
+    { "id": "jackets", "name": "Jackets", "slug": "jackets" },
+    { "id": "sweats", "name": "Sweatshirts", "slug": "sweatshirts" },
+    { "id": "accessories", "name": "Accessories", "slug": "accessories" }
+  ],
+  "products": [
+    {
+      "id": "prod-001",
+      "name": "Olive Heavy Hoodie",
+      "category": "hoodies",
+      "price": 120,
+      "image": "/images/product-1.jpg",
+      "description": "Heavyweight 450gsm french terry hoodie in olive. Oversized fit with kangaroo pocket and ribbed cuffs.",
+      "sizes": ["S", "M", "L", "XL", "XXL"],
+      "colors": ["Olive", "Black", "Sand"],
+      "stock": 24,
+      "isNew": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-002",
+      "name": "Sand Essential Tee",
+      "category": "tees",
+      "price": 55,
+      "image": "/images/product-2.jpg",
+      "description": "Premium 220gsm cotton tee in sand. Relaxed fit with subtle embroidered logo on chest.",
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["Sand", "White", "Black"],
+      "stock": 48,
+      "isNew": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-003",
+      "name": "Black Utility Cargo",
+      "category": "pants",
+      "price": 145,
+      "image": "/images/product-3.jpg",
+      "description": "Ripstop utility cargo pants in black. Tapered fit with six pockets and elastic ankle cuffs.",
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["Black", "Olive"],
+      "stock": 16,
+      "isNew": false,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-004",
+      "name": "Rust Bomber Jacket",
+      "category": "jackets",
+      "price": 195,
+      "image": "/images/product-4.jpg",
+      "description": "Nylon bomber jacket in rust. Padded lining, ribbed collar and cuffs, zip closure.",
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["Rust", "Black", "Olive"],
+      "stock": 12,
+      "isNew": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-005",
+      "name": "Cream Logo Crewneck",
+      "category": "sweats",
+      "price": 95,
+      "image": "/images/product-5.jpg",
+      "description": "Mid-weight crewneck sweatshirt in cream. Embroidered logo, ribbed trim, relaxed fit.",
+      "sizes": ["S", "M", "L", "XL", "XXL"],
+      "colors": ["Cream", "Charcoal"],
+      "stock": 32,
+      "isNew": false,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-006",
+      "name": "Charcoal Jogger Pants",
+      "category": "pants",
+      "price": 110,
+      "image": "/images/product-6.jpg",
+      "description": "French terry jogger pants in charcoal. Elastic waist with drawstring, tapered leg, zippered pockets.",
+      "sizes": ["M", "L", "XL"],
+      "colors": ["Charcoal", "Black"],
+      "stock": 20,
+      "isNew": false,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-007",
+      "name": "Olive Cargo Shorts",
+      "category": "pants",
+      "price": 85,
+      "image": "/images/product-1.jpg",
+      "description": "Ripstop cargo shorts in olive. Relaxed fit with four utility pockets.",
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["Olive", "Sand"],
+      "stock": 0,
+      "isNew": false,
+      "isFeatured": false
+    },
+    {
+      "id": "prod-008",
+      "name": "Black Logo Cap",
+      "category": "accessories",
+      "price": 35,
+      "image": "/images/product-3.jpg",
+      "description": "Six-panel cap in black with embroidered Others. logo. Adjustable strap.",
+      "sizes": ["One Size"],
+      "colors": ["Black", "Cream"],
+      "stock": 56,
+      "isNew": true,
+      "isFeatured": false
+    }
+  ],
+  "orders": [
+    {
+      "id": "ORD-1001",
+      "customer": "Marcus Chen",
+      "email": "marcus.c@email.com",
+      "items": [
+        { "productId": "prod-001", "name": "Olive Heavy Hoodie", "size": "L", "quantity": 1, "price": 120 },
+        { "productId": "prod-002", "name": "Sand Essential Tee", "size": "M", "quantity": 2, "price": 55 }
+      ],
+      "total": 230,
+      "status": "shipped",
+      "date": "2026-03-18",
+      "address": "Keizersgracht 112, Amsterdam"
+    },
+    {
+      "id": "ORD-1002",
+      "customer": "Aisha Patel",
+      "email": "aisha.p@email.com",
+      "items": [
+        { "productId": "prod-004", "name": "Rust Bomber Jacket", "size": "S", "quantity": 1, "price": 195 }
+      ],
+      "total": 195,
+      "status": "processing",
+      "date": "2026-03-20",
+      "address": "Herengracht 45, Amsterdam"
+    },
+    {
+      "id": "ORD-1003",
+      "customer": "Tomás Rivera",
+      "email": "tomas.r@email.com",
+      "items": [
+        { "productId": "prod-003", "name": "Black Utility Cargo", "size": "XL", "quantity": 1, "price": 145 },
+        { "productId": "prod-006", "name": "Charcoal Jogger Pants", "size": "L", "quantity": 1, "price": 110 },
+        { "productId": "prod-008", "name": "Black Logo Cap", "size": "One Size", "quantity": 1, "price": 35 }
+      ],
+      "total": 290,
+      "status": "pending",
+      "date": "2026-03-21",
+      "address": "Prinsengracht 78, Amsterdam"
+    }
+  ]
+}
