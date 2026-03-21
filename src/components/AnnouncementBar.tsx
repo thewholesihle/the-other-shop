@@ -1,6 +1,7 @@
-const AnnouncementBar = () => {
-  const text = "FREE SHIPPING ON ORDERS ABOVE €150 — ";
-  const repeated = Array(8).fill(text).join("");
+import type { SiteConfig } from "@/types/store";
+
+const AnnouncementBar = ({ text }: { text: string }) => {
+  const repeated = Array(8).fill(text + " — ").join("");
 
   return (
     <div className="bg-foreground text-primary-foreground overflow-hidden whitespace-nowrap py-2">
