@@ -1,0 +1,387 @@
+{
+  "site": {
+    "name": "Others.",
+    "tagline": "It's Not About You, It's about Others.",
+    "description": "Streetwear rooted in culture, built for everyone else.",
+    "announcement": "FREE SHIPPING ON ORDERS ABOVE R500",
+    "currency": "R",
+    "hero": {
+      "label": "",
+      "heading": "Others Skate Winter",
+      "cta": "SHOP NOW",
+      "image": "/uploads/1774133065716-62u4iau8epq.jpg",
+      "subheading": "For the Skaters who shred in the ice."
+    },
+    "socials": {
+      "instagram": "https://instagram.com/others.worldwide",
+      "twitter": "#",
+      "tiktok": "#"
+    },
+    "logo": "/uploads/1774131632941-uja1mpi1nnc.jpg",
+    "shipping": {
+      "freeMinimum": 691,
+      "standardRate": 99,
+      "country": "South Africa"
+    }
+  },
+  "categories": [
+    {
+      "id": "hoodies",
+      "name": "Hoodies",
+      "slug": "hoodies"
+    },
+    {
+      "id": "tees",
+      "name": "T-Shirts",
+      "slug": "t-shirts"
+    },
+    {
+      "id": "pants",
+      "name": "Pants",
+      "slug": "pants"
+    },
+    {
+      "id": "jackets",
+      "name": "Jackets",
+      "slug": "jackets"
+    },
+    {
+      "id": "sweats",
+      "name": "Sweatshirts",
+      "slug": "sweatshirts"
+    },
+    {
+      "id": "accessories",
+      "name": "Accessories",
+      "slug": "accessories"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod-001",
+      "name": "Olive Heavy Hoodie",
+      "category": "hoodies",
+      "price": 120,
+      "image": "/images/product-1.jpg",
+      "description": "Heavyweight 450gsm french terry hoodie in olive. Oversized fit with kangaroo pocket and ribbed cuffs.",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ],
+      "colors": [
+        "Olive",
+        "Black",
+        "Sand"
+      ],
+      "stock": 24,
+      "isNew": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-002",
+      "name": "Sand Essential Tee",
+      "category": "tees",
+      "price": 55,
+      "image": "/images/product-2.jpg",
+      "description": "Premium 220gsm cotton tee in sand. Relaxed fit with subtle embroidered logo on chest.",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Sand",
+        "White",
+        "Black"
+      ],
+      "stock": 48,
+      "isNew": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-003",
+      "name": "Black Utility Cargo",
+      "category": "pants",
+      "price": 145,
+      "image": "/images/product-3.jpg",
+      "description": "Ripstop utility cargo pants in black. Tapered fit with six pockets and elastic ankle cuffs.",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Black",
+        "Olive"
+      ],
+      "stock": 16,
+      "isNew": false,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-004",
+      "name": "Rust Bomber Jacket",
+      "category": "jackets",
+      "price": 195,
+      "image": "/images/product-4.jpg",
+      "description": "Nylon bomber jacket in rust. Padded lining, ribbed collar and cuffs, zip closure.",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Rust",
+        "Black",
+        "Olive"
+      ],
+      "stock": 12,
+      "isNew": true,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-005",
+      "name": "Cream Logo Crewneck",
+      "category": "sweats",
+      "price": 95,
+      "image": "/images/product-5.jpg",
+      "description": "Mid-weight crewneck sweatshirt in cream. Embroidered logo, ribbed trim, relaxed fit.",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ],
+      "colors": [
+        "Cream",
+        "Charcoal"
+      ],
+      "stock": 32,
+      "isNew": false,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-006",
+      "name": "Charcoal Jogger Pants",
+      "category": "pants",
+      "price": 110,
+      "image": "/images/product-6.jpg",
+      "description": "French terry jogger pants in charcoal. Elastic waist with drawstring, tapered leg, zippered pockets.",
+      "sizes": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Charcoal",
+        "Black"
+      ],
+      "stock": 20,
+      "isNew": false,
+      "isFeatured": true
+    },
+    {
+      "id": "prod-007",
+      "name": "Olive Cargo Shorts",
+      "category": "pants",
+      "price": 85,
+      "image": "/images/product-1.jpg",
+      "description": "Ripstop cargo shorts in olive. Relaxed fit with four utility pockets.",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "Olive",
+        "Sand"
+      ],
+      "stock": 0,
+      "isNew": false,
+      "isFeatured": false
+    },
+    {
+      "id": "prod-008",
+      "name": "Black Logo Cap",
+      "category": "accessories",
+      "price": 35,
+      "image": "/images/product-3.jpg",
+      "description": "Six-panel cap in black with embroidered Others. logo. Adjustable strap.",
+      "sizes": [
+        "One Size"
+      ],
+      "colors": [
+        "Black",
+        "Cream"
+      ],
+      "stock": 56,
+      "isNew": true,
+      "isFeatured": false
+    }
+  ],
+  "orders": [
+    {
+      "id": "ORD-1001",
+      "customer": "Marcus Chen",
+      "email": "marcus.c@email.com",
+      "items": [
+        {
+          "productId": "prod-001",
+          "name": "Olive Heavy Hoodie",
+          "size": "L",
+          "quantity": 1,
+          "price": 120
+        },
+        {
+          "productId": "prod-002",
+          "name": "Sand Essential Tee",
+          "size": "M",
+          "quantity": 2,
+          "price": 55
+        }
+      ],
+      "total": 230,
+      "status": "shipped",
+      "date": "2026-03-18",
+      "address": "Keizersgracht 112, Amsterdam"
+    },
+    {
+      "id": "ORD-1002",
+      "customer": "Aisha Patel",
+      "email": "aisha.p@email.com",
+      "items": [
+        {
+          "productId": "prod-004",
+          "name": "Rust Bomber Jacket",
+          "size": "S",
+          "quantity": 1,
+          "price": 195
+        }
+      ],
+      "total": 195,
+      "status": "processing",
+      "date": "2026-03-20",
+      "address": "Herengracht 45, Amsterdam"
+    },
+    {
+      "id": "ORD-1003",
+      "customer": "Tomás Rivera",
+      "email": "tomas.r@email.com",
+      "items": [
+        {
+          "productId": "prod-003",
+          "name": "Black Utility Cargo",
+          "size": "XL",
+          "quantity": 1,
+          "price": 145
+        },
+        {
+          "productId": "prod-006",
+          "name": "Charcoal Jogger Pants",
+          "size": "L",
+          "quantity": 1,
+          "price": 110
+        },
+        {
+          "productId": "prod-008",
+          "name": "Black Logo Cap",
+          "size": "One Size",
+          "quantity": 1,
+          "price": 35
+        }
+      ],
+      "total": 290,
+      "status": "pending",
+      "date": "2026-03-21",
+      "address": "Prinsengracht 78, Amsterdam"
+    }
+  ],
+  "lookbooks": [
+    {
+      "id": "lb-001",
+      "title": "SS26 Drop 1",
+      "description": "Spring Summer 2026 — The first drop. Movement. Culture. Purpose.",
+      "date": "2026-03-01",
+      "images": [
+        "/images/lookbook-1.jpg",
+        "/images/lookbook-2.jpg"
+      ]
+    }
+  ],
+  "community": [
+    {
+      "id": "post-001",
+      "slug": "ss26-drop-1-the-story",
+      "title": "SS26 Drop 1 – The Story Behind the Collection",
+      "excerpt": "Every piece in Drop 1 was designed around a single idea: movement through culture.",
+      "content": "<p>Every piece in Drop 1 was designed around a single idea: movement through culture. We spent months researching the streets, listening to the community, and crafting garments that feel as intentional as they look.</p><p><img src=\"/uploads/1774134261294-0tybrtdtaiv.jpg\" alt=\"\" style=\"margin: 1rem 0px;\"></p><p>From the olive heavy hoodie to the rust bomber — each piece tells a part of the story. Shop the full drop now before it sells out.</p>",
+      "author": "Others.",
+      "date": "2026-03-18",
+      "category": "Collection",
+      "image": "/images/hero-main.jpg",
+      "published": true
+    }
+  ],
+  "pages": {
+    "shipping": {
+      "content": "<h2>Shipping</h2><p>We offer free standard shipping on all orders over €150. Standard delivery takes 3–5 business days within Europe. Express shipping (1–2 business days) is available at checkout for €12.95.</p><h2>Returns</h2><p>We accept returns within 30 days of delivery. Items must be unworn, unwashed, and in original packaging. To start a return, email us at returns@others.store with your order number.</p><p>Refunds are processed within 5–7 business days of receiving the returned item.</p>"
+    },
+    "faq": [
+      {
+        "id": "faq-1",
+        "question": "What sizes do you carry?",
+        "answer": "We carry sizes S through XXL on most items. Size guides are available on each product page."
+      },
+      {
+        "id": "faq-2",
+        "question": "How long does shipping take?",
+        "answer": "Standard shipping takes 3–5 business days within Europe. Express options are available at checkout."
+      },
+      {
+        "id": "faq-3",
+        "question": "Can I return or exchange an item?",
+        "answer": "Yes. We accept returns within 30 days of delivery for unworn, unwashed items in original packaging."
+      },
+      {
+        "id": "faq-4",
+        "question": "Do you ship internationally?",
+        "answer": "Currently we ship within Europe. International shipping is coming soon."
+      }
+    ],
+    "contact": {
+      "address": "Keizersgracht 200, 1016 DX Amsterdam, Netherlands",
+      "details": [
+        {
+          "id": "c-1",
+          "label": "General Enquiries",
+          "value": "hello@others.store"
+        },
+        {
+          "id": "c-2",
+          "label": "Returns & Orders",
+          "value": "returns@others.store"
+        },
+        {
+          "id": "c-3",
+          "label": "Press & Collaborations",
+          "value": "press@others.store"
+        }
+      ]
+    }
+  },
+  "subscribers": [
+    {
+      "id": "s-1774134058916",
+      "email": "siphesihlebomela@gmail.com",
+      "date": "2026-03-21"
+    }
+  ]
+}

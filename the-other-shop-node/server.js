@@ -1,0 +1,411 @@
+'use strict';
+require('dotenv').config();
+
+const express  = require('express');
+const path     = require('path');
+const fs       = require('fs');
+const multer   = require('multer');
+const md5      = require('md5');
+const mongoose = require('mongoose');
+
+const { connect } = require('./src/db/connection');
+const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber } = require('./src/db/models');
+
+const app  = express();
+const port = process.env.PORT || 3000;
+
+// ─── Admin Auth ───────────────────────────────────────────────────────────────
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASS;
+
+if (!ADMIN_USER || !ADMIN_PASS) {
+  console.error('FATAL: ADMIN_USER and ADMIN_PASS must be set in .env');
+  process.exit(1);
+}
+
+function basicAuth(req, res, next) {
+  const h = req.headers['authorization'];
+  if (!h || !h.startsWith('Basic ')) {
+    res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
+    return res.status(401).send('Authentication required.');
+  }
+  const [user, pass] = Buffer.from(h.slice(6), 'base64').toString().split(':');
+  if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
+  res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
+  return res.status(401).send('Invalid credentials.');
+}
+
+// ─── PayFast Config ───────────────────────────────────────────────────────────
+const isSandbox = process.env.PAYFAST_SANDBOX !== 'false';
+
+if (!process.env.PAYFAST_MERCHANT_ID || !process.env.PAYFAST_MERCHANT_KEY) {
+  console.error('FATAL: PAYFAST_MERCHANT_ID and PAYFAST_MERCHANT_KEY must be set in .env');
+  console.error('       For sandbox testing, use the PayFast test credentials from your PayFast dashboard.');
+  process.exit(1);
+}
+
+const PF = {
+  merchantId:  process.env.PAYFAST_MERCHANT_ID,
+  merchantKey: process.env.PAYFAST_MERCHANT_KEY,
+  passphrase:  process.env.PAYFAST_PASSPHRASE || '',
+  sandbox:     isSandbox,
+};
+const PF_HOST = PF.sandbox
+  ? 'https://sandbox.payfast.co.za/eng/process'
+  : 'https://www.payfast.co.za/eng/process';
+
+// ─── Image / Video Upload (multer) ────────────────────────────────────────────
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  fileFilter: (_req, file, cb) => {
+    const ok = /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm))$/.test(file.mimetype);
+    cb(ok ? null : new Error('Unsupported file type'), ok);
+  },
+});
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ─── DB helpers ───────────────────────────────────────────────────────────────
+
+/** Assemble the full store data shape expected by the frontend */
+async function readData() {
+  const [site, categories, products, orders, lookbooks, community, pages, subscribers] = await Promise.all([
+    Settings.findOne({ _id: 'main' }).lean(),
+    Category.find().lean(),
+    Product.find().lean(),
+    Order.find().sort({ createdAt: -1 }).lean(),
+    Lookbook.find().lean(),
+    Article.find().lean(),
+    Pages.findOne({ _id: 'main' }).lean(),
+    Subscriber.find().sort({ date: -1 }).lean(),
+  ]);
+
+  return {
+    site:        site        || {},
+    categories:  categories  || [],
+    products:    products    || [],
+    orders:      orders      || [],
+    lookbooks:   lookbooks   || [],
+    community:   community   || [],
+    pages:       pages       || { shipping: { content: '' }, faq: { items: [] }, contact: { address: '', details: [] } },
+    subscribers: subscribers || [],
+  };
+}
+
+/** Persist a full data blob (from admin save) back to MongoDB */
+async function writeData(blob) {
+  const ops = [];
+
+  if (blob.site) {
+    ops.push(Settings.findOneAndUpdate(
+      { _id: 'main' }, { $set: blob.site },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+    ));
+  }
+
+  if (blob.categories) {
+    ops.push(...blob.categories.map(c =>
+      Category.findOneAndUpdate({ id: c.id }, { $set: c }, { upsert: true })
+    ));
+  }
+
+  if (blob.products) {
+    ops.push(...blob.products.map(p =>
+      Product.findOneAndUpdate({ id: p.id }, { $set: p }, { upsert: true })
+    ));
+  }
+
+  if (blob.lookbooks) {
+    ops.push(...blob.lookbooks.map(lb =>
+      Lookbook.findOneAndUpdate({ id: lb.id }, { $set: lb }, { upsert: true })
+    ));
+  }
+
+  if (blob.community) {
+    ops.push(...blob.community.map(a =>
+      Article.findOneAndUpdate({ id: a.id }, { $set: a }, { upsert: true })
+    ));
+  }
+
+  if (blob.pages) {
+    ops.push(Pages.findOneAndUpdate(
+      { _id: 'main' }, { $set: blob.pages },
+      { upsert: true, setDefaultsOnInsert: true }
+    ));
+  }
+
+  if (blob.subscribers) {
+    ops.push(...blob.subscribers.map(s =>
+      Subscriber.findOneAndUpdate(
+        { email: s.email?.toLowerCase() },
+        { $set: s },
+        { upsert: true }
+      )
+    ));
+  }
+
+  await Promise.all(ops);
+}
+
+// ─── API: Upload ──────────────────────────────────────────────────────────────
+app.post('/api/upload', basicAuth, upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
+  res.json({ url: `/uploads/${req.file.filename}` });
+});
+
+app.post('/api/upload/multi', basicAuth, upload.array('images', 20), (req, res) => {
+  if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded.' });
+  res.json({ urls: req.files.map(f => `/uploads/${f.filename}`) });
+});
+
+// ─── API: Store Data ──────────────────────────────────────────────────────────
+app.get('/api/data', async (req, res) => {
+  try {
+    res.json(await readData());
+  } catch (err) {
+    console.error('GET /api/data', err);
+    res.status(500).json({ error: 'Database read failed.' });
+  }
+});
+
+app.post('/api/data', basicAuth, async (req, res) => {
+  try {
+    await writeData(req.body);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /api/data', err);
+    res.status(500).json({ error: 'Database write failed.' });
+  }
+});
+
+// ─── API: Products (granular) ─────────────────────────────────────────────────
+app.get('/api/products', async (_req, res) => {
+  try { res.json(await Product.find().lean()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── API: Newsletter ──────────────────────────────────────────────────────────
+app.post('/api/newsletter', async (req, res) => {
+  const email = (req.body.email || '').toLowerCase().trim();
+  if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email.' });
+  }
+  try {
+    const existing = await Subscriber.findOne({ email });
+    if (existing) return res.json({ ok: true, already: true });
+
+    await Subscriber.create({
+      id: `s-${Date.now()}`,
+      email,
+      date: new Date().toISOString().slice(0, 10),
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /api/newsletter', err);
+    res.status(500).json({ error: 'Could not save subscriber.' });
+  }
+});
+
+// ─── PayFast Helpers ─────────────────────────────────────────────────────────
+/**
+ * Build signature string per PayFast custom-integration spec:
+ * - Fields in DOCUMENT ORDER (not alphabetical)
+ * - Only include non-empty values
+ * - URL-encode each value
+ * - Join with '&', then append passphrase
+ * - MD5 the result
+ */
+function pfSignature(params) {
+  const str = Object.entries(params)
+    .filter(([k, v]) => k !== 'signature' && v !== '' && v !== null && v !== undefined)
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v).trim())}`)
+    .join('&');
+  const withPassphrase = PF.passphrase
+    ? `${str}&passphrase=${encodeURIComponent(PF.passphrase.trim())}`
+    : str;
+  return md5(withPassphrase);
+}
+
+/** PayFast-permitted source IP ranges (keep in sync with docs) */
+const PF_IPS = [
+  '197.97.145.144', '197.97.145.145', '197.97.145.146', '197.97.145.147',
+  '41.74.179.194',  '41.74.179.195',  '41.74.179.196',  '41.74.179.197',
+];
+
+// ─── API: Checkout (PayFast) ──────────────────────────────────────────────────
+app.post('/api/checkout', async (req, res) => {
+  const { order } = req.body;
+  if (!order) return res.status(400).json({ error: 'Missing order.' });
+
+  let shippingConfig = { freeMinimum: 500, standardRate: 99 };
+  try {
+    const site = await Settings.findOne({ _id: 'main' }).lean();
+    if (site?.shipping) shippingConfig = site.shipping;
+  } catch { /* use defaults */ }
+
+  const subtotal     = parseFloat(order.total) || 0;
+  const shippingCost = subtotal >= shippingConfig.freeMinimum ? 0 : shippingConfig.standardRate;
+  const grandTotal   = (subtotal + shippingCost).toFixed(2);
+  const orderId      = `ORD-${Date.now()}`;
+
+  try {
+    await Order.create({
+      id: orderId,
+      customer: order.customer || '',
+      email:    order.email    || '',
+      phone:    order.phone    || '',
+      address:  order.address  || '',
+      items:    Array.isArray(order.items) ? order.items : [],
+      total:    parseFloat(grandTotal),
+      shippingCost,
+      status: 'pending_payment',
+    });
+  } catch (err) {
+    console.error('Order save error:', err.message);
+    return res.status(500).json({ error: 'Could not create order.' });
+  }
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+  // Fields MUST be in this exact order per PayFast documentation
+  const params = {};
+  // Merchant details
+  params.merchant_id   = PF.merchantId;
+  params.merchant_key  = PF.merchantKey;
+  // Return URLs
+  params.return_url    = `${baseUrl}/payment/success`;
+  params.cancel_url    = `${baseUrl}/payment/cancel`;
+  params.notify_url    = `${baseUrl}/api/payfast/itn`;
+  // Buyer details
+  params.name_first    = (order.customer || 'Customer').split(' ')[0].slice(0, 100);
+  params.name_last     = (order.customer || '').split(' ').slice(1).join(' ').slice(0, 100);
+  params.email_address = (order.email || '').slice(0, 255);
+  // Transaction details
+  params.m_payment_id  = orderId;           // our internal order reference
+  params.amount        = grandTotal;        // must be '0.00' format, min R1.00
+  params.item_name     = `Others. Order ${orderId}`.slice(0, 100);
+  params.item_description = `${order.items?.length || 1} item(s)`.slice(0, 255);
+
+  // Generate signature (passphrase appended inside pfSignature)
+  params.signature = pfSignature(params);
+
+  res.json({ paymentUrl: PF_HOST, params, orderId });
+});
+
+// ─── API: PayFast ITN ─────────────────────────────────────────────────────────
+app.post('/api/payfast/itn', async (req, res) => {
+  // Step 1 — Respond 200 immediately so PayFast does not retry
+  res.status(200).send('OK');
+
+  try {
+    // Step 2 — IP allowlist check (skip in sandbox mode)
+    if (!PF.sandbox) {
+      const srcIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+      if (!PF_IPS.includes(srcIp)) {
+        console.warn(`ITN: rejected from untrusted IP ${srcIp}`);
+        return;
+      }
+    }
+
+    const itnData = req.body;
+    const { m_payment_id: orderId, payment_status, pf_payment_id, amount_gross } = itnData;
+
+    // Step 3 — Validate signature
+    const received = { ...itnData };
+    delete received.signature; // exclude from re-computation
+    if (pfSignature(received) !== itnData.signature) {
+      console.warn('ITN: invalid signature — possible tampering, ignoring.');
+      return;
+    }
+
+    // Step 4 — Compare amount against our DB record (prevent amount tampering)
+    const dbOrder = await Order.findOne({ id: orderId }).lean();
+    if (!dbOrder) {
+      console.warn(`ITN: order ${orderId} not found in DB.`);
+      return;
+    }
+    if (Math.abs(parseFloat(amount_gross) - dbOrder.total) > 0.05) {
+      console.warn(`ITN: amount mismatch — ITN ${amount_gross} vs DB ${dbOrder.total}`);
+      return;
+    }
+
+    // Step 5 — Server-to-server data validation with PayFast
+    if (!PF.sandbox) {
+      const pfValidateHost = 'www.payfast.co.za';
+      const pfValidatePath = '/eng/query/validate';
+      const pfBody = Object.entries(itnData)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('&');
+      try {
+        const { default: https } = await import('node:https');
+        await new Promise((resolve, reject) => {
+          const pfReq = https.request({
+            host: pfValidateHost, path: pfValidatePath, method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(pfBody) },
+          }, pfRes => {
+            let body = '';
+            pfRes.on('data', c => (body += c));
+            pfRes.on('end', () => body.trim() === 'VALID' ? resolve() : reject(new Error(`PayFast validation: ${body.trim()}`)));
+          });
+          pfReq.on('error', reject);
+          pfReq.write(pfBody);
+          pfReq.end();
+        });
+      } catch (e) {
+        console.warn('ITN: PayFast server validation failed —', e.message);
+        return;
+      }
+    }
+
+    // Step 6 — All checks passed, update order status
+    if (payment_status === 'COMPLETE') {
+      await Order.findOneAndUpdate(
+        { id: orderId },
+        { $set: { status: 'paid', payfastId: pf_payment_id || '' } }
+      );
+      console.log(`✓ ITN: order ${orderId} marked PAID (PayFast ID: ${pf_payment_id})`);
+    } else {
+      await Order.findOneAndUpdate(
+        { id: orderId },
+        { $set: { status: 'cancelled' } }
+      );
+      console.log(`ITN: order ${orderId} — payment_status=${payment_status}`);
+    }
+  } catch (err) {
+    console.error('ITN processing error:', err.message);
+  }
+});
+
+// ─── Admin Routes (Basic Auth protected) ─────────────────────────────────────
+app.get(/^\/admin(\/.*)?$/, basicAuth, (_req, res) => {
+  res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+});
+
+// ─── SPA Fallback ─────────────────────────────────────────────────────────────
+app.use((_req, res) => {
+  res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+connect().then(() => {
+  app.listen(port, () => {
+    console.log(`\nOthers. Store  → http://localhost:${port}`);
+    console.log(`PayFast mode   → ${PF.sandbox ? 'SANDBOX' : 'LIVE'}`);
+    console.log(`Admin          → http://localhost:${port}/admin  [${ADMIN_USER}]`);
+    console.log(`MongoDB        → connected\n`);
+  });
+});
