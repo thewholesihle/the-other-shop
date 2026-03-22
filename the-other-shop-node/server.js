@@ -215,15 +215,51 @@ async function writeData(blob) {
   await Promise.all(ops);
 }
 
+// ─── API: Delete Product ─────────────────────────────────────────────────────
+app.delete('/api/products/:id', basicAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await Product.deleteOne({ id });
+    if (result.deletedCount === 0)
+      return res.status(404).json({ error: 'Product not found.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/products/:id', err);
+    res.status(500).json({ error: 'Could not delete product.' });
+  }
+});
+
+// ─── API: Update Order Status (accept / reject) ─────────────────────────────────
+app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
+  const allowed = ['processing', 'shipped', 'delivered', 'cancelled', 'paid', 'pending'];
+  const { status, reason } = req.body;
+  if (!allowed.includes(status))
+    return res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` });
+  try {
+    const update = { status };
+    if (reason) update.adminNote = reason;
+    const order = await Order.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: update },
+      { returnDocument: 'after' }
+    );
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+    res.json({ ok: true, order });
+  } catch (err) {
+    console.error('PATCH /api/orders/:id/status', err);
+    res.status(500).json({ error: 'Could not update order status.' });
+  }
+});
+
 // ─── API: Upload ──────────────────────────────────────────────────────────────
 app.post('/api/upload', basicAuth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
-  res.json({ url: `/uploads/${req.file.filename}` });
+  res.json({ url: req.file.path }); // Cloudinary returns secure_url as .path
 });
 
 app.post('/api/upload/multi', basicAuth, upload.array('images', 20), (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded.' });
-  res.json({ urls: req.files.map(f => `/uploads/${f.filename}`) });
+  res.json({ urls: req.files.map(f => f.path) }); // Cloudinary: .path = secure_url
 });
 
 // ─── API: Store Data ──────────────────────────────────────────────────────────
@@ -324,6 +360,25 @@ app.post('/api/checkout', async (req, res) => {
   const grandTotal   = (subtotal + shippingCost).toFixed(2);
   const orderId      = `ORD-${Date.now()}`;
 
+  // ── Stock validation ──────────────────────────────────────────────────────
+  const orderItems = Array.isArray(order.items) ? order.items : [];
+  const stockErrors = [];
+  for (const item of orderItems) {
+    const product = await Product.findOne({ id: item.id }).lean();
+    if (!product) {
+      stockErrors.push(`"${item.name}" is no longer available.`);
+    } else if (product.stock < item.quantity) {
+      stockErrors.push(
+        product.stock === 0
+          ? `"${item.name}" is sold out.`
+          : `"${item.name}" only has ${product.stock} unit${product.stock !== 1 ? 's' : ''} left (you requested ${item.quantity}).`
+      );
+    }
+  }
+  if (stockErrors.length > 0) {
+    return res.status(400).json({ error: 'Some items are out of stock.', stockErrors });
+  }
+
   try {
     await Order.create({
       id: orderId,
@@ -331,7 +386,7 @@ app.post('/api/checkout', async (req, res) => {
       email:    order.email    || '',
       phone:    order.phone    || '',
       address:  order.address  || '',
-      items:    Array.isArray(order.items) ? order.items : [],
+      items:    orderItems,
       total:    parseFloat(grandTotal),
       shippingCost,
       status: 'pending_payment',

@@ -1,14 +1,8 @@
 <script>
   export let product;
-  export let currency = '€';
+  export let currency = 'R';
 
   let isHovered = false;
-  let liked = false;
-
-  function toggleLike(e) {
-    e.stopPropagation();
-    liked = !liked;
-  }
 
   function goToProduct() {
     if (window.__navigate) window.__navigate(`/products/${product.id}`);
@@ -42,19 +36,6 @@
     {:else if product.isNew}
       <span class="absolute top-3 left-3 bg-foreground text-primary-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">New</span>
     {/if}
-
-    <!-- Wishlist button -->
-    <button
-      aria-label="Toggle wishlist"
-      onclick={toggleLike}
-      class="absolute top-3 right-3 p-2 transition-all duration-200 active:scale-90 {isHovered || liked ? 'opacity-100' : 'opacity-0'}"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-        fill={liked ? 'currentColor' : 'none'}
-        class="{liked ? 'text-store-rust' : 'text-foreground'}">
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-      </svg>
-    </button>
   </div>
 
   <!-- Product info -->

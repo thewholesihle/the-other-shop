@@ -11,6 +11,8 @@
   let step = 'cart';
   let submitting = false;
   let orderId = '';
+  let stockErrors = [];
+  let checkoutError = '';
 
   let form = {
     firstName: '', lastName: '', email: '', phone: '',
@@ -34,6 +36,8 @@
   async function proceedToPayment() {
     if (submitting) return;
     submitting = true;
+    stockErrors = [];
+    checkoutError = '';
     step = 'processing';
     try {
       const res = await fetch('/api/checkout', {
@@ -50,11 +54,17 @@
           }
         }),
       });
+      if (!res.ok) {
+        const body = await res.json();
+        stockErrors = body.stockErrors || [];
+        checkoutError = body.error || 'Something went wrong.';
+        step = 'checkout';
+        submitting = false;
+        return;
+      }
       const { paymentUrl, params, orderId: oid } = await res.json();
       orderId = oid;
-      // Clear cart before redirect
       cart.clear();
-      // Build auto-submitting form and submit
       const formEl = document.createElement('form');
       formEl.method = 'POST';
       formEl.action = paymentUrl;
@@ -69,6 +79,7 @@
       formEl.submit();
     } catch (e) {
       console.error(e);
+      checkoutError = 'Connection error. Please try again.';
       step = 'checkout';
       submitting = false;
     }
@@ -262,6 +273,19 @@
                 </div>
               </div>
             </div>
+
+            <!-- Stock/checkout errors -->
+            {#if stockErrors.length > 0}
+              <div class="border border-destructive bg-destructive/5 px-4 py-3 space-y-1">
+                <p class="text-sm font-medium text-destructive">Cannot complete checkout:</p>
+                {#each stockErrors as err}
+                  <p class="text-xs text-destructive">{err}</p>
+                {/each}
+                <p class="text-xs text-muted-foreground mt-1">Please update your cart and try again.</p>
+              </div>
+            {:else if checkoutError}
+              <p class="text-sm text-destructive">{checkoutError}</p>
+            {/if}
 
             <!-- Pay button -->
             <button type="submit" disabled={submitting} class="w-full py-4 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2">

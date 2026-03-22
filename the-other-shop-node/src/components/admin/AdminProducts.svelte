@@ -28,7 +28,19 @@
     editing = null; isNew = false;
   }
 
-  function handleDelete(id) { onUpdate(products.filter(p => p.id !== id)); }
+  async function handleDelete(id, name) {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      onUpdate(products.filter(p => p.id !== id));
+    } catch (e) {
+      alert(`Failed to delete: ${e.message}`);
+    }
+  }
   function handleAdd() { editing = { ...emptyProduct, images: [] }; isNew = true; }
 
   function statusClass(p) {
@@ -100,7 +112,7 @@
                 <button aria-label="Edit product" onclick={() => { editing = { ...p, images: [...(p.images || [p.image].filter(Boolean))] }; isNew = false; }} class="p-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-90">
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                 </button>
-                <button aria-label="Delete product" onclick={() => handleDelete(p.id)} class="p-1.5 text-muted-foreground hover:text-destructive transition-colors active:scale-90">
+                <button aria-label="Delete product" onclick={() => handleDelete(p.id, p.name)} class="p-1.5 text-muted-foreground hover:text-destructive transition-colors active:scale-90">
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 </button>
               </div>
