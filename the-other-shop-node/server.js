@@ -6,6 +6,7 @@ const path     = require('path');
 const fs       = require('fs');
 const multer   = require('multer');
 const md5      = require('md5');
+const morgan   = require('morgan');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
@@ -16,6 +17,9 @@ const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber
 
 const app  = express();
 const port = process.env.PORT || 3000;
+
+// Add HTTP request logging
+app.use(morgan('dev'));
 
 // Trust the edge proxy (Fly.io, Heroku, etc) so req.protocol properly detects HTTPS
 app.set('trust proxy', 1);
@@ -364,7 +368,8 @@ app.post('/api/checkout', async (req, res) => {
   const orderItems = Array.isArray(order.items) ? order.items : [];
   const stockErrors = [];
   for (const item of orderItems) {
-    const product = await Product.findOne({ id: item.id }).lean();
+    // Check both 'id' and '_id' in case the frontend sent the MongoDB _id as 'id'
+    const product = await Product.findOne({ $or: [{ id: item.id }, { _id: item.id }] }).lean();
     if (!product) {
       stockErrors.push(`"${item.name}" is no longer available.`);
     } else if (product.stock < item.quantity) {

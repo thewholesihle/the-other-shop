@@ -7465,7 +7465,7 @@
 
 	enable_legacy_mode_flag();
 
-	var root_1$n = from_html(`<div class="fixed inset-0 z-[999] bg-foreground/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in" role="dialog" aria-modal="true" aria-label="Shipping restriction notice"><div class="bg-background w-full md:max-w-md p-8 md:p-10 border-t md:border border-border animate-fade-up"><div class="w-12 h-12 border border-border flex items-center justify-center mb-6"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg></div> <p class="text-label text-muted-foreground mb-2">Shipping Notice</p> <h2 class="text-2xl font-display font-bold mb-3 leading-tight">We Ship Within<br/>South Africa Only</h2> <p class="text-sm text-muted-foreground leading-relaxed mb-8">Currently Others. only ships within South Africa. It looks like you're visiting from outside the country — you're welcome to browse, but orders can only be delivered to South African addresses.</p> <div class="space-y-3"><button class="w-full py-4 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">BROWSE THE STORE</button> <p class="text-xs text-center text-muted-foreground">Checkout is restricted to South African addresses.</p></div></div></div>`);
+	var root_1$p = from_html(`<div class="fixed inset-0 z-[999] bg-foreground/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in" role="dialog" aria-modal="true" aria-label="Shipping restriction notice"><div class="bg-background w-full md:max-w-md p-8 md:p-10 border-t md:border border-border animate-fade-up"><div class="w-12 h-12 border border-border flex items-center justify-center mb-6"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg></div> <p class="text-label text-muted-foreground mb-2">Shipping Notice</p> <h2 class="text-2xl font-display font-bold mb-3 leading-tight">We Ship Within<br/>South Africa Only</h2> <p class="text-sm text-muted-foreground leading-relaxed mb-8">Currently Others. only ships within South Africa. It looks like you're visiting from outside the country — you're welcome to browse, but orders can only be delivered to South African addresses.</p> <div class="space-y-3"><button class="w-full py-4 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">BROWSE THE STORE</button> <p class="text-xs text-center text-muted-foreground">Checkout is restricted to South African addresses.</p></div></div></div>`);
 
 	function GeoBlock($$anchor, $$props) {
 		push($$props, false);
@@ -7500,7 +7500,7 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_1$n();
+				var div = root_1$p();
 				var div_1 = child(div);
 				var div_2 = sibling(child(div_1), 8);
 				var button = child(div_2);
@@ -7578,14 +7578,42 @@
 	  $cart.reduce((sum, i) => sum + i.price * i.quantity, 0)
 	);
 
-	var root_1$m = from_html(`<img class="h-7 w-auto object-contain"/>`);
-	var root_3$n = from_html(`<a class="text-foreground text-label hover:opacity-60 transition-opacity duration-200"> </a>`);
-	var root_4$f = from_html(`<span class="absolute -top-2 -right-2 bg-store-rust text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none tabular-nums"> </span>`);
-	var root_5$h = from_svg(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>`);
-	var root_6$f = from_svg(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>`);
-	var root_8$9 = from_html(`<a class="block text-foreground text-label py-3 border-b border-border"> </a>`);
-	var root_7$a = from_html(`<div class="md:hidden bg-background border-t border-border px-5 pb-6 pt-3 animate-fade-in"><!> <a href="/cart" class="block text-foreground text-label py-3">CART <!></a></div>`);
-	var root$k = from_html(`<nav class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/40"><div class="flex items-center justify-between px-5 md:px-10 py-4 max-w-screen-2xl mx-auto"><a href="/" class="text-foreground font-display text-xl font-bold tracking-tight"><!></a> <div class="hidden md:flex items-center gap-8"></div> <div class="flex items-center gap-5"><a href="/cart" class="relative text-foreground hover:opacity-60 transition-opacity active:scale-95" aria-label="Cart"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg> <!></a> <button class="md:hidden text-foreground hover:opacity-60 transition-opacity active:scale-95" aria-label="Menu"><!></button></div></div> <!></nav>`);
+	/**
+	 * Shared data access utility for public pages.
+	 * Always fetches from /api/data (MongoDB) — no localStorage, no store.json.
+	 */
+
+	let _cache = null;
+	let _promise = null;
+
+	/**
+	 * Load store data. Caches for the lifetime of the page visit so multiple
+	 * component onMounts don't fire redundant requests.
+	 * Pass `fresh = true` to bypass cache (e.g. after a write).
+	 */
+	async function loadStoreData(fresh = false) {
+	  if (!fresh && _cache) return _cache;
+	  if (!fresh && _promise) return _promise;
+
+	  _promise = fetch('/api/data')
+	    .then(r => {
+	      if (!r.ok) throw new Error(`Could not load store data: ${r.status}`);
+	      return r.json();
+	    })
+	    .then(d => { _cache = d; _promise = null; return d; })
+	    .catch(e => { _promise = null; throw e; });
+
+	  return _promise;
+	}
+
+	var root_1$o = from_html(`<img class="h-7 w-auto object-contain"/>`);
+	var root_3$p = from_html(`<a class="text-foreground text-label hover:opacity-60 transition-opacity duration-200"> </a>`);
+	var root_4$h = from_html(`<span class="absolute -top-2 -right-2 bg-store-rust text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none tabular-nums"> </span>`);
+	var root_5$j = from_svg(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>`);
+	var root_6$h = from_svg(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>`);
+	var root_8$b = from_html(`<a class="block text-foreground text-label py-3 border-b border-border"> </a>`);
+	var root_7$c = from_html(`<div class="md:hidden bg-background border-t border-border px-5 pb-6 pt-3 animate-fade-in"><!> <a href="/cart" class="block text-foreground text-label py-3">CART <!></a></div>`);
+	var root$l = from_html(`<nav class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/40"><div class="flex items-center justify-between px-5 md:px-10 py-4 max-w-screen-2xl mx-auto"><a href="/" class="text-foreground font-display text-xl font-bold tracking-tight"><!></a> <div class="hidden md:flex items-center gap-8"></div> <div class="flex items-center gap-5"><a href="/cart" class="relative text-foreground hover:opacity-60 transition-opacity active:scale-95" aria-label="Cart"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg> <!></a> <button class="md:hidden text-foreground hover:opacity-60 transition-opacity active:scale-95" aria-label="Menu"><!></button></div></div> <!></nav>`);
 
 	function Navbar($$anchor, $$props) {
 		const $cartCount = () => store_get(cartCount, '$cartCount', $$stores);
@@ -7610,14 +7638,14 @@
 			set(mobileOpen, false);
 		}
 
-		var nav_1 = root$k();
+		var nav_1 = root$l();
 		var div = child(nav_1);
 		var a = child(div);
 		var node = child(a);
 
 		{
 			var consequent = ($$anchor) => {
-				var img = root_1$m();
+				var img = root_1$o();
 
 				template_effect(() => {
 					set_attribute(img, 'src', logo());
@@ -7642,7 +7670,7 @@
 		var div_1 = sibling(a, 2);
 
 		each(div_1, 5, () => navLinks, index, ($$anchor, link) => {
-			var a_1 = root_3$n();
+			var a_1 = root_3$p();
 			var text_1 = child(a_1);
 
 			template_effect(() => {
@@ -7660,7 +7688,7 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var span = root_4$f();
+				var span = root_4$h();
 				var text_2 = child(span);
 				template_effect(() => set_text(text_2, $cartCount() > 9 ? '9+' : $cartCount()));
 				append($$anchor, span);
@@ -7676,13 +7704,13 @@
 
 		{
 			var consequent_2 = ($$anchor) => {
-				var svg = root_5$h();
+				var svg = root_5$j();
 
 				append($$anchor, svg);
 			};
 
 			var alternate_1 = ($$anchor) => {
-				var svg_1 = root_6$f();
+				var svg_1 = root_6$h();
 
 				append($$anchor, svg_1);
 			};
@@ -7696,11 +7724,11 @@
 
 		{
 			var consequent_4 = ($$anchor) => {
-				var div_3 = root_7$a();
+				var div_3 = root_7$c();
 				var node_4 = child(div_3);
 
 				each(node_4, 1, () => navLinks, index, ($$anchor, link) => {
-					var a_3 = root_8$9();
+					var a_3 = root_8$b();
 					var text_3 = child(a_3);
 
 					template_effect(() => {
@@ -7744,7 +7772,7 @@
 
 	delegate(['click']);
 
-	var root$j = from_html(`<div class="bg-foreground text-primary-foreground overflow-hidden whitespace-nowrap py-2"><div class="animate-marquee inline-block"><span class="text-label tracking-[0.3em] text-[10px]"> </span> <span class="text-label tracking-[0.3em] text-[10px]"> </span></div></div>`);
+	var root$k = from_html(`<div class="bg-foreground text-primary-foreground overflow-hidden whitespace-nowrap py-2"><div class="animate-marquee inline-block"><span class="text-label tracking-[0.3em] text-[10px]"> </span> <span class="text-label tracking-[0.3em] text-[10px]"> </span></div></div>`);
 
 	function AnnouncementBar($$anchor, $$props) {
 		push($$props, false);
@@ -7759,7 +7787,7 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var div = root$j();
+		var div = root$k();
 		var div_1 = child(div);
 		var span = child(div_1);
 		var text_1 = child(span);
@@ -7776,14 +7804,14 @@
 		pop();
 	}
 
-	var root_1$l = from_html(`<img alt="" class="absolute inset-0 w-full h-full object-cover" aria-hidden="true" loading="eager"/>`);
-	var root_2$p = from_html(`<video class="absolute inset-0 w-full h-full object-cover" autoplay="" loop="" playsinline="" aria-hidden="true"><track kind="captions"/></video>`, 2);
-	var root_3$m = from_html(`<img alt="Others. collection editorial" class="absolute inset-0 w-full h-full object-cover" loading="eager"/>`);
-	var root_4$e = from_html(`<p class="text-label mb-3 opacity-0 animate-fade-up" style="animation-delay:0.3s;color:hsl(40,20%,97%)"> </p>`);
-	var root_5$g = from_html(` <br/>`, 1);
-	var root_6$e = from_html(`<p class="text-sm md:text-base mb-6 opacity-0 animate-fade-up" style="animation-delay:0.6s;color:hsl(40,20%,97%);opacity:0.85"> </p>`);
-	var root_7$9 = from_html(`<a class="inline-block border border-[hsl(40,20%,97%)] px-8 py-3 text-label tracking-[0.25em] hover:bg-[hsl(40,20%,97%)] hover:text-foreground transition-all duration-300 opacity-0 animate-fade-up active:scale-[0.97]" style="animation-delay:0.7s;color:hsl(40,20%,97%)"> </a>`);
-	var root$i = from_html(`<section class="relative h-screen w-full overflow-hidden"><!> <div class="absolute inset-0 bg-black/20"></div> <div class="absolute inset-0 flex items-end"><div class="px-6 md:px-10 pb-16 md:pb-20 max-w-lg"><!> <h1 class="text-5xl md:text-7xl font-display font-bold leading-[0.9] mb-4 opacity-0 animate-fade-up" style="animation-delay:0.5s;color:hsl(40,20%,97%)"></h1> <!> <!></div></div></section>`);
+	var root_1$n = from_html(`<img alt="" class="absolute inset-0 w-full h-full object-cover" aria-hidden="true" loading="eager"/>`);
+	var root_2$r = from_html(`<video class="absolute inset-0 w-full h-full object-cover" autoplay="" loop="" playsinline="" aria-hidden="true"><track kind="captions"/></video>`, 2);
+	var root_3$o = from_html(`<img alt="Others. collection editorial" class="absolute inset-0 w-full h-full object-cover" loading="eager"/>`);
+	var root_4$g = from_html(`<p class="text-label mb-3 opacity-0 animate-fade-up" style="animation-delay:0.3s;color:hsl(40,20%,97%)"> </p>`);
+	var root_5$i = from_html(` <br/>`, 1);
+	var root_6$g = from_html(`<p class="text-sm md:text-base mb-6 opacity-0 animate-fade-up" style="animation-delay:0.6s;color:hsl(40,20%,97%);opacity:0.85"> </p>`);
+	var root_7$b = from_html(`<a class="inline-block border border-[hsl(40,20%,97%)] px-8 py-3 text-label tracking-[0.25em] hover:bg-[hsl(40,20%,97%)] hover:text-foreground transition-all duration-300 opacity-0 animate-fade-up active:scale-[0.97]" style="animation-delay:0.7s;color:hsl(40,20%,97%)"> </a>`);
+	var root$j = from_html(`<section class="relative h-screen w-full overflow-hidden"><!> <div class="absolute inset-0 bg-black/20"></div> <div class="absolute inset-0 flex items-end"><div class="px-6 md:px-10 pb-16 md:pb-20 max-w-lg"><!> <h1 class="text-5xl md:text-7xl font-display font-bold leading-[0.9] mb-4 opacity-0 animate-fade-up" style="animation-delay:0.5s;color:hsl(40,20%,97%)"></h1> <!> <!></div></div></section>`);
 
 	function Hero($$anchor, $$props) {
 		push($$props, false);
@@ -7821,12 +7849,12 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var section = root$i();
+		var section = root$j();
 		var node = child(section);
 
 		{
 			var consequent = ($$anchor) => {
-				var img = root_1$l();
+				var img = root_1$n();
 
 				template_effect(() => set_attribute(img, 'src', (deep_read_state(hero()), untrack(() => hero().video))));
 				append($$anchor, img);
@@ -7839,7 +7867,7 @@
 			));
 
 			var consequent_1 = ($$anchor) => {
-				var video = root_2$p();
+				var video = root_2$r();
 
 				video.muted = true;
 				template_effect(() => set_attribute(video, 'src', (deep_read_state(hero()), untrack(() => hero().video))));
@@ -7847,7 +7875,7 @@
 			};
 
 			var consequent_2 = ($$anchor) => {
-				var img_1 = root_3$m();
+				var img_1 = root_3$o();
 
 				template_effect(() => set_attribute(img_1, 'src', (deep_read_state(hero()), untrack(() => hero().image))));
 				append($$anchor, img_1);
@@ -7864,7 +7892,7 @@
 
 		{
 			var consequent_3 = ($$anchor) => {
-				var p = root_4$e();
+				var p = root_4$g();
 				var text = child(p);
 				template_effect(() => set_text(text, (deep_read_state(hero()), untrack(() => hero().label))));
 				append($$anchor, p);
@@ -7879,7 +7907,7 @@
 
 		each(h1, 5, () => get(words), index, ($$anchor, word) => {
 
-			var fragment = root_5$g();
+			var fragment = root_5$i();
 			var text_1 = first_child(fragment, true);
 			template_effect(() => set_text(text_1, get(word)));
 			append($$anchor, fragment);
@@ -7889,7 +7917,7 @@
 
 		{
 			var consequent_4 = ($$anchor) => {
-				var p_1 = root_6$e();
+				var p_1 = root_6$g();
 				var text_2 = child(p_1);
 
 				template_effect(() => set_text(text_2, (
@@ -7912,7 +7940,7 @@
 
 		{
 			var consequent_5 = ($$anchor) => {
-				var a = root_7$9();
+				var a = root_7$b();
 				var text_3 = child(a);
 
 				template_effect(() => {
@@ -7938,10 +7966,10 @@
 
 	delegate(['click']);
 
-	var root_1$k = from_html(`<span class="absolute top-3 left-3 bg-store-rust text-accent-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">Sold Out</span>`);
-	var root_2$o = from_html(`<span class="absolute top-3 left-3 bg-foreground text-primary-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">New</span>`);
-	var root_3$l = from_html(`<p class="text-[11px] text-muted-foreground mt-0.5"> </p>`);
-	var root$h = from_html(`<div class="group relative cursor-pointer" role="button" tabindex="0"><div class="relative aspect-[3/4] overflow-hidden bg-secondary mb-3"><img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/> <!></div> <div><h3 class="text-sm font-medium leading-tight truncate"> </h3> <p class="text-sm text-muted-foreground mt-0.5 tabular-nums"> </p> <!></div></div>`);
+	var root_1$m = from_html(`<span class="absolute top-3 left-3 bg-store-rust text-accent-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">Sold Out</span>`);
+	var root_2$q = from_html(`<span class="absolute top-3 left-3 bg-foreground text-primary-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">New</span>`);
+	var root_3$n = from_html(`<p class="text-[11px] text-muted-foreground mt-0.5"> </p>`);
+	var root$i = from_html(`<div class="group relative cursor-pointer" role="button" tabindex="0"><div class="relative aspect-[3/4] overflow-hidden bg-secondary mb-3"><img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/> <!></div> <div><h3 class="text-sm font-medium leading-tight truncate"> </h3> <p class="text-sm text-muted-foreground mt-0.5 tabular-nums"> </p> <!></div></div>`);
 
 	function ProductCard($$anchor, $$props) {
 		push($$props, false);
@@ -7972,20 +8000,20 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var div = root$h();
+		var div = root$i();
 		var div_1 = child(div);
 		var img = child(div_1);
 		var node = sibling(img, 2);
 
 		{
 			var consequent = ($$anchor) => {
-				var span = root_1$k();
+				var span = root_1$m();
 
 				append($$anchor, span);
 			};
 
 			var consequent_1 = ($$anchor) => {
-				var span_1 = root_2$o();
+				var span_1 = root_2$q();
 
 				append($$anchor, span_1);
 			};
@@ -8009,7 +8037,7 @@
 
 		{
 			var consequent_2 = ($$anchor) => {
-				var p_1 = root_3$l();
+				var p_1 = root_3$n();
 				var text_2 = child(p_1);
 
 				template_effect(() => set_text(text_2, `${(
@@ -8067,8 +8095,8 @@
 
 	delegate(['click', 'keydown']);
 
-	var root_1$j = from_html(`<div><!></div>`);
-	var root$g = from_html(`<section id="products" class="px-6 md:px-10 py-20 md:py-32"><div class="flex items-end justify-between mb-12"><div><p class="text-label mb-2">Latest</p> <h2 class="text-3xl md:text-4xl font-display font-bold leading-tight">New Drops</h2></div> <a href="/products" class="text-label hover:text-foreground transition-colors border-b border-current pb-0.5">VIEW ALL</a></div> <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6"></div> <div class="text-center mt-12"><a href="/products" class="inline-block border border-foreground px-10 py-4 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300 active:scale-[0.97]">SHOP ALL PRODUCTS</a></div></section>`);
+	var root_1$l = from_html(`<div><!></div>`);
+	var root$h = from_html(`<section id="products" class="px-6 md:px-10 py-20 md:py-32"><div class="flex items-end justify-between mb-12"><div><p class="text-label mb-2">Latest</p> <h2 class="text-3xl md:text-4xl font-display font-bold leading-tight">New Drops</h2></div> <a href="/products" class="text-label hover:text-foreground transition-colors border-b border-current pb-0.5">VIEW ALL</a></div> <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6"></div> <div class="text-center mt-12"><a href="/products" class="inline-block border border-foreground px-10 py-4 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300 active:scale-[0.97]">SHOP ALL PRODUCTS</a></div></section>`);
 
 	function ProductGrid($$anchor, $$props) {
 		push($$props, false);
@@ -8108,14 +8136,14 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var section = root$g();
+		var section = root$h();
 		var div = child(section);
 		var a = sibling(child(div), 2);
 
 		var div_1 = sibling(div, 2);
 
 		each(div_1, 5, () => get(featured), index, ($$anchor, p, i) => {
-			var div_2 = root_1$j();
+			var div_2 = root_1$l();
 
 			set_style(div_2, `animation-delay:${i * 0.1}s`);
 
@@ -8145,11 +8173,22 @@
 
 	delegate(['click']);
 
-	var root$f = from_html(`<section class="px-6 md:px-10 pb-20 md:pb-32"><div><p class="text-label mb-2">Editorial</p> <h2 class="text-3xl md:text-4xl font-display font-bold leading-tight">SS26 Lookbook</h2></div> <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"><a href="/lookbook" style="animation-delay:0.15s"><img src="/images/lookbook-1.jpg" alt="SS26 Lookbook" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute bottom-0 left-0 right-0 p-6"><span class="inline-block bg-background/90 backdrop-blur-sm px-4 py-2 text-label text-foreground">VIEW LOOKBOOK</span></div></a> <a href="/lookbook" style="animation-delay:0.25s"><img src="/images/lookbook-2.jpg" alt="SS26 Behind the Scenes" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute bottom-0 left-0 right-0 p-6"><span class="inline-block bg-background/90 backdrop-blur-sm px-4 py-2 text-label text-foreground">BEHIND THE SCENES</span></div></a></div> <div style="animation-delay:0.35s"><a href="/lookbook" class="inline-block border border-foreground px-10 py-4 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300 active:scale-[0.97]">EXPLORE FULL LOOKBOOK</a></div></section>`);
+	var root_1$k = from_html(`<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"><a style="animation-delay:0.15s"><img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent"><span class="text-label text-white group-hover:underline underline-offset-4">VIEW LOOKBOOK</span></div></a> <a style="animation-delay:0.25s"><img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent"><span class="text-label text-white group-hover:underline underline-offset-4">EXPLORE</span></div></a></div>`);
+	var root_3$m = from_html(`<a href="/lookbook"><img alt="Lookbook" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent"><span class="text-label text-white group-hover:underline underline-offset-4"></span></div></a>`);
+	var root_2$p = from_html(`<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"></div>`);
+	var root$g = from_html(`<section class="px-6 md:px-10 pb-20 md:pb-32"><div><p class="text-label mb-2">Editorial</p> <h2 class="text-3xl md:text-4xl font-display font-bold leading-tight"> </h2></div> <!> <div style="animation-delay:0.35s"><a href="/lookbook" class="inline-block border border-foreground px-10 py-4 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300 active:scale-[0.97]">EXPLORE FULL LOOKBOOK</a></div></section>`);
 
 	function LookbookSection($$anchor, $$props) {
 		push($$props, false);
 
+		const lb = mutable_source();
+		const images = mutable_source();
+		const primary = mutable_source();
+		const secondary = mutable_source();
+		const lbPath = mutable_source();
+		let lookbook = prop($$props, 'lookbook', 8, null // single lookbook object from parent
+		);
+		let allLookbooks = prop($$props, 'allLookbooks', 24, () => []);
 		let visible = mutable_source(false);
 		let ref = mutable_source();
 
@@ -8166,48 +8205,135 @@
 			return () => observer.disconnect();
 		});
 
-		function goLookbook(e) {
-			e.preventDefault();
+		function goTo(path, e) {
+			e?.preventDefault();
 
-			if (window.__navigate) window.__navigate('/lookbook');
+			if (window.__navigate) window.__navigate(path);
 		}
 
+		legacy_pre_effect(
+			() => (
+				deep_read_state(lookbook()),
+				deep_read_state(allLookbooks())
+			),
+			() => {
+				set(lb, lookbook() || allLookbooks()[0] || null);
+			}
+		);
+
+		legacy_pre_effect(() => (get(lb)), () => {
+			set(images, get(lb)
+				? get(lb).images || [get(lb).cover].filter(Boolean)
+				: []);
+		});
+
+		legacy_pre_effect(() => (get(images)), () => {
+			set(primary, get(images)[0] || '');
+		});
+
+		legacy_pre_effect(() => (get(images)), () => {
+			set(secondary, get(images)[1] || get(images)[0] || '');
+		});
+
+		legacy_pre_effect(() => (get(lb)), () => {
+			set(lbPath, get(lb) ? `/lookbook/${get(lb).id}` : '/lookbook');
+		});
+
+		legacy_pre_effect_reset();
 		init();
 
-		var section = root$f();
+		var section = root$g();
 		var div = child(section);
-		var div_1 = sibling(div, 2);
-		var a = child(div_1);
-		var a_1 = sibling(a, 2);
+		var h2 = sibling(child(div), 2);
+		var text = child(h2);
 
-		var div_2 = sibling(div_1, 2);
-		var a_2 = child(div_2);
+		var node = sibling(div, 2);
+
+		{
+			var consequent = ($$anchor) => {
+				var div_1 = root_1$k();
+				var a = child(div_1);
+				var img = child(a);
+
+				var a_1 = sibling(a, 2);
+				var img_1 = child(a_1);
+
+				template_effect(() => {
+					set_attribute(a, 'href', get(lbPath));
+					set_class(a, 1, `relative aspect-square md:aspect-[3/4] overflow-hidden group ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
+					set_attribute(img, 'src', get(primary));
+					set_attribute(img, 'alt', (get(lb), untrack(() => get(lb).title)));
+					set_attribute(a_1, 'href', get(lbPath));
+					set_class(a_1, 1, `relative aspect-square md:aspect-[3/4] overflow-hidden group ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
+					set_attribute(img_1, 'src', get(secondary));
+					set_attribute(img_1, 'alt', `${(get(lb), untrack(() => get(lb).title)) ?? ''} — behind the scenes`);
+				});
+
+				delegated('click', a, (e) => goTo(get(lbPath), e));
+				delegated('click', a_1, (e) => goTo(get(lbPath), e));
+				append($$anchor, div_1);
+			};
+
+			var alternate = ($$anchor) => {
+				var div_2 = root_2$p();
+
+				each(div_2, 4, () => ['/images/lookbook-1.jpg', '/images/lookbook-2.jpg'], index, ($$anchor, src, i) => {
+					var a_2 = root_3$m();
+
+					set_style(a_2, `animation-delay:${0.15 + i * 0.1}s`);
+
+					var img_2 = child(a_2);
+					var div_3 = sibling(img_2, 2);
+					var span = child(div_3);
+
+					span.textContent = i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE';
+
+					template_effect(() => {
+						set_class(a_2, 1, `relative aspect-square md:aspect-[3/4] overflow-hidden group ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
+						set_attribute(img_2, 'src', src);
+					});
+
+					delegated('click', a_2, (e) => goTo('/lookbook', e));
+					append($$anchor, a_2);
+				});
+				append($$anchor, div_2);
+			};
+
+			if_block(node, ($$render) => {
+				if (get(lb) && (get(primary) || get(secondary))) $$render(consequent); else $$render(alternate, -1);
+			});
+		}
+
+		var div_4 = sibling(node, 2);
+		var a_3 = child(div_4);
 		bind_this(section, ($$value) => set(ref, $$value), () => get(ref));
 
 		template_effect(() => {
 			set_class(div, 1, `mb-12 ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
-			set_class(a, 1, `relative aspect-[3/4] overflow-hidden group ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
-			set_class(a_1, 1, `relative aspect-[3/4] overflow-hidden group ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
-			set_class(div_2, 1, `text-center mt-10 ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
+
+			set_text(text, (
+				get(lb),
+				untrack(() => get(lb) ? get(lb).title : 'Lookbook')
+			));
+
+			set_class(div_4, 1, `text-center mt-10 ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
 		});
 
-		delegated('click', a, goLookbook);
-		delegated('click', a_1, goLookbook);
-		delegated('click', a_2, goLookbook);
+		delegated('click', a_3, (e) => goTo('/lookbook', e));
 		append($$anchor, section);
 		pop();
 	}
 
 	delegate(['click']);
 
-	var root_2$n = from_html(`<li><a class="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors duration-200"> </a></li>`);
-	var root_1$i = from_html(`<div><p class="text-label text-primary-foreground/40 mb-4"> </p> <ul class="space-y-2.5"></ul></div>`);
-	var root_3$k = from_html(`<div class="flex items-center gap-2 text-sm text-primary-foreground/70"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> You're subscribed!</div>`);
-	var root_4$d = from_html(`<p class="text-sm text-primary-foreground/50">Already subscribed.</p>`);
-	var root_6$d = from_html(`<p class="text-xs text-red-400">Something went wrong. Try again.</p>`);
-	var root_5$f = from_html(`<div class="flex w-full md:w-auto flex-col gap-1"><div class="flex"><input type="email" placeholder="Email address" class="bg-transparent border border-primary-foreground/20 px-4 py-3 text-sm text-primary-foreground placeholder:text-primary-foreground/30 flex-1 md:w-64 focus:outline-none focus:border-primary-foreground/50 transition-colors"/> <button class="bg-primary-foreground text-foreground px-6 py-3 text-label tracking-[0.2em] hover:bg-primary-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60"> </button></div> <!></div>`);
-	var root_7$8 = from_html(`<a target="_blank" rel="noopener noreferrer" class="text-xs text-primary-foreground/30 hover:text-primary-foreground/60 transition-colors capitalize"> </a>`);
-	var root$e = from_html(`<footer class="bg-foreground text-primary-foreground px-6 md:px-10 pt-16 pb-8"><div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16"><div class="col-span-2 md:col-span-1"><h3 class="font-display text-2xl font-bold mb-4"> </h3> <p class="text-sm text-primary-foreground/60 max-w-xs leading-relaxed"> </p></div> <!></div> <div class="border-t border-primary-foreground/10 pt-10 pb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div><p class="text-label text-primary-foreground/40 mb-2">NEWSLETTER</p> <p class="text-sm text-primary-foreground/60">Sign up for drops, exclusives &amp; community news.</p></div> <!></div> <div class="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4"><p class="text-xs text-primary-foreground/30"> </p> <div class="flex gap-6"></div></div></footer>`);
+	var root_2$o = from_html(`<li><a class="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors duration-200"> </a></li>`);
+	var root_1$j = from_html(`<div><p class="text-label text-primary-foreground/40 mb-4"> </p> <ul class="space-y-2.5"></ul></div>`);
+	var root_3$l = from_html(`<div class="flex items-center gap-2 text-sm text-primary-foreground/70"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> You're subscribed!</div>`);
+	var root_4$f = from_html(`<p class="text-sm text-primary-foreground/50">Already subscribed.</p>`);
+	var root_6$f = from_html(`<p class="text-xs text-red-400">Something went wrong. Try again.</p>`);
+	var root_5$h = from_html(`<div class="flex w-full md:w-auto flex-col gap-1"><div class="flex"><input type="email" placeholder="Email address" class="bg-transparent border border-primary-foreground/20 px-4 py-3 text-sm text-primary-foreground placeholder:text-primary-foreground/30 flex-1 md:w-64 focus:outline-none focus:border-primary-foreground/50 transition-colors"/> <button class="bg-primary-foreground text-foreground px-6 py-3 text-label tracking-[0.2em] hover:bg-primary-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60"> </button></div> <!></div>`);
+	var root_7$a = from_html(`<a target="_blank" rel="noopener noreferrer" class="text-xs text-primary-foreground/30 hover:text-primary-foreground/60 transition-colors capitalize"> </a>`);
+	var root$f = from_html(`<footer class="bg-foreground text-primary-foreground px-6 md:px-10 pt-16 pb-8"><div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16"><div class="col-span-2 md:col-span-1"><h3 class="font-display text-2xl font-bold mb-4"> </h3> <p class="text-sm text-primary-foreground/60 max-w-xs leading-relaxed"> </p></div> <!></div> <div class="border-t border-primary-foreground/10 pt-10 pb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div><p class="text-label text-primary-foreground/40 mb-2">NEWSLETTER</p> <p class="text-sm text-primary-foreground/60">Sign up for drops, exclusives &amp; community news.</p></div> <!></div> <div class="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4"><p class="text-xs text-primary-foreground/30"> </p> <div class="flex gap-6"></div></div></footer>`);
 
 	function Footer($$anchor, $$props) {
 		push($$props, false);
@@ -8281,7 +8407,7 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var footer = root$e();
+		var footer = root$f();
 		var div = child(footer);
 		var div_1 = child(div);
 		var h3 = child(div_1);
@@ -8296,14 +8422,14 @@
 			var $$array = user_derived(() => to_array(get($$item), 2));
 			let title = () => get($$array)[0];
 			let links = () => get($$array)[1];
-			var div_2 = root_1$i();
+			var div_2 = root_1$j();
 			var p_1 = child(div_2);
 			var text_2 = child(p_1);
 
 			var ul = sibling(p_1, 2);
 
 			each(ul, 5, links, index, ($$anchor, link) => {
-				var li = root_2$n();
+				var li = root_2$o();
 				var a = child(li);
 				var text_3 = child(a);
 
@@ -8324,19 +8450,19 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div_4 = root_3$k();
+				var div_4 = root_3$l();
 
 				append($$anchor, div_4);
 			};
 
 			var consequent_1 = ($$anchor) => {
-				var p_2 = root_4$d();
+				var p_2 = root_4$f();
 
 				append($$anchor, p_2);
 			};
 
 			var alternate = ($$anchor) => {
-				var div_5 = root_5$f();
+				var div_5 = root_5$h();
 				var div_6 = child(div_5);
 				var input = child(div_6);
 
@@ -8347,7 +8473,7 @@
 
 				{
 					var consequent_2 = ($$anchor) => {
-						var p_3 = root_6$d();
+						var p_3 = root_6$f();
 
 						append($$anchor, p_3);
 					};
@@ -8383,7 +8509,7 @@
 			var $$array_1 = user_derived(() => to_array(get($$item), 2));
 			let name = () => get($$array_1)[0];
 			let href = () => get($$array_1)[1];
-			var a_1 = root_7$8();
+			var a_1 = root_7$a();
 			var text_6 = child(a_1);
 
 			template_effect(() => {
@@ -8411,41 +8537,16 @@
 
 	delegate(['click', 'keydown']);
 
-	/**
-	 * Shared data access utility for public pages.
-	 * Always fetches from /api/data (MongoDB) — no localStorage, no store.json.
-	 */
-
-	let _cache = null;
-	let _promise = null;
-
-	/**
-	 * Load store data. Caches for the lifetime of the page visit so multiple
-	 * component onMounts don't fire redundant requests.
-	 * Pass `fresh = true` to bypass cache (e.g. after a write).
-	 */
-	async function loadStoreData(fresh = false) {
-	  if (!fresh && _cache) return _cache;
-	  if (!fresh && _promise) return _promise;
-
-	  _promise = fetch('/api/data')
-	    .then(r => {
-	      if (!r.ok) throw new Error(`Could not load store data: ${r.status}`);
-	      return r.json();
-	    })
-	    .then(d => { _cache = d; _promise = null; return d; })
-	    .catch(e => { _promise = null; throw e; });
-
-	  return _promise;
-	}
-
-	var root_1$h = from_html(`<meta name="description"/>`);
-	var root_2$m = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_3$j = from_html(`<div class="min-h-screen"><!> <!> <!> <!> <!> <!></div>`);
+	var root_1$i = from_html(`<meta name="description"/>`);
+	var root_2$n = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_3$k = from_html(`<div class="min-h-screen"><!> <!> <!> <!> <!> <!></div>`);
 
 	function Index($$anchor, $$props) {
 		push($$props, false);
 
+		const featuredId = mutable_source();
+		const allLookbooks = mutable_source();
+		const featuredLookbook = mutable_source();
 		let data = mutable_source(null);
 		let loading = mutable_source(true);
 
@@ -8459,19 +8560,40 @@
 			}
 		});
 
+		legacy_pre_effect(() => (get(data)), () => {
+			set(featuredId, get(data)?.site?.featuredLookbook);
+		});
+
+		legacy_pre_effect(() => (get(data)), () => {
+			set(allLookbooks, get(data)?.lookbooks ?? []);
+		});
+
+		legacy_pre_effect(() => (get(featuredId), get(allLookbooks)), () => {
+			set(featuredLookbook, get(featuredId)
+				? get(allLookbooks).find((lb) => lb.id === get(featuredId)) || get(allLookbooks)[0] || null
+				: get(allLookbooks)[0] || null);
+		});
+
+		legacy_pre_effect_reset();
 		init();
 
 		var fragment = comment();
 
 		head('1oaxlqy', ($$anchor) => {
-			var meta = root_1$h();
+			var meta = root_1$i();
 
-			template_effect(() => set_attribute(meta, 'content', get(data)
-				? get(data).site.description
-				: 'Streetwear rooted in culture, built for everyone else.'));
+			template_effect(() => set_attribute(meta, 'content', (
+				get(data),
+				untrack(() => get(data)
+					? get(data).site.description
+					: 'Streetwear rooted in culture, built for everyone else.')
+			)));
 
 			deferred_template_effect(() => {
-				$document.title = (get(data) ? get(data).site.name : 'Others.') ?? '';
+				$document.title = (
+					get(data),
+					untrack(() => get(data) ? get(data).site.name : 'Others.')
+				) ?? '';
 			});
 
 			append($$anchor, meta);
@@ -8481,22 +8603,22 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_2$m();
+				var div = root_2$n();
 
 				append($$anchor, div);
 			};
 
 			var alternate = ($$anchor) => {
-				var div_1 = root_3$j();
+				var div_1 = root_3$k();
 				var node_1 = child(div_1);
 
 				Navbar(node_1, {
 					get siteName() {
-						return get(data).site.name;
+						return (get(data), untrack(() => get(data).site.name));
 					},
 
 					get logo() {
-						return get(data).site.logo;
+						return (get(data), untrack(() => get(data).site.logo));
 					}
 				});
 
@@ -8504,7 +8626,7 @@
 
 				Hero(node_2, {
 					get hero() {
-						return get(data).site.hero;
+						return (get(data), untrack(() => get(data).site.hero));
 					}
 				});
 
@@ -8512,7 +8634,7 @@
 
 				AnnouncementBar(node_3, {
 					get text() {
-						return get(data).site.announcement;
+						return (get(data), untrack(() => get(data).site.announcement));
 					}
 				});
 
@@ -8520,23 +8642,31 @@
 
 				ProductGrid(node_4, {
 					get products() {
-						return get(data).products;
+						return (get(data), untrack(() => get(data).products));
 					},
 
 					get currency() {
-						return get(data).site.currency;
+						return (get(data), untrack(() => get(data).site.currency));
 					}
 				});
 
 				var node_5 = sibling(node_4, 2);
 
-				LookbookSection(node_5, {});
+				LookbookSection(node_5, {
+					get lookbook() {
+						return get(featuredLookbook);
+					},
+
+					get allLookbooks() {
+						return get(allLookbooks);
+					}
+				});
 
 				var node_6 = sibling(node_5, 2);
 
 				Footer(node_6, {
 					get site() {
-						return get(data).site;
+						return (get(data), untrack(() => get(data).site));
 					}
 				});
 				append($$anchor, div_1);
@@ -8551,9 +8681,9 @@
 		pop();
 	}
 
-	var root_1$g = from_html(`<button><!> </button>`);
-	var root_2$l = from_html(`<button class="fixed inset-0 bg-foreground/50 z-40 md:hidden w-full h-full cursor-default" aria-label="Close sidebar overlay"></button>`);
-	var root$d = from_html(`<div class="min-h-screen bg-background flex"><aside><div class="flex items-center justify-between px-5 py-4 border-b border-primary-foreground/10"><span class="font-display text-base font-bold">Others. Admin</span> <button class="md:hidden text-primary-foreground/60 hover:text-primary-foreground" aria-label="Close sidebar"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <nav class="px-2 py-3 space-y-0.5"></nav> <div class="absolute bottom-0 left-0 right-0 px-2 py-3 border-t border-primary-foreground/10"><a href="/" class="flex items-center gap-2.5 px-3 py-2 text-[11px] tracking-[0.1em] uppercase font-medium text-primary-foreground/50 hover:text-primary-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg> Back to Store</a></div></aside> <!> <main class="flex-1 md:ml-56"><header class="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border px-6 py-3 flex items-center gap-4"><button class="md:hidden text-foreground" aria-label="Open sidebar"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button> <h1 class="text-sm font-medium text-foreground capitalize"> </h1></header> <div class="p-6 md:p-8"><!></div></main></div>`);
+	var root_1$h = from_html(`<button><!> </button>`);
+	var root_2$m = from_html(`<button class="fixed inset-0 bg-foreground/50 z-40 md:hidden w-full h-full cursor-default" aria-label="Close sidebar overlay"></button>`);
+	var root$e = from_html(`<div class="min-h-screen bg-background flex"><aside><div class="flex items-center justify-between px-5 py-4 border-b border-primary-foreground/10"><span class="font-display text-base font-bold">Others. Admin</span> <button class="md:hidden text-primary-foreground/60 hover:text-primary-foreground" aria-label="Close sidebar"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <nav class="px-2 py-3 space-y-0.5"></nav> <div class="absolute bottom-0 left-0 right-0 px-2 py-3 border-t border-primary-foreground/10"><a href="/" class="flex items-center gap-2.5 px-3 py-2 text-[11px] tracking-[0.1em] uppercase font-medium text-primary-foreground/50 hover:text-primary-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg> Back to Store</a></div></aside> <!> <main class="flex-1 md:ml-56"><header class="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border px-6 py-3 flex items-center gap-4"><button class="md:hidden text-foreground" aria-label="Open sidebar"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button> <h1 class="text-sm font-medium text-foreground capitalize"> </h1></header> <div class="p-6 md:p-8"><!></div></main></div>`);
 
 	function AdminLayout($$anchor, $$props) {
 		push($$props, false);
@@ -8591,7 +8721,7 @@
 
 		init();
 
-		var div = root$d();
+		var div = root$e();
 		var aside = child(div);
 		var div_1 = child(aside);
 		var button = sibling(child(div_1), 2);
@@ -8605,7 +8735,7 @@
 				untrack(() => activeSection() === get(item).key)
 			));
 
-			var button_1 = root_1$g();
+			var button_1 = root_1$h();
 			var node = child(button_1);
 
 			html(node, () => (get(item), untrack(() => icons[get(item).key])));
@@ -8628,7 +8758,7 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var button_2 = root_2$l();
+				var button_2 = root_2$m();
 
 				delegated('click', button_2, () => set(sidebarOpen, false));
 				append($$anchor, button_2);
@@ -8671,10 +8801,10 @@
 
 	delegate(['click']);
 
-	var root_1$f = from_html(`<tr class="border-b border-border/50 hover:bg-muted/50 transition-colors"><td class="p-3 font-medium tabular-nums"> </td><td class="p-3 text-muted-foreground"> </td><td class="p-3"><span> </span></td><td class="p-3 text-right tabular-nums"> </td></tr>`);
-	var root_3$i = from_html(`<div class="flex items-center justify-between bg-card border border-border p-3"><div class="flex items-center gap-3"><img class="w-10 h-10 object-cover bg-secondary"/> <span class="text-sm font-medium"> </span></div> <span> </span></div>`);
-	var root_2$k = from_html(`<div><h3 class="text-lg font-display font-bold mb-4">Stock Alerts</h3> <div class="space-y-2"></div></div>`);
-	var root$c = from_html(`<div class="space-y-8"><div><h2 class="text-2xl font-display font-bold mb-1">Dashboard</h2> <p class="text-sm text-muted-foreground">Overview of your store performance.</p></div> <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200"><div class="flex items-start justify-between mb-3"><span class="text-label">REVENUE</span> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><line x1="12" x2="12" y1="2" y2="22"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div> <p class="text-2xl font-display font-bold text-foreground tabular-nums"> </p> <p class="text-xs text-muted-foreground mt-1">All time</p></div> <div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200"><div class="flex items-start justify-between mb-3"><span class="text-label">ORDERS</span> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg></div> <p class="text-2xl font-display font-bold text-foreground tabular-nums"> </p> <p class="text-xs text-muted-foreground mt-1"> </p></div> <div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200"><div class="flex items-start justify-between mb-3"><span class="text-label">PRODUCTS</span> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg></div> <p class="text-2xl font-display font-bold text-foreground tabular-nums"> </p> <p class="text-xs text-muted-foreground mt-1"> </p></div> <div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200"><div class="flex items-start justify-between mb-3"><span class="text-label">LOW STOCK</span> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg></div> <p class="text-2xl font-display font-bold text-foreground tabular-nums"> </p> <p class="text-xs text-muted-foreground mt-1">Items below 10 units</p></div></div> <div><h3 class="text-lg font-display font-bold mb-4">Recent Orders</h3> <div class="bg-card border border-border overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border"><th class="text-left text-label p-3">ORDER</th><th class="text-left text-label p-3">CUSTOMER</th><th class="text-left text-label p-3">STATUS</th><th class="text-right text-label p-3">TOTAL</th></tr></thead><tbody></tbody></table></div></div> <!></div>`);
+	var root_1$g = from_html(`<tr class="border-b border-border/50 hover:bg-muted/50 transition-colors"><td class="p-3 font-medium tabular-nums"> </td><td class="p-3 text-muted-foreground"> </td><td class="p-3"><span> </span></td><td class="p-3 text-right tabular-nums"> </td></tr>`);
+	var root_3$j = from_html(`<div class="flex items-center justify-between bg-card border border-border p-3"><div class="flex items-center gap-3"><img class="w-10 h-10 object-cover bg-secondary"/> <span class="text-sm font-medium"> </span></div> <span> </span></div>`);
+	var root_2$l = from_html(`<div><h3 class="text-lg font-display font-bold mb-4">Stock Alerts</h3> <div class="space-y-2"></div></div>`);
+	var root$d = from_html(`<div class="space-y-8"><div><h2 class="text-2xl font-display font-bold mb-1">Dashboard</h2> <p class="text-sm text-muted-foreground">Overview of your store performance.</p></div> <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200"><div class="flex items-start justify-between mb-3"><span class="text-label">REVENUE</span> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><line x1="12" x2="12" y1="2" y2="22"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div> <p class="text-2xl font-display font-bold text-foreground tabular-nums"> </p> <p class="text-xs text-muted-foreground mt-1">All time</p></div> <div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200"><div class="flex items-start justify-between mb-3"><span class="text-label">ORDERS</span> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg></div> <p class="text-2xl font-display font-bold text-foreground tabular-nums"> </p> <p class="text-xs text-muted-foreground mt-1"> </p></div> <div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200"><div class="flex items-start justify-between mb-3"><span class="text-label">PRODUCTS</span> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg></div> <p class="text-2xl font-display font-bold text-foreground tabular-nums"> </p> <p class="text-xs text-muted-foreground mt-1"> </p></div> <div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200"><div class="flex items-start justify-between mb-3"><span class="text-label">LOW STOCK</span> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg></div> <p class="text-2xl font-display font-bold text-foreground tabular-nums"> </p> <p class="text-xs text-muted-foreground mt-1">Items below 10 units</p></div></div> <div><h3 class="text-lg font-display font-bold mb-4">Recent Orders</h3> <div class="bg-card border border-border overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border"><th class="text-left text-label p-3">ORDER</th><th class="text-left text-label p-3">CUSTOMER</th><th class="text-left text-label p-3">STATUS</th><th class="text-right text-label p-3">TOTAL</th></tr></thead><tbody></tbody></table></div></div> <!></div>`);
 
 	function AdminDashboard($$anchor, $$props) {
 		push($$props, false);
@@ -8732,7 +8862,7 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var div = root$c();
+		var div = root$d();
 		var div_1 = sibling(child(div), 2);
 		var div_2 = child(div_1);
 		var p_1 = sibling(child(div_2), 2);
@@ -8762,7 +8892,7 @@
 		var tbody = sibling(child(table));
 
 		each(tbody, 5, () => get(recentOrders), index, ($$anchor, order) => {
-			var tr = root_1$f();
+			var tr = root_1$g();
 			var td = child(tr);
 			var text_6 = child(td);
 
@@ -8804,11 +8934,11 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div_8 = root_2$k();
+				var div_8 = root_2$l();
 				var div_9 = sibling(child(div_8), 2);
 
 				each(div_9, 5, () => get(stockAlerts), index, ($$anchor, p) => {
-					var div_10 = root_3$i();
+					var div_10 = root_3$j();
 					var div_11 = child(div_10);
 					var img = child(div_11);
 					var span_1 = sibling(img, 2);
@@ -8867,14 +8997,14 @@
 		pop();
 	}
 
-	var root_1$e = from_html(`<p class="text-label"> </p>`);
-	var root_2$j = from_html(`<div class="w-5 h-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin mb-2"></div> <span class="text-xs text-muted-foreground">Uploading…</span>`, 1);
-	var root_3$h = from_html(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-2 text-muted-foreground"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg> <span class="text-xs text-muted-foreground"> </span>`, 1);
-	var root_4$c = from_html(`<p class="text-xs text-destructive"> </p>`);
-	var root_5$e = from_html(`<div class="relative w-24 h-24 border border-border"><img alt="Preview" class="w-full h-full object-cover"/> <button aria-label="Remove image" class="absolute top-0.5 right-0.5 bg-background text-foreground p-0.5 hover:bg-destructive hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div>`);
-	var root_7$7 = from_html(`<div class="relative w-20 h-20 border border-border flex-shrink-0"><img alt="Preview" class="w-full h-full object-cover"/> <button aria-label="Remove image" class="absolute top-0.5 right-0.5 bg-background text-foreground p-0.5 hover:bg-destructive hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div>`);
-	var root_6$c = from_html(`<div class="flex flex-wrap gap-2"></div>`);
-	var root$b = from_html(`<div class="space-y-3"><!> <label class="flex flex-col items-center justify-center w-full border border-dashed border-border px-4 py-6 cursor-pointer hover:bg-muted/50 transition-colors"><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"/> <!></label> <!> <!> <!></div>`);
+	var root_1$f = from_html(`<p class="text-label"> </p>`);
+	var root_2$k = from_html(`<div class="w-5 h-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin mb-2"></div> <span class="text-xs text-muted-foreground">Uploading…</span>`, 1);
+	var root_3$i = from_html(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-2 text-muted-foreground"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg> <span class="text-xs text-muted-foreground"> </span>`, 1);
+	var root_4$e = from_html(`<p class="text-xs text-destructive"> </p>`);
+	var root_5$g = from_html(`<div class="relative w-24 h-24 border border-border"><img alt="Preview" class="w-full h-full object-cover"/> <button aria-label="Remove image" class="absolute top-0.5 right-0.5 bg-background text-foreground p-0.5 hover:bg-destructive hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div>`);
+	var root_7$9 = from_html(`<div class="relative w-20 h-20 border border-border flex-shrink-0"><img alt="Preview" class="w-full h-full object-cover"/> <button aria-label="Remove image" class="absolute top-0.5 right-0.5 bg-background text-foreground p-0.5 hover:bg-destructive hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div>`);
+	var root_6$e = from_html(`<div class="flex flex-wrap gap-2"></div>`);
+	var root$c = from_html(`<div class="space-y-3"><!> <label class="flex flex-col items-center justify-center w-full border border-dashed border-border px-4 py-6 cursor-pointer hover:bg-muted/50 transition-colors"><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden"/> <!></label> <!> <!> <!></div>`);
 
 	function ImageUpload($$anchor, $$props) {
 		push($$props, false);
@@ -8945,12 +9075,12 @@
 
 		init();
 
-		var div = root$b();
+		var div = root$c();
 		var node = child(div);
 
 		{
 			var consequent = ($$anchor) => {
-				var p = root_1$e();
+				var p = root_1$f();
 				var text = child(p);
 				template_effect(() => set_text(text, label()));
 				append($$anchor, p);
@@ -8967,12 +9097,12 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var fragment = root_2$j();
+				var fragment = root_2$k();
 				append($$anchor, fragment);
 			};
 
 			var alternate = ($$anchor) => {
-				var fragment_1 = root_3$h();
+				var fragment_1 = root_3$i();
 				var span = sibling(first_child(fragment_1), 2);
 				var text_1 = child(span);
 				template_effect(() => set_text(text_1, `Drop image${multi() ? 's' : ''} or click to browse`));
@@ -8988,7 +9118,7 @@
 
 		{
 			var consequent_2 = ($$anchor) => {
-				var p_1 = root_4$c();
+				var p_1 = root_4$e();
 				var text_2 = child(p_1);
 				template_effect(() => set_text(text_2, get(error)));
 				append($$anchor, p_1);
@@ -9003,7 +9133,7 @@
 
 		{
 			var consequent_3 = ($$anchor) => {
-				var div_1 = root_5$e();
+				var div_1 = root_5$g();
 				var img = child(div_1);
 				var button = sibling(img, 2);
 				template_effect(() => set_attribute(img, 'src', value()));
@@ -9025,10 +9155,10 @@
 
 		{
 			var consequent_4 = ($$anchor) => {
-				var div_2 = root_6$c();
+				var div_2 = root_6$e();
 
 				each(div_2, 5, values, index, ($$anchor, url) => {
-					var div_3 = root_7$7();
+					var div_3 = root_7$9();
 					var img_1 = child(div_3);
 					var button_1 = sibling(img_1, 2);
 					template_effect(() => set_attribute(img_1, 'src', get(url)));
@@ -9056,9 +9186,9 @@
 
 	delegate(['change', 'click']);
 
-	var root_1$d = from_html(`<tr class="border-b border-border/50 hover:bg-muted/50 transition-colors"><td class="p-3"><div class="flex items-center gap-3"><img class="w-10 h-10 object-cover bg-secondary flex-shrink-0"/> <div><span class="font-medium block"> </span> <span class="text-xs text-muted-foreground"> </span></div></div></td><td class="p-3 text-muted-foreground capitalize hidden md:table-cell"> </td><td class="p-3 text-right tabular-nums"> </td><td class="p-3 text-right tabular-nums"> </td><td class="p-3 text-center"><span> </span></td><td class="p-3 text-right"><div class="flex items-center justify-end gap-1"><button aria-label="Edit product" class="p-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg></button> <button aria-label="Delete product" class="p-1.5 text-muted-foreground hover:text-destructive transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></div></td></tr>`);
-	var root_2$i = from_html(`<div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"><div class="bg-background border border-border w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-fade-up"><div class="flex items-center justify-between"><h3 class="text-lg font-display font-bold"> </h3> <button aria-label="Close" class="text-muted-foreground hover:text-foreground active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <div class="space-y-4"><div><label for="edit-name" class="text-label block mb-1.5">NAME</label> <input id="edit-name" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div class="grid grid-cols-2 gap-4"><div><label for="edit-category" class="text-label block mb-1.5">CATEGORY</label> <input id="edit-category" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="edit-price" class="text-label block mb-1.5"> </label> <input id="edit-price" type="number" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div></div> <div><label for="edit-desc" class="text-label block mb-1.5">DESCRIPTION</label> <textarea id="edit-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <!> <div class="grid grid-cols-2 gap-4"><div><label for="edit-stock" class="text-label block mb-1.5">STOCK</label> <input id="edit-stock" type="number" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div> <div><label for="edit-sizes" class="text-label block mb-1.5">SIZES (comma sep.)</label> <input id="edit-sizes" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div><label for="edit-colors" class="text-label block mb-1.5">COLORS (comma sep.)</label> <input id="edit-colors" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div class="flex items-center gap-6"><label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="accent-foreground"/> Mark as New</label> <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="accent-foreground"/> Featured on Homepage</label></div></div> <div class="flex gap-3 pt-2"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> SAVE</button> <button class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97]">CANCEL</button></div></div></div>`);
-	var root$a = from_html(`<div class="space-y-6"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Products</h2> <p class="text-sm text-muted-foreground"> </p></div> <button class="flex items-center gap-2 bg-foreground text-primary-foreground px-4 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD PRODUCT</button></div> <div class="bg-card border border-border overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border"><th class="text-left text-label p-3">PRODUCT</th><th class="text-left text-label p-3 hidden md:table-cell">CATEGORY</th><th class="text-right text-label p-3">PRICE</th><th class="text-right text-label p-3">STOCK</th><th class="text-center text-label p-3">STATUS</th><th class="text-right text-label p-3">ACTIONS</th></tr></thead><tbody></tbody></table></div> <!></div>`);
+	var root_1$e = from_html(`<tr class="border-b border-border/50 hover:bg-muted/50 transition-colors"><td class="p-3"><div class="flex items-center gap-3"><img class="w-10 h-10 object-cover bg-secondary flex-shrink-0"/> <div><span class="font-medium block"> </span> <span class="text-xs text-muted-foreground"> </span></div></div></td><td class="p-3 text-muted-foreground capitalize hidden md:table-cell"> </td><td class="p-3 text-right tabular-nums"> </td><td class="p-3 text-right tabular-nums"> </td><td class="p-3 text-center"><span> </span></td><td class="p-3 text-right"><div class="flex items-center justify-end gap-1"><button aria-label="Edit product" class="p-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg></button> <button aria-label="Delete product" class="p-1.5 text-muted-foreground hover:text-destructive transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></div></td></tr>`);
+	var root_2$j = from_html(`<div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"><div class="bg-background border border-border w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-fade-up"><div class="flex items-center justify-between"><h3 class="text-lg font-display font-bold"> </h3> <button aria-label="Close" class="text-muted-foreground hover:text-foreground active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <div class="space-y-4"><div><label for="edit-name" class="text-label block mb-1.5">NAME</label> <input id="edit-name" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div class="grid grid-cols-2 gap-4"><div><label for="edit-category" class="text-label block mb-1.5">CATEGORY</label> <input id="edit-category" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="edit-price" class="text-label block mb-1.5"> </label> <input id="edit-price" type="number" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div></div> <div><label for="edit-desc" class="text-label block mb-1.5">DESCRIPTION</label> <textarea id="edit-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <!> <div class="grid grid-cols-2 gap-4"><div><label for="edit-stock" class="text-label block mb-1.5">STOCK</label> <input id="edit-stock" type="number" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div> <div><label for="edit-sizes" class="text-label block mb-1.5">SIZES (comma sep.)</label> <input id="edit-sizes" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div><label for="edit-colors" class="text-label block mb-1.5">COLORS (comma sep.)</label> <input id="edit-colors" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div class="flex items-center gap-6"><label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="accent-foreground"/> Mark as New</label> <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="accent-foreground"/> Featured on Homepage</label></div></div> <div class="flex gap-3 pt-2"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> SAVE</button> <button class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97]">CANCEL</button></div></div></div>`);
+	var root$b = from_html(`<div class="space-y-6"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Products</h2> <p class="text-sm text-muted-foreground"> </p></div> <button class="flex items-center gap-2 bg-foreground text-primary-foreground px-4 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD PRODUCT</button></div> <div class="bg-card border border-border overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border"><th class="text-left text-label p-3">PRODUCT</th><th class="text-left text-label p-3 hidden md:table-cell">CATEGORY</th><th class="text-right text-label p-3">PRICE</th><th class="text-right text-label p-3">STOCK</th><th class="text-center text-label p-3">STATUS</th><th class="text-right text-label p-3">ACTIONS</th></tr></thead><tbody></tbody></table></div> <!></div>`);
 
 	function AdminProducts($$anchor, $$props) {
 		push($$props, false);
@@ -9163,7 +9293,7 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var div = root$a();
+		var div = root$b();
 		var div_1 = child(div);
 		var div_2 = child(div_1);
 		var p_1 = sibling(child(div_2), 2);
@@ -9176,7 +9306,7 @@
 		var tbody = sibling(child(table));
 
 		each(tbody, 5, products, index, ($$anchor, p) => {
-			var tr = root_1$d();
+			var tr = root_1$e();
 			var td = child(tr);
 			var div_4 = child(td);
 			var img = child(div_4);
@@ -9250,7 +9380,7 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div_7 = root_2$i();
+				var div_7 = root_2$j();
 				var div_8 = child(div_7);
 				var div_9 = child(div_8);
 				var h3 = child(div_9);
@@ -9356,16 +9486,16 @@
 
 	delegate(['click', 'input']);
 
-	var root_1$c = with_script(from_html(`<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>`, 1));
-	var root_2$h = from_html(`<option> </option>`);
-	var root_4$b = from_html(`<button class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-green-600 text-white hover:bg-green-700 transition-colors active:scale-95">✓ ACCEPT</button> <button class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95">✕ REJECT</button>`, 1);
-	var root_5$d = from_html(`<option> </option>`);
-	var root_6$b = from_html(`<div class="flex gap-2 mt-1"><input placeholder="Rejection reason (optional)…" class="flex-1 bg-transparent border border-red-300 px-3 py-1.5 text-xs focus:outline-none"/> <button class="bg-red-600 text-white text-[10px] uppercase tracking-wider px-3 py-1.5 hover:bg-red-700 transition-colors">Confirm Reject</button> <button class="text-xs text-muted-foreground hover:text-foreground px-2 transition-colors">Cancel</button></div>`);
-	var root_8$8 = from_html(`<img alt="" class="w-6 h-6 object-cover bg-secondary"/>`);
-	var root_7$6 = from_html(`<div class="flex items-center justify-between text-sm"><span class="text-muted-foreground flex items-center gap-2"><!> <span> <span class="text-xs"> </span></span></span> <span class="tabular-nums"> </span></div>`);
-	var root_3$g = from_html(`<div class="bg-card border border-border p-5 space-y-4 animate-fade-in relative"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><p class="font-medium tabular-nums text-foreground"> </p> <p class="text-sm text-muted-foreground"> </p></div> <div class="flex flex-wrap items-center gap-2"><span> </span> <!> <select class="bg-transparent border border-border px-2 py-1 text-[10px] uppercase font-medium tracking-[0.1em] focus:outline-none focus:border-foreground transition-colors cursor-pointer ml-auto"></select> <button class="text-[10px] uppercase text-muted-foreground hover:text-foreground border border-border px-2 py-1 transition-colors">PDF</button></div> <!></div> <div class="border-t border-border/50 pt-3 space-y-2"></div> <div class="text-xs text-muted-foreground flex flex-col sm:flex-row gap-4 sm:items-center border-t border-border/50 pt-3"><div><span class="text-label">ADDRESS:</span> </div> <div><span class="text-label">EMAIL:</span> </div> <div><span class="text-label">PHONE:</span> </div> <div class="sm:hidden mt-2"><button class="text-[10px] uppercase text-muted-foreground hover:text-foreground underline transition-colors">Download PDF</button></div></div></div>`);
-	var root_9$6 = from_html(`<div class="py-12 border border-dashed border-border text-center"><p class="text-muted-foreground text-sm">No orders found for this filter.</p></div>`);
-	var root$9 = from_html(`<div class="space-y-6 max-w-4xl"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Orders</h2> <p class="text-sm text-muted-foreground"> </p></div> <select class="bg-transparent border border-border px-4 py-2 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer"><option>All Orders</option><!></select></div> <div class="space-y-4"><!> <!></div></div>`);
+	var root_1$d = with_script(from_html(`<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>`, 1));
+	var root_2$i = from_html(`<option> </option>`);
+	var root_4$d = from_html(`<button class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-green-600 text-white hover:bg-green-700 transition-colors active:scale-95">✓ ACCEPT</button> <button class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95">✕ REJECT</button>`, 1);
+	var root_5$f = from_html(`<option> </option>`);
+	var root_6$d = from_html(`<div class="flex gap-2 mt-1"><input placeholder="Rejection reason (optional)…" class="flex-1 bg-transparent border border-red-300 px-3 py-1.5 text-xs focus:outline-none"/> <button class="bg-red-600 text-white text-[10px] uppercase tracking-wider px-3 py-1.5 hover:bg-red-700 transition-colors">Confirm Reject</button> <button class="text-xs text-muted-foreground hover:text-foreground px-2 transition-colors">Cancel</button></div>`);
+	var root_8$a = from_html(`<img alt="" class="w-6 h-6 object-cover bg-secondary"/>`);
+	var root_7$8 = from_html(`<div class="flex items-center justify-between text-sm"><span class="text-muted-foreground flex items-center gap-2"><!> <span> <span class="text-xs"> </span></span></span> <span class="tabular-nums"> </span></div>`);
+	var root_3$h = from_html(`<div class="bg-card border border-border p-5 space-y-4 animate-fade-in relative"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><p class="font-medium tabular-nums text-foreground"> </p> <p class="text-sm text-muted-foreground"> </p></div> <div class="flex flex-wrap items-center gap-2"><span> </span> <!> <select class="bg-transparent border border-border px-2 py-1 text-[10px] uppercase font-medium tracking-[0.1em] focus:outline-none focus:border-foreground transition-colors cursor-pointer ml-auto"></select> <button class="text-[10px] uppercase text-muted-foreground hover:text-foreground border border-border px-2 py-1 transition-colors">PDF</button></div> <!></div> <div class="border-t border-border/50 pt-3 space-y-2"></div> <div class="text-xs text-muted-foreground flex flex-col sm:flex-row gap-4 sm:items-center border-t border-border/50 pt-3"><div><span class="text-label">ADDRESS:</span> </div> <div><span class="text-label">EMAIL:</span> </div> <div><span class="text-label">PHONE:</span> </div> <div class="sm:hidden mt-2"><button class="text-[10px] uppercase text-muted-foreground hover:text-foreground underline transition-colors">Download PDF</button></div></div></div>`);
+	var root_9$7 = from_html(`<div class="py-12 border border-dashed border-border text-center"><p class="text-muted-foreground text-sm">No orders found for this filter.</p></div>`);
+	var root$a = from_html(`<div class="space-y-6 max-w-4xl"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Orders</h2> <p class="text-sm text-muted-foreground"> </p></div> <select class="bg-transparent border border-border px-4 py-2 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer"><option>All Orders</option><!></select></div> <div class="space-y-4"><!> <!></div></div>`);
 
 	function AdminOrders($$anchor, $$props) {
 		push($$props, false);
@@ -9477,10 +9607,10 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var div = root$9();
+		var div = root$a();
 
 		head('roy1ce', ($$anchor) => {
-			var fragment = root_1$c();
+			var fragment = root_1$d();
 			append($$anchor, fragment);
 		});
 
@@ -9497,7 +9627,7 @@
 		var node = sibling(option);
 
 		each(node, 1, () => statusOptions, index, ($$anchor, s) => {
-			var option_1 = root_2$h();
+			var option_1 = root_2$i();
 			var text_1 = child(option_1);
 
 			var option_1_value = {};
@@ -9525,7 +9655,7 @@
 		var node_1 = child(div_3);
 
 		each(node_1, 1, () => get(filteredOrders), (order) => order.id, ($$anchor, order) => {
-			var div_4 = root_3$g();
+			var div_4 = root_3$h();
 			var div_5 = child(div_4);
 			var div_6 = child(div_5);
 			var p_1 = child(div_6);
@@ -9542,7 +9672,7 @@
 
 			{
 				var consequent = ($$anchor) => {
-					var fragment_1 = root_4$b();
+					var fragment_1 = root_4$d();
 					var button = first_child(fragment_1);
 					var button_1 = sibling(button, 2);
 
@@ -9575,7 +9705,7 @@
 				],
 				index,
 				($$anchor, s) => {
-					var option_2 = root_5$d();
+					var option_2 = root_5$f();
 					var text_5 = child(option_2);
 
 					var option_2_value = {};
@@ -9605,7 +9735,7 @@
 
 			{
 				var consequent_1 = ($$anchor) => {
-					var div_8 = root_6$b();
+					var div_8 = root_6$d();
 					var input = child(div_8);
 
 					var button_3 = sibling(input, 2);
@@ -9628,13 +9758,13 @@
 			var div_9 = sibling(div_5, 2);
 
 			each(div_9, 5, () => (get(order), untrack(() => get(order).items || [])), index, ($$anchor, item) => {
-				var div_10 = root_7$6();
+				var div_10 = root_7$8();
 				var span_1 = child(div_10);
 				var node_4 = child(span_1);
 
 				{
 					var consequent_2 = ($$anchor) => {
-						var img = root_8$8();
+						var img = root_8$a();
 
 						template_effect(() => set_attribute(img, 'src', (get(item), untrack(() => get(item).image))));
 						append($$anchor, img);
@@ -9745,7 +9875,7 @@
 
 		{
 			var consequent_3 = ($$anchor) => {
-				var div_16 = root_9$6();
+				var div_16 = root_9$7();
 
 				append($$anchor, div_16);
 			};
@@ -9770,10 +9900,15 @@
 
 	delegate(['click', 'change']);
 
-	var root_1$b = from_html(`<div class="flex items-center gap-3"><img alt="Logo" class="h-10 w-auto max-w-[120px] object-contain bg-secondary p-1"/> <button class="text-xs text-destructive hover:underline">Remove</button></div>`);
-	var root_2$g = from_html(`<div class="flex items-center gap-3 mb-2"><span class="text-xs text-muted-foreground truncate max-w-[200px]"> </span> <button class="text-xs text-destructive hover:underline">Remove</button></div>`);
-	var root_3$f = from_html(`<div><label class="text-label block mb-1.5"> </label> <input class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div>`);
-	var root$8 = from_html(`<div class="space-y-8 max-w-2xl"><div><h2 class="text-2xl font-display font-bold mb-1">Settings</h2> <p class="text-sm text-muted-foreground">Manage store settings, branding and content.</p></div> <div class="space-y-6"><div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">BRANDING</h3> <div><label for="s-name" class="text-label block mb-1.5">STORE NAME</label> <input id="s-name" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-tagline" class="text-label block mb-1.5">TAGLINE</label> <input id="s-tagline" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-desc" class="text-label block mb-1.5">DESCRIPTION</label> <textarea id="s-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div><p class="text-label block mb-1.5">LOGO IMAGE</p> <p class="text-xs text-muted-foreground mb-2">Upload a logo image. If none, the store name text is shown.</p> <div class="flex items-start gap-4"><!> <!></div></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">ANNOUNCEMENT BAR</h3> <div><label for="s-ann" class="text-label block mb-1.5">ANNOUNCEMENT TEXT</label> <input id="s-ann" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-cur" class="text-label block mb-1.5">CURRENCY SYMBOL</label> <input id="s-cur" class="w-full max-w-[80px] bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">SHIPPING</h3> <div class="grid grid-cols-2 gap-4"><div><label for="s-free-min" class="text-label block mb-1.5"> </label> <input id="s-free-min" type="number" min="0" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div> <div><label for="s-std-rate" class="text-label block mb-1.5"> </label> <input id="s-std-rate" type="number" min="0" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div></div> <p class="text-xs text-muted-foreground">Orders above the free shipping minimum qualify for free delivery. Checkout is restricted to South Africa only.</p></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">HERO SECTION</h3> <div><label for="h-label" class="text-label block mb-1.5">SEASON LABEL</label> <input id="h-label" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-heading" class="text-label block mb-1.5">HERO TITLE</label> <input id="h-heading" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-sub" class="text-label block mb-1.5">HERO SUBTITLE</label> <input id="h-sub" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-cta" class="text-label block mb-1.5">CTA BUTTON TEXT</label> <input id="h-cta" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-cta-link" class="text-label block mb-1.5">CTA BUTTON LINK</label> <input id="h-cta-link" placeholder="/products" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/> <p class="text-xs text-muted-foreground mt-1">Use a relative path (e.g. /products, /lookbook) or a full URL.</p></div> <div class="space-y-3"><p class="text-label">HERO BACKGROUND</p> <p class="text-xs text-muted-foreground">Upload an image <em>or</em> a video/GIF. If both are set, video takes priority.</p> <!> <div><p class="text-label block mb-1.5">VIDEO / GIF (MP4, WEBM, GIF)</p> <!> <label class="cursor-pointer inline-flex items-center gap-2 border border-border px-3 py-2 text-label hover:bg-muted transition-colors text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg> UPLOAD VIDEO/GIF <input type="file" accept="video/mp4,video/webm,image/gif" class="sr-only"/></label></div></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">SOCIAL LINKS</h3> <!></div> <div class="flex gap-3"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> </button> <button class="flex items-center gap-2 px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] text-destructive"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg> RESET ALL DATA</button></div></div></div>`);
+	var root_1$c = from_html(`<div class="flex items-center gap-3"><img alt="Logo" class="h-10 w-auto max-w-[120px] object-contain bg-secondary p-1"/> <button class="text-xs text-destructive hover:underline">Remove</button></div>`);
+	var root_2$h = from_html(`<div class="flex items-center gap-3 mb-2"><span class="text-xs text-muted-foreground truncate max-w-[200px]"> </span> <button class="text-xs text-destructive hover:underline">Remove</button></div>`);
+	var root_4$c = from_html(`<div class="flex items-center gap-3"><img alt="Maintenance BG" class="h-16 w-24 object-cover bg-secondary"/> <button class="text-xs text-destructive hover:underline">Remove</button></div>`);
+	var root_3$g = from_html(`<div class="pt-2 space-y-4 border-t border-border/50"><p class="text-[11px] uppercase tracking-widest text-red-500 font-medium">⚠ Maintenance mode is ON — visitors cannot access the store.</p> <div class="flex items-center justify-between bg-muted/40 px-4 py-3 rounded"><div><p class="text-sm font-medium">Collect email addresses</p> <p class="text-xs text-muted-foreground mt-0.5">Show a "Notify me" form on the maintenance page.</p></div> <button role="switch" aria-label="Toggle email collection"><span></span></button></div> <div><label for="maint-title" class="text-label block mb-1.5">MAINTENANCE TITLE</label> <input id="maint-title" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="maint-msg" class="text-label block mb-1.5">MAINTENANCE MESSAGE</label> <textarea id="maint-msg" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div><p class="text-label block mb-1.5">BACKGROUND IMAGE (optional)</p> <p class="text-xs text-muted-foreground mb-2">Shown behind the maintenance message. Recommended: a dark or moody image.</p> <div class="flex items-start gap-4"><!> <!></div></div></div>`);
+	var root_5$e = from_html(`<p class="text-xs text-muted-foreground italic">No lookbooks yet — create one in the Lookbook section first.</p>`);
+	var root_7$7 = from_html(`<option> </option>`);
+	var root_6$c = from_html(`<select class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer"><option>— Latest lookbook (default) —</option><!></select>`);
+	var root_8$9 = from_html(`<div><label class="text-label block mb-1.5"> </label> <input class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div>`);
+	var root$9 = from_html(`<div class="space-y-8 max-w-2xl"><div><h2 class="text-2xl font-display font-bold mb-1">Settings</h2> <p class="text-sm text-muted-foreground">Manage store settings, branding and content.</p></div> <div class="space-y-6"><div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">BRANDING</h3> <div><label for="s-name" class="text-label block mb-1.5">STORE NAME</label> <input id="s-name" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-tagline" class="text-label block mb-1.5">TAGLINE</label> <input id="s-tagline" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-desc" class="text-label block mb-1.5">DESCRIPTION</label> <textarea id="s-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div><p class="text-label block mb-1.5">LOGO IMAGE</p> <p class="text-xs text-muted-foreground mb-2">Upload a logo image. If none, the store name text is shown.</p> <div class="flex items-start gap-4"><!> <!></div></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">ANNOUNCEMENT BAR</h3> <div><label for="s-ann" class="text-label block mb-1.5">ANNOUNCEMENT TEXT</label> <input id="s-ann" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-cur" class="text-label block mb-1.5">CURRENCY SYMBOL</label> <input id="s-cur" class="w-full max-w-[80px] bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">SHIPPING</h3> <div class="grid grid-cols-2 gap-4"><div><label for="s-free-min" class="text-label block mb-1.5"> </label> <input id="s-free-min" type="number" min="0" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div> <div><label for="s-std-rate" class="text-label block mb-1.5"> </label> <input id="s-std-rate" type="number" min="0" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div></div> <p class="text-xs text-muted-foreground">Orders above the free shipping minimum qualify for free delivery. Checkout is restricted to South Africa only.</p></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">HERO SECTION</h3> <div><label for="h-label" class="text-label block mb-1.5">SEASON LABEL</label> <input id="h-label" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-heading" class="text-label block mb-1.5">HERO TITLE</label> <input id="h-heading" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-sub" class="text-label block mb-1.5">HERO SUBTITLE</label> <input id="h-sub" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-cta" class="text-label block mb-1.5">CTA BUTTON TEXT</label> <input id="h-cta" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-cta-link" class="text-label block mb-1.5">CTA BUTTON LINK</label> <input id="h-cta-link" placeholder="/products" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/> <p class="text-xs text-muted-foreground mt-1">Use a relative path (e.g. /products, /lookbook) or a full URL.</p></div> <div class="space-y-3"><p class="text-label">HERO BACKGROUND</p> <p class="text-xs text-muted-foreground">Upload an image <em>or</em> a video/GIF. If both are set, video takes priority.</p> <!> <div><p class="text-label block mb-1.5">VIDEO / GIF (MP4, WEBM, GIF)</p> <!> <label class="cursor-pointer inline-flex items-center gap-2 border border-border px-3 py-2 text-label hover:bg-muted transition-colors text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg> UPLOAD VIDEO/GIF <input type="file" accept="video/mp4,video/webm,image/gif" class="sr-only"/></label></div></div></div> <div><div class="flex items-start justify-between gap-4"><div><h3 class="text-label text-red-500">MAINTENANCE MODE</h3> <p class="text-xs text-muted-foreground mt-0.5">When enabled, visitors see a maintenance page. Admins can still access /admin.</p></div> <button role="switch" aria-label="Toggle maintenance mode"><span></span></button></div> <!></div> <div class="space-y-3 bg-card border border-border p-5"><h3 class="text-label">FEATURED LOOKBOOK</h3> <p class="text-xs text-muted-foreground">Choose which lookbook is shown on the homepage.</p> <!></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">SOCIAL LINKS</h3> <!></div> <div class="flex gap-3"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> </button> <button class="flex items-center gap-2 px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] text-destructive"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg> RESET ALL DATA</button></div></div></div>`);
 
 	function AdminSettings($$anchor, $$props) {
 		push($$props, false);
@@ -9781,12 +9916,71 @@
 		let site = prop($$props, 'site', 24, () => ({}));
 		let onUpdate = prop($$props, 'onUpdate', 8, () => {});
 		let onReset = prop($$props, 'onReset', 8, () => {});
+		let lookbooks = prop($$props, 'lookbooks', 24, () => []);
 		let form = mutable_source(JSON.parse(JSON.stringify(site())));
 
-		if (!get(form).shipping) mutate(form, get(form).shipping = { freeMinimum: 500, standardRate: 99, country: 'South Africa' });
-		if (!get(form).hero) mutate(form, get(form).hero = {});
-		if (get(form).hero.ctaLink === undefined) mutate(form, get(form).hero.ctaLink = '/products');
-		if (get(form).hero.video === undefined) mutate(form, get(form).hero.video = '');
+		if (!get(form).shipping) (
+			mutate(form, get(form).shipping = { freeMinimum: 500, standardRate: 99, country: 'South Africa' }),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (!get(form).hero) (
+			mutate(form, get(form).hero = {}),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).hero.ctaLink === undefined) (
+			mutate(form, get(form).hero.ctaLink = '/products'),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).hero.video === undefined) (
+			mutate(form, get(form).hero.video = ''),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (!get(form).maintenance) (
+			mutate(form, get(form).maintenance = {
+				enabled: false,
+				collectEmails: false,
+				title: "We'll be back soon.",
+				message: 'Our store is currently undergoing scheduled maintenance. Please check back shortly.',
+				background: ''
+			}),
+
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).maintenance.collectEmails === undefined) (
+			mutate(form, get(form).maintenance.collectEmails = false),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (!get(form).socials) (
+			mutate(form, get(form).socials = { instagram: '', twitter: '', tiktok: '' }),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).featuredLookbook === undefined) (
+			mutate(form, get(form).featuredLookbook = ''),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
 
 		let saved = mutable_source(false);
 
@@ -9798,7 +9992,7 @@
 
 		init();
 
-		var div = root$8();
+		var div = root$9();
 		var div_1 = sibling(child(div), 2);
 		var div_2 = child(div_1);
 		var div_3 = sibling(child(div_2), 2);
@@ -9817,11 +10011,18 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div_8 = root_1$b();
+				var div_8 = root_1$c();
 				var img = child(div_8);
 				var button = sibling(img, 2);
 				template_effect(() => set_attribute(img, 'src', (get(form), untrack(() => get(form).logo))));
-				delegated('click', button, () => mutate(form, get(form).logo = null));
+
+				delegated('click', button, () => (
+					mutate(form, get(form).logo = null),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				));
+
 				append($$anchor, div_8);
 			};
 
@@ -9840,7 +10041,13 @@
 				get value() {
 					return get($0);
 				},
-				onChange: (url) => mutate(form, get(form).logo = url)
+
+				onChange: (url) => (
+					mutate(form, get(form).logo = url),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				)
 			});
 		}
 
@@ -9889,7 +10096,13 @@
 			get value() {
 				return (get(form), untrack(() => get(form).hero.image));
 			},
-			onChange: (url) => mutate(form, get(form).hero.image = url)
+
+			onChange: (url) => (
+				mutate(form, get(form).hero.image = url),
+				invalidate_inner_signals(() => {
+					lookbooks();
+				})
+			)
 		});
 
 		var div_23 = sibling(node_2, 2);
@@ -9897,13 +10110,20 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var div_24 = root_2$g();
+				var div_24 = root_2$h();
 				var span = child(div_24);
 				var text_2 = child(span);
 
 				var button_1 = sibling(span, 2);
 				template_effect(() => set_text(text_2, (get(form), untrack(() => get(form).hero.video))));
-				delegated('click', button_1, () => mutate(form, get(form).hero.video = ''));
+
+				delegated('click', button_1, () => (
+					mutate(form, get(form).hero.video = ''),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				));
+
 				append($$anchor, div_24);
 			};
 
@@ -9916,10 +10136,189 @@
 		var input_11 = sibling(child(label_3), 2);
 
 		var div_25 = sibling(div_16, 2);
-		var node_4 = sibling(child(div_25), 2);
+		var div_26 = child(div_25);
+		var button_2 = sibling(child(div_26), 2);
+		var span_1 = child(button_2);
+
+		var node_4 = sibling(div_26, 2);
+
+		{
+			var consequent_3 = ($$anchor) => {
+				var div_27 = root_3$g();
+				var div_28 = sibling(child(div_27), 2);
+				var button_3 = sibling(child(div_28), 2);
+				var span_2 = child(button_3);
+
+				var div_29 = sibling(div_28, 2);
+				var input_12 = sibling(child(div_29), 2);
+
+				var div_30 = sibling(div_29, 2);
+				var textarea_1 = sibling(child(div_30), 2);
+				set_attribute(textarea_1, 'rows', 3);
+
+				var div_31 = sibling(div_30, 2);
+				var div_32 = sibling(child(div_31), 4);
+				var node_5 = child(div_32);
+
+				{
+					var consequent_2 = ($$anchor) => {
+						var div_33 = root_4$c();
+						var img_1 = child(div_33);
+						var button_4 = sibling(img_1, 2);
+
+						template_effect(() => set_attribute(img_1, 'src', (
+							get(form),
+							untrack(() => get(form).maintenance.background)
+						)));
+
+						delegated('click', button_4, () => (
+							mutate(form, get(form).maintenance.background = ''),
+							invalidate_inner_signals(() => {
+								lookbooks();
+							})
+						));
+
+						append($$anchor, div_33);
+					};
+
+					if_block(node_5, ($$render) => {
+						if ((
+							get(form),
+							untrack(() => get(form).maintenance.background)
+						)) $$render(consequent_2);
+					});
+				}
+
+				var node_6 = sibling(node_5, 2);
+
+				{
+					let $0 = derived_safe_equal(() => (
+						get(form),
+						untrack(() => get(form).maintenance.background || '')
+					));
+
+					ImageUpload(node_6, {
+						label: '',
+						get value() {
+							return get($0);
+						},
+
+						onChange: (url) => (
+							mutate(form, get(form).maintenance.background = url),
+							invalidate_inner_signals(() => {
+								lookbooks();
+							})
+						)
+					});
+				}
+
+				template_effect(() => {
+					set_attribute(button_3, 'aria-checked', (
+						get(form),
+						untrack(() => get(form).maintenance.collectEmails)
+					));
+
+					set_class(button_3, 1, `relative flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${(
+					get(form),
+					untrack(() => get(form).maintenance.collectEmails ? 'bg-foreground' : 'bg-muted')
+				) ?? ''}`);
+
+					set_class(span_2, 1, `absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${(
+					get(form),
+					untrack(() => get(form).maintenance.collectEmails ? 'translate-x-5' : 'translate-x-0')
+				) ?? ''}`);
+				});
+
+				delegated('click', button_3, () => (
+					mutate(form, get(form).maintenance.collectEmails = !get(form).maintenance.collectEmails),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				));
+
+				bind_value(input_12, () => get(form).maintenance.title, ($$value) => (
+					mutate(form, get(form).maintenance.title = $$value),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				));
+
+				bind_value(textarea_1, () => get(form).maintenance.message, ($$value) => (
+					mutate(form, get(form).maintenance.message = $$value),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				));
+
+				append($$anchor, div_27);
+			};
+
+			if_block(node_4, ($$render) => {
+				if ((
+					get(form),
+					untrack(() => get(form).maintenance.enabled)
+				)) $$render(consequent_3);
+			});
+		}
+
+		var div_34 = sibling(div_25, 2);
+		var node_7 = sibling(child(div_34), 4);
+
+		{
+			var consequent_4 = ($$anchor) => {
+				var p = root_5$e();
+
+				append($$anchor, p);
+			};
+
+			var alternate = ($$anchor) => {
+				var select = root_6$c();
+				var option = child(select);
+
+				option.value = option.__value = '';
+
+				var node_8 = sibling(option);
+
+				each(node_8, 1, lookbooks, index, ($$anchor, lb) => {
+					var option_1 = root_7$7();
+					var text_3 = child(option_1);
+
+					var option_1_value = {};
+
+					template_effect(() => {
+						set_text(text_3, (get(lb), untrack(() => get(lb).title)));
+
+						if (option_1_value !== (option_1_value = (get(lb), untrack(() => get(lb).id)))) {
+							option_1.value = (option_1.__value = (get(lb), untrack(() => get(lb).id))) ?? '';
+						}
+					});
+
+					append($$anchor, option_1);
+				});
+
+				bind_select_value(select, () => get(form).featuredLookbook, ($$value) => (
+					mutate(form, get(form).featuredLookbook = $$value),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				));
+
+				append($$anchor, select);
+			};
+
+			if_block(node_7, ($$render) => {
+				if ((
+					deep_read_state(lookbooks()),
+					untrack(() => lookbooks().length === 0)
+				)) $$render(consequent_4); else $$render(alternate, -1);
+			});
+		}
+
+		var div_35 = sibling(div_34, 2);
+		var node_9 = sibling(child(div_35), 2);
 
 		each(
-			node_4,
+			node_9,
 			0,
 			() => [
 				['instagram', 'Instagram'],
@@ -9931,47 +10330,145 @@
 				var $$array = user_derived(() => to_array($$item, 2));
 				let key = () => get($$array)[0];
 				let label = () => get($$array)[1];
-				var div_26 = root_3$f();
-				var label_4 = child(div_26);
-				var text_3 = child(label_4);
+				var div_36 = root_8$9();
+				var label_4 = child(div_36);
+				var text_4 = child(label_4);
 
-				var input_12 = sibling(label_4, 2);
+				var input_13 = sibling(label_4, 2);
 
 				template_effect(() => {
 					set_attribute(label_4, 'for', `social-${key() ?? ''}`);
-					set_text(text_3, label());
-					set_attribute(input_12, 'id', `social-${key() ?? ''}`);
+					set_text(text_4, label());
+					set_attribute(input_13, 'id', `social-${key() ?? ''}`);
 				});
 
-				bind_value(input_12, () => get(form).socials[key()], ($$value) => mutate(form, get(form).socials[key()] = $$value));
-				append($$anchor, div_26);
+				bind_value(input_13, () => get(form).socials[key()], ($$value) => (
+					mutate(form, get(form).socials[key()] = $$value),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				));
+
+				append($$anchor, div_36);
 			}
 		);
 
-		var div_27 = sibling(div_25, 2);
-		var button_2 = child(div_27);
-		var text_4 = sibling(child(button_2));
+		var div_37 = sibling(div_35, 2);
+		var button_5 = child(div_37);
+		var text_5 = sibling(child(button_5));
 
-		var button_3 = sibling(button_2, 2);
+		var button_6 = sibling(button_5, 2);
 
 		template_effect(() => {
 			set_text(text, `FREE SHIPPING MINIMUM (${(get(form), untrack(() => get(form).currency)) ?? ''})`);
 			set_text(text_1, `STANDARD RATE (${(get(form), untrack(() => get(form).currency)) ?? ''})`);
-			set_text(text_4, ` ${get(saved) ? 'SAVED!' : 'SAVE CHANGES'}`);
+
+			set_class(div_25, 1, `space-y-4 bg-card border ${(
+			get(form),
+			untrack(() => get(form).maintenance.enabled ? 'border-red-400' : 'border-border')
+		) ?? ''} p-5`);
+
+			set_attribute(button_2, 'aria-checked', (
+				get(form),
+				untrack(() => get(form).maintenance.enabled)
+			));
+
+			set_class(button_2, 1, `relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${(
+			get(form),
+			untrack(() => get(form).maintenance.enabled ? 'bg-red-500' : 'bg-muted')
+		) ?? ''}`);
+
+			set_class(span_1, 1, `absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${(
+			get(form),
+			untrack(() => get(form).maintenance.enabled ? 'translate-x-6' : 'translate-x-0')
+		) ?? ''}`);
+
+			set_text(text_5, ` ${get(saved) ? 'SAVED!' : 'SAVE CHANGES'}`);
 		});
 
-		bind_value(input, () => get(form).name, ($$value) => mutate(form, get(form).name = $$value));
-		bind_value(input_1, () => get(form).tagline, ($$value) => mutate(form, get(form).tagline = $$value));
-		bind_value(textarea, () => get(form).description, ($$value) => mutate(form, get(form).description = $$value));
-		bind_value(input_2, () => get(form).announcement, ($$value) => mutate(form, get(form).announcement = $$value));
-		bind_value(input_3, () => get(form).currency, ($$value) => mutate(form, get(form).currency = $$value));
-		bind_value(input_4, () => get(form).shipping.freeMinimum, ($$value) => mutate(form, get(form).shipping.freeMinimum = $$value));
-		bind_value(input_5, () => get(form).shipping.standardRate, ($$value) => mutate(form, get(form).shipping.standardRate = $$value));
-		bind_value(input_6, () => get(form).hero.label, ($$value) => mutate(form, get(form).hero.label = $$value));
-		bind_value(input_7, () => get(form).hero.heading, ($$value) => mutate(form, get(form).hero.heading = $$value));
-		bind_value(input_8, () => get(form).hero.subheading, ($$value) => mutate(form, get(form).hero.subheading = $$value));
-		bind_value(input_9, () => get(form).hero.cta, ($$value) => mutate(form, get(form).hero.cta = $$value));
-		bind_value(input_10, () => get(form).hero.ctaLink, ($$value) => mutate(form, get(form).hero.ctaLink = $$value));
+		bind_value(input, () => get(form).name, ($$value) => (
+			mutate(form, get(form).name = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_1, () => get(form).tagline, ($$value) => (
+			mutate(form, get(form).tagline = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(textarea, () => get(form).description, ($$value) => (
+			mutate(form, get(form).description = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_2, () => get(form).announcement, ($$value) => (
+			mutate(form, get(form).announcement = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_3, () => get(form).currency, ($$value) => (
+			mutate(form, get(form).currency = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_4, () => get(form).shipping.freeMinimum, ($$value) => (
+			mutate(form, get(form).shipping.freeMinimum = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_5, () => get(form).shipping.standardRate, ($$value) => (
+			mutate(form, get(form).shipping.standardRate = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_6, () => get(form).hero.label, ($$value) => (
+			mutate(form, get(form).hero.label = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_7, () => get(form).hero.heading, ($$value) => (
+			mutate(form, get(form).hero.heading = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_8, () => get(form).hero.subheading, ($$value) => (
+			mutate(form, get(form).hero.subheading = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_9, () => get(form).hero.cta, ($$value) => (
+			mutate(form, get(form).hero.cta = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_10, () => get(form).hero.ctaLink, ($$value) => (
+			mutate(form, get(form).hero.ctaLink = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
 
 		delegated('change', input_11, async (e) => {
 			const file = e.target.files[0];
@@ -9987,13 +10484,25 @@
 			if (res.ok) {
 				const { url } = await res.json();
 
-				mutate(form, get(form).hero.video = url);
+				(
+					mutate(form, get(form).hero.video = url),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				);
 			}
 		});
 
-		delegated('click', button_2, handleSave);
+		delegated('click', button_2, () => (
+			mutate(form, get(form).maintenance.enabled = !get(form).maintenance.enabled),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
 
-		delegated('click', button_3, function (...$$args) {
+		delegated('click', button_5, handleSave);
+
+		delegated('click', button_6, function (...$$args) {
 			onReset()?.apply(this, $$args);
 		});
 
@@ -10003,14 +10512,14 @@
 
 	delegate(['click', 'change']);
 
-	var root_2$f = from_html(`<img class="w-20 h-24 object-cover flex-shrink-0 bg-secondary"/>`);
-	var root_3$e = from_html(`<div class="w-20 h-24 bg-secondary flex-shrink-0 flex items-center justify-center text-muted-foreground text-xs">No cover</div>`);
-	var root_1$a = from_html(`<div class="bg-card border border-border p-4 flex gap-4 items-start"><!> <div class="flex-1 min-w-0"><p class="font-medium"> </p> <p class="text-xs text-muted-foreground mt-0.5"> </p> <p class="text-sm text-muted-foreground mt-1 truncate"> </p></div> <div class="flex gap-1 flex-shrink-0"><button aria-label="Edit lookbook" class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg></button> <button aria-label="Delete lookbook" class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button></div></div>`);
-	var root_4$a = from_html(`<div class="text-center py-16 border border-dashed border-border text-muted-foreground text-sm">No lookbooks yet. Click ADD LOOKBOOK to create one.</div>`);
-	var root_8$7 = from_html(`<input class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors font-mono"/>`);
-	var root_6$a = from_html(`<div class="border border-border p-3 mb-2 space-y-2"><div class="flex items-center justify-between"><span class="text-[10px] tracking-[0.15em] uppercase text-muted-foreground"> </span> <div class="flex items-center gap-1"><button aria-label="Move up" class="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"></path></svg></button> <button aria-label="Move down" class="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></button> <button aria-label="Remove item" class="p-1 text-muted-foreground hover:text-destructive"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div></div> <!> <input placeholder="Caption (optional)" class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"/></div>`);
-	var root_5$c = from_html(`<div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"><div class="bg-background border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-fade-up"><div class="flex items-center justify-between"><h3 class="text-lg font-display font-bold"> </h3> <button aria-label="Close" class="text-muted-foreground hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <div class="space-y-4"><div class="grid grid-cols-2 gap-4"><div><label for="lb-title" class="text-label block mb-1.5">TITLE</label> <input id="lb-title" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="lb-date" class="text-label block mb-1.5">DATE</label> <input id="lb-date" type="date" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div><label for="lb-desc" class="text-label block mb-1.5">DESCRIPTION</label> <textarea id="lb-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <!> <div><p class="text-label mb-3">MEDIA ITEMS <span class="text-muted-foreground font-normal normal-case text-xs"> </span></p> <!> <div class="flex gap-2 flex-wrap pt-1"><button class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD IMAGE</button> <button class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"></path><rect width="14" height="12" x="2" y="6" rx="2"></rect></svg> ADD VIDEO</button> <button class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 17a24.12 24.12 0 0 1 0-10"></path><path d="m10 15 5-3-5-3z"></path></svg> EMBED YT/VIMEO</button></div></div></div> <div class="flex gap-3 pt-2"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> SAVE</button> <button class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97]">CANCEL</button></div></div></div>`);
-	var root$7 = from_html(`<div class="space-y-6"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Lookbook</h2> <p class="text-sm text-muted-foreground"> </p></div> <button class="flex items-center gap-2 bg-foreground text-primary-foreground px-4 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD LOOKBOOK</button></div> <div class="grid gap-4"><!> <!></div> <!></div>`);
+	var root_2$g = from_html(`<img class="w-20 h-24 object-cover flex-shrink-0 bg-secondary"/>`);
+	var root_3$f = from_html(`<div class="w-20 h-24 bg-secondary flex-shrink-0 flex items-center justify-center text-muted-foreground text-xs">No cover</div>`);
+	var root_1$b = from_html(`<div class="bg-card border border-border p-4 flex gap-4 items-start"><!> <div class="flex-1 min-w-0"><p class="font-medium"> </p> <p class="text-xs text-muted-foreground mt-0.5"> </p> <p class="text-sm text-muted-foreground mt-1 truncate"> </p></div> <div class="flex gap-1 flex-shrink-0"><button aria-label="Edit lookbook" class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg></button> <button aria-label="Delete lookbook" class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button></div></div>`);
+	var root_4$b = from_html(`<div class="text-center py-16 border border-dashed border-border text-muted-foreground text-sm">No lookbooks yet. Click ADD LOOKBOOK to create one.</div>`);
+	var root_8$8 = from_html(`<input class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors font-mono"/>`);
+	var root_6$b = from_html(`<div class="border border-border p-3 mb-2 space-y-2"><div class="flex items-center justify-between"><span class="text-[10px] tracking-[0.15em] uppercase text-muted-foreground"> </span> <div class="flex items-center gap-1"><button aria-label="Move up" class="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"></path></svg></button> <button aria-label="Move down" class="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></button> <button aria-label="Remove item" class="p-1 text-muted-foreground hover:text-destructive"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div></div> <!> <input placeholder="Caption (optional)" class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"/></div>`);
+	var root_5$d = from_html(`<div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"><div class="bg-background border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-fade-up"><div class="flex items-center justify-between"><h3 class="text-lg font-display font-bold"> </h3> <button aria-label="Close" class="text-muted-foreground hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <div class="space-y-4"><div class="grid grid-cols-2 gap-4"><div><label for="lb-title" class="text-label block mb-1.5">TITLE</label> <input id="lb-title" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="lb-date" class="text-label block mb-1.5">DATE</label> <input id="lb-date" type="date" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div><label for="lb-desc" class="text-label block mb-1.5">DESCRIPTION</label> <textarea id="lb-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <!> <div><p class="text-label mb-3">MEDIA ITEMS <span class="text-muted-foreground font-normal normal-case text-xs"> </span></p> <!> <div class="flex gap-2 flex-wrap pt-1"><button class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD IMAGE</button> <button class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"></path><rect width="14" height="12" x="2" y="6" rx="2"></rect></svg> ADD VIDEO</button> <button class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 17a24.12 24.12 0 0 1 0-10"></path><path d="m10 15 5-3-5-3z"></path></svg> EMBED YT/VIMEO</button></div></div></div> <div class="flex gap-3 pt-2"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> SAVE</button> <button class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97]">CANCEL</button></div></div></div>`);
+	var root$8 = from_html(`<div class="space-y-6"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Lookbook</h2> <p class="text-sm text-muted-foreground"> </p></div> <button class="flex items-center gap-2 bg-foreground text-primary-foreground px-4 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD LOOKBOOK</button></div> <div class="grid gap-4"><!> <!></div> <!></div>`);
 
 	function AdminLookbook($$anchor, $$props) {
 		push($$props, false);
@@ -10081,7 +10590,7 @@
 
 		init();
 
-		var div = root$7();
+		var div = root$8();
 		var div_1 = child(div);
 		var div_2 = child(div_1);
 		var p = sibling(child(div_2), 2);
@@ -10098,12 +10607,12 @@
 				untrack(() => get(lb).coverImage ?? get(lb).items?.find((i) => i.type !== 'video')?.url ?? get(lb).images?.[0])
 			));
 
-			var div_4 = root_1$a();
+			var div_4 = root_1$b();
 			var node_1 = child(div_4);
 
 			{
 				var consequent = ($$anchor) => {
-					var img = root_2$f();
+					var img = root_2$g();
 
 					template_effect(() => {
 						set_attribute(img, 'src', get(cover));
@@ -10114,7 +10623,7 @@
 				};
 
 				var alternate = ($$anchor) => {
-					var div_5 = root_3$e();
+					var div_5 = root_3$f();
 
 					append($$anchor, div_5);
 				};
@@ -10169,7 +10678,7 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var div_8 = root_4$a();
+				var div_8 = root_4$b();
 
 				append($$anchor, div_8);
 			};
@@ -10186,7 +10695,7 @@
 
 		{
 			var consequent_3 = ($$anchor) => {
-				var div_9 = root_5$c();
+				var div_9 = root_5$d();
 				var div_10 = child(div_9);
 				var div_11 = child(div_10);
 				var h3 = child(div_11);
@@ -10231,7 +10740,7 @@
 				var node_5 = sibling(p_4, 2);
 
 				each(node_5, 1, () => (get(editing), untrack(() => get(editing).items)), index, ($$anchor, item, i) => {
-					var div_18 = root_6$a();
+					var div_18 = root_6$b();
 					var div_19 = child(div_18);
 					var span_1 = child(div_19);
 					var text_6 = child(span_1);
@@ -10258,7 +10767,7 @@
 						};
 
 						var alternate_1 = ($$anchor) => {
-							var input_2 = root_8$7();
+							var input_2 = root_8$8();
 
 							template_effect(() => {
 								set_value(input_2, (get(item), untrack(() => get(item).url)));
@@ -10357,11 +10866,11 @@
 
 	delegate(['click', 'input']);
 
-	var root_2$e = from_html(`<div class="w-px bg-border mx-1 self-stretch"></div>`);
-	var root_3$d = from_html(`<button type="button" class="px-2 py-1 text-xs font-medium hover:bg-muted rounded transition-colors min-w-[28px] text-center"> </button>`);
-	var root_4$9 = from_html(`<div class="w-3 h-3 border border-foreground/30 border-t-foreground rounded-full animate-spin"></div>`);
-	var root_5$b = from_svg(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>`);
-	var root$6 = from_html(`<div class="border border-border focus-within:border-foreground transition-colors"><div class="flex flex-wrap gap-0.5 p-2 border-b border-border bg-muted/40"><!> <button type="button" title="Insert image" class="px-2 py-1 text-xs font-medium hover:bg-muted rounded transition-colors flex items-center gap-1"><!> IMG</button> <button type="button" title="Insert video file" class="px-2 py-1 text-xs font-medium hover:bg-muted rounded transition-colors flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"></path><rect width="14" height="12" x="2" y="6" rx="2" ry="2"></rect></svg> VID</button> <button type="button" title="Embed YouTube/Vimeo" class="px-2 py-1 text-xs font-medium hover:bg-muted rounded transition-colors flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg> EMBED</button></div> <div contenteditable="true" class="min-h-[280px] p-4 text-sm focus:outline-none prose prose-sm max-w-none [&amp;_h2]:font-display [&amp;_h2]:font-bold [&amp;_h2]:text-xl [&amp;_h2]:my-3 [&amp;_h3]:font-display [&amp;_h3]:font-semibold [&amp;_h3]:text-lg [&amp;_h3]:my-2 [&amp;_p]:mb-3 [&amp;_ul]:list-disc [&amp;_ul]:ml-5 [&amp;_ol]:list-decimal [&amp;_ol]:ml-5 [&amp;_a]:underline [&amp;_a]:text-foreground [&amp;_img]:max-w-full [&amp;_img]:rounded [&amp;_video]:max-w-full"></div></div>`);
+	var root_2$f = from_html(`<div class="w-px bg-border mx-1 self-stretch"></div>`);
+	var root_3$e = from_html(`<button type="button" class="px-2 py-1 text-xs font-medium hover:bg-muted rounded transition-colors min-w-[28px] text-center"> </button>`);
+	var root_4$a = from_html(`<div class="w-3 h-3 border border-foreground/30 border-t-foreground rounded-full animate-spin"></div>`);
+	var root_5$c = from_svg(`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>`);
+	var root$7 = from_html(`<div class="border border-border focus-within:border-foreground transition-colors"><div class="flex flex-wrap gap-0.5 p-2 border-b border-border bg-muted/40"><!> <button type="button" title="Insert image" class="px-2 py-1 text-xs font-medium hover:bg-muted rounded transition-colors flex items-center gap-1"><!> IMG</button> <button type="button" title="Insert video file" class="px-2 py-1 text-xs font-medium hover:bg-muted rounded transition-colors flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"></path><rect width="14" height="12" x="2" y="6" rx="2" ry="2"></rect></svg> VID</button> <button type="button" title="Embed YouTube/Vimeo" class="px-2 py-1 text-xs font-medium hover:bg-muted rounded transition-colors flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg> EMBED</button></div> <div contenteditable="true" class="min-h-[280px] p-4 text-sm focus:outline-none prose prose-sm max-w-none [&amp;_h2]:font-display [&amp;_h2]:font-bold [&amp;_h2]:text-xl [&amp;_h2]:my-3 [&amp;_h3]:font-display [&amp;_h3]:font-semibold [&amp;_h3]:text-lg [&amp;_h3]:my-2 [&amp;_p]:mb-3 [&amp;_ul]:list-disc [&amp;_ul]:ml-5 [&amp;_ol]:list-decimal [&amp;_ol]:ml-5 [&amp;_a]:underline [&amp;_a]:text-foreground [&amp;_img]:max-w-full [&amp;_img]:rounded [&amp;_video]:max-w-full"></div></div>`);
 
 	function RichEditor($$anchor, $$props) {
 		push($$props, false);
@@ -10527,7 +11036,7 @@
 		var // server accepts video too via updated mimetype filter
 		// Convert YouTube watch URL to embed URL
 		// Convert Vimeo URL
-		div = root$6();
+		div = root$7();
 
 		var div_1 = child(div);
 		var node = child(div_1);
@@ -10538,13 +11047,13 @@
 
 			{
 				var consequent = ($$anchor) => {
-					var div_2 = root_2$e();
+					var div_2 = root_2$f();
 
 					append($$anchor, div_2);
 				};
 
 				var alternate = ($$anchor) => {
-					var button = root_3$d();
+					var button = root_3$e();
 					var text = child(button);
 
 					template_effect(() => {
@@ -10575,13 +11084,13 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var div_3 = root_4$9();
+				var div_3 = root_4$a();
 
 				append($$anchor, div_3);
 			};
 
 			var alternate_1 = ($$anchor) => {
-				var svg = root_5$b();
+				var svg = root_5$c();
 
 				append($$anchor, svg);
 			};
@@ -10607,11 +11116,11 @@
 
 	delegate(['click', 'input']);
 
-	var root_1$9 = from_html(`<tr class="border-b border-border/50 hover:bg-muted/50 transition-colors"><td class="p-3 font-medium"> </td><td class="p-3 text-muted-foreground hidden md:table-cell"> </td><td class="p-3 text-muted-foreground hidden md:table-cell"> </td><td class="p-3 text-center"><span> </span></td><td class="p-3 text-right"><div class="flex items-center justify-end gap-1"><button aria-label="Edit post" class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg></button> <button aria-label="Delete post" class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button></div></td></tr>`);
-	var root_2$d = from_html(`<tr><td colspan="5" class="p-8 text-center text-muted-foreground text-sm">No posts yet.</td></tr>`);
-	var root_4$8 = from_html(`<option> </option>`);
-	var root_3$c = from_html(`<div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"><div class="bg-background border border-border w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-fade-up"><div class="flex items-center justify-between"><h3 class="text-lg font-display font-bold"> </h3> <button aria-label="Close" class="text-muted-foreground hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <div class="space-y-4"><div><label for="post-title" class="text-label block mb-1.5">TITLE</label> <input id="post-title" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div class="grid grid-cols-2 gap-4"><div><label for="post-slug" class="text-label block mb-1.5">SLUG</label> <input id="post-slug" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors font-mono"/></div> <div><label for="post-cat" class="text-label block mb-1.5">CATEGORY</label> <select id="post-cat" class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"></select></div></div> <div class="grid grid-cols-2 gap-4"><div><label for="post-author" class="text-label block mb-1.5">AUTHOR</label> <input id="post-author" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="post-date" class="text-label block mb-1.5">DATE</label> <input id="post-date" type="date" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div><label for="post-excerpt" class="text-label block mb-1.5">EXCERPT</label> <textarea id="post-excerpt" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div><p class="text-label block mb-1.5">CONTENT</p> <!></div> <!> <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="accent-foreground"/> Published (visible on site)</label></div> <div class="flex gap-3 pt-2"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> SAVE</button> <button class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97]">CANCEL</button></div></div></div>`);
-	var root$5 = from_html(`<div class="space-y-6"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Community</h2> <p class="text-sm text-muted-foreground"> </p></div> <button class="flex items-center gap-2 bg-foreground text-primary-foreground px-4 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD POST</button></div> <div class="bg-card border border-border overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border"><th class="text-left text-label p-3">TITLE</th><th class="text-left text-label p-3 hidden md:table-cell">CATEGORY</th><th class="text-left text-label p-3 hidden md:table-cell">DATE</th><th class="text-center text-label p-3">STATUS</th><th class="text-right text-label p-3">ACTIONS</th></tr></thead><tbody><!><!></tbody></table></div> <!></div>`);
+	var root_1$a = from_html(`<tr class="border-b border-border/50 hover:bg-muted/50 transition-colors"><td class="p-3 font-medium"> </td><td class="p-3 text-muted-foreground hidden md:table-cell"> </td><td class="p-3 text-muted-foreground hidden md:table-cell"> </td><td class="p-3 text-center"><span> </span></td><td class="p-3 text-right"><div class="flex items-center justify-end gap-1"><button aria-label="Edit post" class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg></button> <button aria-label="Delete post" class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button></div></td></tr>`);
+	var root_2$e = from_html(`<tr><td colspan="5" class="p-8 text-center text-muted-foreground text-sm">No posts yet.</td></tr>`);
+	var root_4$9 = from_html(`<option> </option>`);
+	var root_3$d = from_html(`<div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4"><div class="bg-background border border-border w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-fade-up"><div class="flex items-center justify-between"><h3 class="text-lg font-display font-bold"> </h3> <button aria-label="Close" class="text-muted-foreground hover:text-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <div class="space-y-4"><div><label for="post-title" class="text-label block mb-1.5">TITLE</label> <input id="post-title" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div class="grid grid-cols-2 gap-4"><div><label for="post-slug" class="text-label block mb-1.5">SLUG</label> <input id="post-slug" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors font-mono"/></div> <div><label for="post-cat" class="text-label block mb-1.5">CATEGORY</label> <select id="post-cat" class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"></select></div></div> <div class="grid grid-cols-2 gap-4"><div><label for="post-author" class="text-label block mb-1.5">AUTHOR</label> <input id="post-author" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="post-date" class="text-label block mb-1.5">DATE</label> <input id="post-date" type="date" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div><label for="post-excerpt" class="text-label block mb-1.5">EXCERPT</label> <textarea id="post-excerpt" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div><p class="text-label block mb-1.5">CONTENT</p> <!></div> <!> <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" class="accent-foreground"/> Published (visible on site)</label></div> <div class="flex gap-3 pt-2"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> SAVE</button> <button class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97]">CANCEL</button></div></div></div>`);
+	var root$6 = from_html(`<div class="space-y-6"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Community</h2> <p class="text-sm text-muted-foreground"> </p></div> <button class="flex items-center gap-2 bg-foreground text-primary-foreground px-4 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD POST</button></div> <div class="bg-card border border-border overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border"><th class="text-left text-label p-3">TITLE</th><th class="text-left text-label p-3 hidden md:table-cell">CATEGORY</th><th class="text-left text-label p-3 hidden md:table-cell">DATE</th><th class="text-center text-label p-3">STATUS</th><th class="text-right text-label p-3">ACTIONS</th></tr></thead><tbody><!><!></tbody></table></div> <!></div>`);
 
 	function AdminCommunity($$anchor, $$props) {
 		push($$props, false);
@@ -10669,7 +11178,7 @@
 
 		init();
 
-		var div = root$5();
+		var div = root$6();
 		var div_1 = child(div);
 		var div_2 = child(div_1);
 		var p_1 = sibling(child(div_2), 2);
@@ -10683,7 +11192,7 @@
 		var node = child(tbody);
 
 		each(node, 1, community, index, ($$anchor, post) => {
-			var tr = root_1$9();
+			var tr = root_1$a();
 			var td = child(tr);
 			var text_1 = child(td);
 
@@ -10733,7 +11242,7 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var tr_1 = root_2$d();
+				var tr_1 = root_2$e();
 
 				append($$anchor, tr_1);
 			};
@@ -10750,7 +11259,7 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var div_5 = root_3$c();
+				var div_5 = root_3$d();
 				var div_6 = child(div_5);
 				var div_7 = child(div_6);
 				var h3 = child(div_7);
@@ -10770,7 +11279,7 @@
 				var select = sibling(child(div_12), 2);
 
 				each(select, 5, () => CATEGORIES, index, ($$anchor, c) => {
-					var option = root_4$8();
+					var option = root_4$9();
 					var text_6 = child(option);
 
 					var option_value = {};
@@ -10914,13 +11423,13 @@
 
 	delegate(['click', 'input']);
 
-	var root_1$8 = from_html(`<button> </button>`);
-	var root_2$c = from_html(`<div class="space-y-4"><p class="text-xs text-muted-foreground">Supports HTML. Use &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, etc.</p> <textarea class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-y font-mono"></textarea></div>`);
-	var root_4$7 = from_html(`<div class="border border-border p-4 space-y-3"><div class="flex items-center justify-between"><span class="text-label"></span> <button aria-label="Remove FAQ" class="text-muted-foreground hover:text-destructive"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <input placeholder="Question" class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"/> <textarea placeholder="Answer" class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div>`);
-	var root_3$b = from_html(`<div class="space-y-4"><!> <button class="flex items-center gap-2 border border-dashed border-border px-4 py-3 w-full text-label text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD QUESTION</button></div>`);
-	var root_6$9 = from_html(`<div class="flex gap-2 items-start"><input placeholder="Label (e.g. General Enquiries)" class="flex-1 bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"/> <input placeholder="Value (e.g. email or phone)" class="flex-1 bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"/> <button aria-label="Remove contact" class="p-2 text-muted-foreground hover:text-destructive transition-colors mt-0.5"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div>`);
-	var root_5$a = from_html(`<div class="space-y-4"><div><label for="contact-address" class="text-label block mb-1.5">ADDRESS</label> <textarea id="contact-address" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div class="space-y-3"><p class="text-label">CONTACT DETAILS</p> <!> <button class="flex items-center gap-2 border border-dashed border-border px-4 py-3 w-full text-label text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD CONTACT</button></div></div>`);
-	var root$4 = from_html(`<div class="space-y-6 max-w-3xl"><div><h2 class="text-2xl font-display font-bold mb-1">Pages</h2> <p class="text-sm text-muted-foreground">Edit public-facing informational pages.</p></div> <div class="flex gap-2 border-b border-border pb-4"></div> <!> <button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> </button></div>`);
+	var root_1$9 = from_html(`<button> </button>`);
+	var root_2$d = from_html(`<div class="space-y-4"><p class="text-xs text-muted-foreground">Supports HTML. Use &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, etc.</p> <textarea class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-y font-mono"></textarea></div>`);
+	var root_4$8 = from_html(`<div class="border border-border p-4 space-y-3"><div class="flex items-center justify-between"><span class="text-label"></span> <button aria-label="Remove FAQ" class="text-muted-foreground hover:text-destructive"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div> <input placeholder="Question" class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"/> <textarea placeholder="Answer" class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div>`);
+	var root_3$c = from_html(`<div class="space-y-4"><!> <button class="flex items-center gap-2 border border-dashed border-border px-4 py-3 w-full text-label text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD QUESTION</button></div>`);
+	var root_6$a = from_html(`<div class="flex gap-2 items-start"><input placeholder="Label (e.g. General Enquiries)" class="flex-1 bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"/> <input placeholder="Value (e.g. email or phone)" class="flex-1 bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"/> <button aria-label="Remove contact" class="p-2 text-muted-foreground hover:text-destructive transition-colors mt-0.5"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div>`);
+	var root_5$b = from_html(`<div class="space-y-4"><div><label for="contact-address" class="text-label block mb-1.5">ADDRESS</label> <textarea id="contact-address" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div class="space-y-3"><p class="text-label">CONTACT DETAILS</p> <!> <button class="flex items-center gap-2 border border-dashed border-border px-4 py-3 w-full text-label text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> ADD CONTACT</button></div></div>`);
+	var root$5 = from_html(`<div class="space-y-6 max-w-3xl"><div><h2 class="text-2xl font-display font-bold mb-1">Pages</h2> <p class="text-sm text-muted-foreground">Edit public-facing informational pages.</p></div> <div class="flex gap-2 border-b border-border pb-4"></div> <!> <button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> </button></div>`);
 
 	function AdminPages($$anchor, $$props) {
 		push($$props, false);
@@ -10981,7 +11490,7 @@
 
 		init();
 
-		var div = root$4();
+		var div = root$5();
 		var div_1 = sibling(child(div), 2);
 
 		each(
@@ -10997,7 +11506,7 @@
 				var $$array = user_derived(() => to_array($$item, 2));
 				let key = () => get($$array)[0];
 				let label = () => get($$array)[1];
-				var button = root_1$8();
+				var button = root_1$9();
 				var text = child(button);
 
 				template_effect(() => {
@@ -11017,7 +11526,7 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div_2 = root_2$c();
+				var div_2 = root_2$d();
 				var textarea = sibling(child(div_2), 2);
 				set_attribute(textarea, 'rows', 16);
 				bind_value(textarea, () => get(shipping), ($$value) => set(shipping, $$value));
@@ -11025,11 +11534,11 @@
 			};
 
 			var consequent_1 = ($$anchor) => {
-				var div_3 = root_3$b();
+				var div_3 = root_3$c();
 				var node_1 = child(div_3);
 
 				each(node_1, 1, () => get(faq), index, ($$anchor, item, i) => {
-					var div_4 = root_4$7();
+					var div_4 = root_4$8();
 					var div_5 = child(div_4);
 					var span = child(div_5);
 
@@ -11062,7 +11571,7 @@
 			};
 
 			var consequent_2 = ($$anchor) => {
-				var div_6 = root_5$a();
+				var div_6 = root_5$b();
 				var div_7 = child(div_6);
 				var textarea_2 = sibling(child(div_7), 2);
 				set_attribute(textarea_2, 'rows', 2);
@@ -11071,7 +11580,7 @@
 				var node_2 = sibling(child(div_8), 2);
 
 				each(node_2, 1, () => (get(contact), untrack(() => get(contact).details)), index, ($$anchor, detail, $$index_2) => {
-					var div_9 = root_6$9();
+					var div_9 = root_6$a();
 					var input_1 = child(div_9);
 
 					var input_2 = sibling(input_1, 2);
@@ -11113,10 +11622,10 @@
 
 	delegate(['click']);
 
-	var root_1$7 = from_html(`<button class="flex items-center gap-2 border border-border px-4 py-2.5 text-label tracking-[0.15em] hover:bg-muted transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg> EXPORT CSV</button>`);
-	var root_2$b = from_html(`<tr class="border-b border-border/50 hover:bg-muted/50 transition-colors"><td class="p-3 font-medium"> </td><td class="p-3 text-muted-foreground hidden md:table-cell"> </td><td class="p-3 text-right"><button aria-label="Remove subscriber" class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></td></tr>`);
-	var root_3$a = from_html(`<tr><td colspan="3" class="p-8 text-center text-muted-foreground text-sm">No subscribers yet. The newsletter form in the footer collects emails.</td></tr>`);
-	var root$3 = from_html(`<div class="space-y-6"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Newsletter Subscribers</h2> <p class="text-sm text-muted-foreground"> </p></div> <!></div> <div class="bg-card border border-border overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border"><th class="text-left text-label p-3">EMAIL</th><th class="text-left text-label p-3 hidden md:table-cell">DATE SUBSCRIBED</th><th class="text-right text-label p-3">REMOVE</th></tr></thead><tbody><!><!></tbody></table></div></div>`);
+	var root_1$8 = from_html(`<button class="flex items-center gap-2 border border-border px-4 py-2.5 text-label tracking-[0.15em] hover:bg-muted transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg> EXPORT CSV</button>`);
+	var root_2$c = from_html(`<tr class="border-b border-border/50 hover:bg-muted/50 transition-colors"><td class="p-3 font-medium"> </td><td class="p-3 text-muted-foreground hidden md:table-cell"> </td><td class="p-3 text-right"><button aria-label="Remove subscriber" class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></td></tr>`);
+	var root_3$b = from_html(`<tr><td colspan="3" class="p-8 text-center text-muted-foreground text-sm">No subscribers yet. The newsletter form in the footer collects emails.</td></tr>`);
+	var root$4 = from_html(`<div class="space-y-6"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Newsletter Subscribers</h2> <p class="text-sm text-muted-foreground"> </p></div> <!></div> <div class="bg-card border border-border overflow-x-auto"><table class="w-full text-sm"><thead><tr class="border-b border-border"><th class="text-left text-label p-3">EMAIL</th><th class="text-left text-label p-3 hidden md:table-cell">DATE SUBSCRIBED</th><th class="text-right text-label p-3">REMOVE</th></tr></thead><tbody><!><!></tbody></table></div></div>`);
 
 	function AdminSubscribers($$anchor, $$props) {
 		push($$props, false);
@@ -11147,7 +11656,7 @@
 
 		init();
 
-		var div = root$3();
+		var div = root$4();
 		var div_1 = child(div);
 		var div_2 = child(div_1);
 		var p = sibling(child(div_2), 2);
@@ -11157,7 +11666,7 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var button = root_1$7();
+				var button = root_1$8();
 
 				delegated('click', button, exportCSV);
 				append($$anchor, button);
@@ -11177,7 +11686,7 @@
 		var node_1 = child(tbody);
 
 		each(node_1, 1, subscribers, index, ($$anchor, sub) => {
-			var tr = root_2$b();
+			var tr = root_2$c();
 			var td = child(tr);
 			var text_1 = child(td);
 
@@ -11200,7 +11709,7 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var tr_1 = root_3$a();
+				var tr_1 = root_3$b();
 
 				append($$anchor, tr_1);
 			};
@@ -11227,12 +11736,12 @@
 
 	delegate(['click']);
 
-	var root_1$6 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_3$9 = from_html(`<p class="text-xs text-destructive"> </p>`);
-	var root_2$a = from_html(`<div class="flex min-h-screen items-center justify-center flex-col gap-4"><p class="text-muted-foreground">Could not connect to the database.</p> <!> <button class="border border-border px-4 py-2 text-sm hover:bg-muted transition-colors">Retry</button></div>`);
-	var root_5$9 = from_html(`<div class="fixed bottom-4 right-4 z-50 bg-destructive text-destructive-foreground px-4 py-2 text-sm shadow-lg animate-fade-up max-w-xs"> </div>`);
-	var root_6$8 = from_html(`<div class="fixed bottom-4 right-4 z-50 bg-foreground text-primary-foreground px-4 py-2 text-sm shadow-lg animate-fade-up flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"></path></svg> Saved to database</div>`);
-	var root_4$6 = from_html(`<!> <!> <!>`, 1);
+	var root_1$7 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_3$a = from_html(`<p class="text-xs text-destructive"> </p>`);
+	var root_2$b = from_html(`<div class="flex min-h-screen items-center justify-center flex-col gap-4"><p class="text-muted-foreground">Could not connect to the database.</p> <!> <button class="border border-border px-4 py-2 text-sm hover:bg-muted transition-colors">Retry</button></div>`);
+	var root_5$a = from_html(`<div class="fixed bottom-4 right-4 z-50 bg-destructive text-destructive-foreground px-4 py-2 text-sm shadow-lg animate-fade-up max-w-xs"> </div>`);
+	var root_6$9 = from_html(`<div class="fixed bottom-4 right-4 z-50 bg-foreground text-primary-foreground px-4 py-2 text-sm shadow-lg animate-fade-up flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"></path></svg> Saved to database</div>`);
+	var root_4$7 = from_html(`<!> <!> <!>`, 1);
 
 	function Admin($$anchor, $$props) {
 		push($$props, false);
@@ -11346,18 +11855,18 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_1$6();
+				var div = root_1$7();
 
 				append($$anchor, div);
 			};
 
 			var consequent_2 = ($$anchor) => {
-				var div_1 = root_2$a();
+				var div_1 = root_2$b();
 				var node_1 = sibling(child(div_1), 2);
 
 				{
 					var consequent_1 = ($$anchor) => {
-						var p = root_3$9();
+						var p = root_3$a();
 						var text = child(p);
 						template_effect(() => set_text(text, get(saveError)));
 						append($$anchor, p);
@@ -11374,12 +11883,12 @@
 			};
 
 			var alternate = ($$anchor) => {
-				var fragment_1 = root_4$6();
+				var fragment_1 = root_4$7();
 				var node_2 = first_child(fragment_1);
 
 				{
 					var consequent_3 = ($$anchor) => {
-						var div_2 = root_5$9();
+						var div_2 = root_5$a();
 						var text_1 = child(div_2);
 						template_effect(() => set_text(text_1, get(saveError)));
 						append($$anchor, div_2);
@@ -11394,7 +11903,7 @@
 
 				{
 					var consequent_4 = ($$anchor) => {
-						var div_3 = root_6$8();
+						var div_3 = root_6$9();
 
 						append($$anchor, div_3);
 					};
@@ -11491,6 +12000,10 @@
 									get site() {
 										return get(data).site;
 									},
+
+									get lookbooks() {
+										return get(data).lookbooks;
+									},
 									onUpdate: updateSite,
 									onReset: resetData
 								});
@@ -11520,12 +12033,12 @@
 
 	delegate(['click']);
 
-	var root_1$5 = from_html(`<meta name="description" content="Browse the full Others. collection — hoodies, tees, cargo pants, jackets and accessories."/>`);
-	var root_2$9 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_5$8 = from_html(`<button> </button>`);
-	var root_6$7 = from_html(`<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"></div>`);
-	var root_8$6 = from_html(`<div class="text-center py-24 text-muted-foreground">No products in this category.</div>`);
-	var root_3$8 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><div class="mb-10"><p class="text-label mb-2">Collection</p> <h1 class="text-4xl md:text-5xl font-display font-bold">All Products</h1></div> <div class="flex flex-wrap gap-2 mb-10 border-b border-border pb-6"><button> </button> <!></div> <!></div> <!></div>`);
+	var root_1$6 = from_html(`<meta name="description" content="Browse the full Others. collection — hoodies, tees, cargo pants, jackets and accessories."/>`);
+	var root_2$a = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_5$9 = from_html(`<button> </button>`);
+	var root_6$8 = from_html(`<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"></div>`);
+	var root_8$7 = from_html(`<div class="text-center py-24 text-muted-foreground">No products in this category.</div>`);
+	var root_3$9 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><div class="mb-10"><p class="text-label mb-2">Collection</p> <h1 class="text-4xl md:text-5xl font-display font-bold">All Products</h1></div> <div class="flex flex-wrap gap-2 mb-10 border-b border-border pb-6"><button> </button> <!></div> <!></div> <!></div>`);
 
 	function Products($$anchor, $$props) {
 		push($$props, false);
@@ -11557,7 +12070,7 @@
 		var fragment = comment();
 
 		head('1dxun1a', ($$anchor) => {
-			var meta = root_1$5();
+			var meta = root_1$6();
 
 			deferred_template_effect(() => {
 				$document.title = (
@@ -11573,13 +12086,13 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_2$9();
+				var div = root_2$a();
 
 				append($$anchor, div);
 			};
 
 			var alternate_1 = ($$anchor) => {
-				var div_1 = root_3$8();
+				var div_1 = root_3$9();
 				var node_1 = child(div_1);
 
 				Navbar(node_1, {
@@ -11610,7 +12123,7 @@
 
 					{
 						var consequent_1 = ($$anchor) => {
-							var button_1 = root_5$8();
+							var button_1 = root_5$9();
 							var text_1 = child(button_1);
 
 							template_effect(
@@ -11646,7 +12159,7 @@
 
 				{
 					var consequent_2 = ($$anchor) => {
-						var div_4 = root_6$7();
+						var div_4 = root_6$8();
 
 						each(div_4, 5, () => get(filtered), index, ($$anchor, product) => {
 							ProductCard($$anchor, {
@@ -11663,7 +12176,7 @@
 					};
 
 					var alternate = ($$anchor) => {
-						var div_5 = root_8$6();
+						var div_5 = root_8$7();
 
 						append($$anchor, div_5);
 					};
@@ -11704,18 +12217,18 @@
 
 	delegate(['click']);
 
-	var root_2$8 = from_html(`<meta name="description"/>`);
-	var root_4$5 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_5$7 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background flex-col gap-4"><p class="text-muted-foreground">Product not found.</p> <a href="/products" class="text-label border-b border-current">← Back to Shop</a></div>`);
-	var root_8$5 = from_html(`<button><img alt="" class="w-full h-full object-cover"/></button>`);
-	var root_7$5 = from_html(`<div class="flex gap-2 flex-wrap"></div>`);
-	var root_9$5 = from_html(`<span class="inline-block text-[10px] tracking-[0.2em] uppercase bg-foreground text-primary-foreground px-2 py-0.5 mb-3">New</span>`);
-	var root_11$2 = from_html(`<span class="text-xs border border-border px-3 py-1.5"> </span>`);
-	var root_10$4 = from_html(`<div><p class="text-label mb-3"> </p> <div class="flex gap-2"></div></div>`);
+	var root_2$9 = from_html(`<meta name="description"/>`);
+	var root_4$6 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_5$8 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background flex-col gap-4"><p class="text-muted-foreground">Product not found.</p> <a href="/products" class="text-label border-b border-current">← Back to Shop</a></div>`);
+	var root_8$6 = from_html(`<button><img alt="" class="w-full h-full object-cover"/></button>`);
+	var root_7$6 = from_html(`<div class="flex gap-2 flex-wrap"></div>`);
+	var root_9$6 = from_html(`<span class="inline-block text-[10px] tracking-[0.2em] uppercase bg-foreground text-primary-foreground px-2 py-0.5 mb-3">New</span>`);
+	var root_11$3 = from_html(`<span class="text-xs border border-border px-3 py-1.5"> </span>`);
+	var root_10$5 = from_html(`<div><p class="text-label mb-3"> </p> <div class="flex gap-2"></div></div>`);
 	var root_13$2 = from_html(`<button> </button>`);
-	var root_12$1 = from_html(`<div><p class="text-label mb-3">SIZE</p> <div class="flex flex-wrap gap-2"></div></div>`);
+	var root_12$2 = from_html(`<div><p class="text-label mb-3">SIZE</p> <div class="flex flex-wrap gap-2"></div></div>`);
 	var root_14$2 = from_html(`<p class="text-xs text-store-rust font-medium"> </p>`);
-	var root_6$6 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-6xl mx-auto"><nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/products" class="hover:text-foreground transition-colors">Shop</a> <span>/</span> <span class="text-foreground"> </span></nav> <div class="grid md:grid-cols-2 gap-10 lg:gap-16"><div class="space-y-3"><div class="aspect-[4/5] bg-secondary overflow-hidden"><img class="w-full h-full object-cover transition-opacity duration-300"/></div> <!></div> <div class="space-y-6"><div><!> <h1 class="text-3xl md:text-4xl font-display font-bold leading-tight mb-2"> </h1> <p class="text-2xl font-medium tabular-nums"> </p></div> <p class="text-sm text-muted-foreground leading-relaxed"> </p> <!> <!> <div class="space-y-3 pt-2"><button> </button> <a href="/cart" class="block w-full py-3.5 text-label tracking-[0.25em] text-center border border-border hover:bg-muted transition-colors">VIEW CART</a></div> <!></div></div></div> <!></div>`);
+	var root_6$7 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-6xl mx-auto"><nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/products" class="hover:text-foreground transition-colors">Shop</a> <span>/</span> <span class="text-foreground"> </span></nav> <div class="grid md:grid-cols-2 gap-10 lg:gap-16"><div class="space-y-3"><div class="aspect-[4/5] bg-secondary overflow-hidden"><img class="w-full h-full object-cover transition-opacity duration-300"/></div> <!></div> <div class="space-y-6"><div><!> <h1 class="text-3xl md:text-4xl font-display font-bold leading-tight mb-2"> </h1> <p class="text-2xl font-medium tabular-nums"> </p></div> <p class="text-sm text-muted-foreground leading-relaxed"> </p> <!> <!> <div class="space-y-3 pt-2"><button> </button> <a href="/cart" class="block w-full py-3.5 text-label tracking-[0.25em] text-center border border-border hover:bg-muted transition-colors">VIEW CART</a></div> <!></div></div></div> <!></div>`);
 
 	function Product($$anchor, $$props) {
 		push($$props, false);
@@ -11765,7 +12278,7 @@
 
 			{
 				var consequent = ($$anchor) => {
-					var meta = root_2$8();
+					var meta = root_2$9();
 
 					template_effect(() => set_attribute(meta, 'content', (get(product), untrack(() => get(product).description))));
 
@@ -11797,19 +12310,19 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var div = root_4$5();
+				var div = root_4$6();
 
 				append($$anchor, div);
 			};
 
 			var consequent_2 = ($$anchor) => {
-				var div_1 = root_5$7();
+				var div_1 = root_5$8();
 
 				append($$anchor, div_1);
 			};
 
 			var alternate_1 = ($$anchor) => {
-				var div_2 = root_6$6();
+				var div_2 = root_6$7();
 				var node_2 = child(div_2);
 
 				Navbar(node_2, {
@@ -11836,10 +12349,10 @@
 
 				{
 					var consequent_3 = ($$anchor) => {
-						var div_7 = root_7$5();
+						var div_7 = root_7$6();
 
 						each(div_7, 5, () => get(images), index, ($$anchor, img, i) => {
-							var button = root_8$5();
+							var button = root_8$6();
 
 							set_attribute(button, 'aria-label', `View image ${i + 1}`);
 
@@ -11867,7 +12380,7 @@
 
 				{
 					var consequent_4 = ($$anchor) => {
-						var span_1 = root_9$5();
+						var span_1 = root_9$6();
 
 						append($$anchor, span_1);
 					};
@@ -11890,14 +12403,14 @@
 
 				{
 					var consequent_5 = ($$anchor) => {
-						var div_10 = root_10$4();
+						var div_10 = root_10$5();
 						var p_3 = child(div_10);
 						var text_4 = child(p_3);
 
 						var div_11 = sibling(p_3, 2);
 
 						each(div_11, 5, () => (get(product), untrack(() => get(product).colors)), index, ($$anchor, color) => {
-							var span_2 = root_11$2();
+							var span_2 = root_11$3();
 							var text_5 = child(span_2);
 							template_effect(() => set_text(text_5, get(color)));
 							append($$anchor, span_2);
@@ -11918,7 +12431,7 @@
 
 				{
 					var consequent_6 = ($$anchor) => {
-						var div_12 = root_12$1();
+						var div_12 = root_12$2();
 						var div_13 = sibling(child(div_12), 2);
 
 						each(div_13, 5, () => (get(product), untrack(() => get(product).sizes)), index, ($$anchor, size) => {
@@ -12044,16 +12557,16 @@
 
 	delegate(['click']);
 
-	var root_1$4 = from_html(`<meta name="description" content="Browse the Others. lookbook — editorial photography and campaign imagery from our latest collections."/>`);
-	var root_2$7 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_6$5 = from_html(`<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy"/>`);
-	var root_7$4 = from_html(`<div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No cover</div>`);
-	var root_8$4 = from_html(`<span class="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm text-foreground text-[10px] tracking-[0.15em] uppercase px-2 py-1"> </span>`);
-	var root_9$4 = from_html(`<p class="text-sm text-muted-foreground mt-1 line-clamp-2"> </p>`);
-	var root_5$6 = from_html(`<button class="group text-left"><div class="aspect-[3/4] overflow-hidden bg-secondary mb-4 relative"><!> <!></div> <div><h2 class="font-display font-bold text-lg group-hover:underline underline-offset-2 transition-all"> </h2> <p class="text-xs text-muted-foreground mt-0.5"> </p> <!></div></button>`);
-	var root_4$4 = from_html(`<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>`);
-	var root_10$3 = from_html(`<div class="text-center py-24 text-muted-foreground">No lookbooks yet.</div>`);
-	var root_3$7 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><div class="mb-12"><p class="text-label mb-2">Editorial</p> <h1 class="text-4xl md:text-5xl font-display font-bold">Lookbook</h1></div> <!></div> <!></div>`);
+	var root_1$5 = from_html(`<meta name="description" content="Browse the Others. lookbook — editorial photography and campaign imagery from our latest collections."/>`);
+	var root_2$8 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_6$6 = from_html(`<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy"/>`);
+	var root_7$5 = from_html(`<div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No cover</div>`);
+	var root_8$5 = from_html(`<span class="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm text-foreground text-[10px] tracking-[0.15em] uppercase px-2 py-1"> </span>`);
+	var root_9$5 = from_html(`<p class="text-sm text-muted-foreground mt-1 line-clamp-2"> </p>`);
+	var root_5$7 = from_html(`<button class="group text-left"><div class="aspect-[3/4] overflow-hidden bg-secondary mb-4 relative"><!> <!></div> <div><h2 class="font-display font-bold text-lg group-hover:underline underline-offset-2 transition-all"> </h2> <p class="text-xs text-muted-foreground mt-0.5"> </p> <!></div></button>`);
+	var root_4$5 = from_html(`<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>`);
+	var root_10$4 = from_html(`<div class="text-center py-24 text-muted-foreground">No lookbooks yet.</div>`);
+	var root_3$8 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><div class="mb-12"><p class="text-label mb-2">Editorial</p> <h1 class="text-4xl md:text-5xl font-display font-bold">Lookbook</h1></div> <!></div> <!></div>`);
 
 	function Lookbook($$anchor, $$props) {
 		push($$props, false);
@@ -12078,7 +12591,7 @@
 		var fragment = comment();
 
 		head('zcrx70', ($$anchor) => {
-			var meta = root_1$4();
+			var meta = root_1$5();
 
 			deferred_template_effect(() => {
 				$document.title = get(data) ? `Lookbook — ${get(data).site.name}` : 'Lookbook';
@@ -12091,13 +12604,13 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_2$7();
+				var div = root_2$8();
 
 				append($$anchor, div);
 			};
 
 			var alternate_2 = ($$anchor) => {
-				var div_1 = root_3$7();
+				var div_1 = root_3$8();
 				var node_1 = child(div_1);
 
 				Navbar(node_1, {
@@ -12115,18 +12628,18 @@
 
 				{
 					var consequent_4 = ($$anchor) => {
-						var div_3 = root_4$4();
+						var div_3 = root_4$5();
 
 						each(div_3, 5, () => get(data).lookbooks, index, ($$anchor, lb) => {
 							const cover = derived_safe_equal(() => get(lb).coverImage ?? get(lb).items?.find((i) => i.type !== 'video')?.url ?? get(lb).images?.[0] ?? '');
 							const count = derived_safe_equal(() => (get(lb).items ?? get(lb).images ?? []).length);
-							var button = root_5$6();
+							var button = root_5$7();
 							var div_4 = child(button);
 							var node_3 = child(div_4);
 
 							{
 								var consequent_1 = ($$anchor) => {
-									var img = root_6$5();
+									var img = root_6$6();
 
 									template_effect(() => {
 										set_attribute(img, 'src', get(cover));
@@ -12137,7 +12650,7 @@
 								};
 
 								var alternate = ($$anchor) => {
-									var div_5 = root_7$4();
+									var div_5 = root_7$5();
 
 									append($$anchor, div_5);
 								};
@@ -12151,7 +12664,7 @@
 
 							{
 								var consequent_2 = ($$anchor) => {
-									var span = root_8$4();
+									var span = root_8$5();
 									var text = child(span);
 									template_effect(() => set_text(text, `${get(count) ?? ''} ${get(count) === 1 ? 'image' : 'images'}`));
 									append($$anchor, span);
@@ -12173,7 +12686,7 @@
 
 							{
 								var consequent_3 = ($$anchor) => {
-									var p_1 = root_9$4();
+									var p_1 = root_9$5();
 									var text_3 = child(p_1);
 									template_effect(() => set_text(text_3, get(lb).description));
 									append($$anchor, p_1);
@@ -12197,7 +12710,7 @@
 					};
 
 					var alternate_1 = ($$anchor) => {
-						var div_7 = root_10$3();
+						var div_7 = root_10$4();
 
 						append($$anchor, div_7);
 					};
@@ -12228,21 +12741,21 @@
 
 	delegate(['click']);
 
-	var root_3$6 = from_html(`<meta property="og:image"/>`);
-	var root_2$6 = from_html(`<meta name="description"/> <meta property="og:type" content="article"/> <meta property="og:title"/> <meta property="og:description"/> <!>`, 1);
-	var root_5$5 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_6$4 = from_html(`<div class="flex min-h-screen items-center justify-center flex-col gap-4"><p class="text-muted-foreground">Lookbook not found.</p> <a href="/lookbook" class="text-label border-b border-current">← Back to Lookbook</a></div>`);
-	var root_8$3 = from_html(`<p class="text-muted-foreground max-w-xl"> </p>`);
-	var root_10$2 = from_html(`<div class="relative" style="padding-bottom:56.25%;height:0;"><iframe class="absolute inset-0 w-full h-full" frameborder="0" allowfullscreen=""></iframe></div>`);
-	var root_11$1 = from_html(`<video controls="" class="w-full h-auto" preload="metadata"><track kind="captions"/></video>`, 2);
-	var root_12 = from_html(`<button aria-label="View full image" class="group w-full overflow-hidden bg-secondary block"><img class="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="lazy"/></button>`);
-	var root_13$1 = from_html(`<p class="text-xs text-muted-foreground mt-1.5 italic"> </p>`);
-	var root_9$3 = from_html(`<div class="break-inside-avoid"><!> <!></div>`);
+	var root_3$7 = from_html(`<meta property="og:image"/>`);
+	var root_2$7 = from_html(`<meta name="description"/> <meta property="og:type" content="article"/> <meta property="og:title"/> <meta property="og:description"/> <!>`, 1);
+	var root_5$6 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_6$5 = from_html(`<div class="flex min-h-screen items-center justify-center flex-col gap-4"><p class="text-muted-foreground">Lookbook not found.</p> <a href="/lookbook" class="text-label border-b border-current">← Back to Lookbook</a></div>`);
+	var root_8$4 = from_html(`<p class="text-muted-foreground max-w-xl"> </p>`);
+	var root_10$3 = from_html(`<div class="relative w-full" style="padding-bottom:56.25%;height:0;"><iframe class="absolute inset-0 w-full h-full" frameborder="0" allowfullscreen=""></iframe></div>`);
+	var root_11$2 = from_html(`<video controls="" class="w-full h-auto object-cover" preload="metadata"><track kind="captions"/></video>`, 2);
+	var root_12$1 = from_html(`<button aria-label="View full image" class="group w-full overflow-hidden bg-secondary block"><img class="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="lazy"/></button>`);
+	var root_13$1 = from_html(`<p class="text-xs text-muted-foreground mt-2 italic"> </p>`);
+	var root_9$4 = from_html(`<div class="break-inside-avoid"><!> <!></div>`);
 	var root_14$1 = from_html(`<div class="text-center py-24 text-muted-foreground">No media in this lookbook yet.</div>`);
-	var root_7$3 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><nav class="mb-6 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/lookbook" class="hover:text-foreground transition-colors">Lookbook</a> <span>/</span> <span class="text-foreground"> </span></nav> <div class="mb-12"><p class="text-label text-muted-foreground mb-2"> </p> <h1 class="text-4xl md:text-5xl font-display font-bold mb-4"> </h1> <!></div> <div class="columns-1 md:columns-2 lg:columns-3 gap-3 space-y-3"></div> <!> <div class="mt-14 pt-8 border-t border-border"><a href="/lookbook" class="text-label hover:opacity-60 transition-opacity">← All Lookbooks</a></div></div> <!></div>`);
+	var root_7$4 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><nav class="mb-6 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/lookbook" class="hover:text-foreground transition-colors">Lookbook</a> <span>/</span> <span class="text-foreground"> </span></nav> <div class="mb-12"><p class="text-label text-muted-foreground mb-2"> </p> <h1 class="text-4xl md:text-5xl font-display font-bold mb-4"> </h1> <!></div> <div class="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4"></div> <!> <div class="mt-14 pt-8 border-t border-border"><a href="/lookbook" class="text-label hover:opacity-60 transition-opacity">← All Lookbooks</a></div></div> <!></div>`);
 	var root_16$1 = from_html(`<button aria-label="Previous" class="absolute left-4 text-primary-foreground/70 hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m15 18-6-6 6-6"></path></svg></button> <button aria-label="Next" class="absolute right-12 text-primary-foreground/70 hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m9 18 6-6-6-6"></path></svg></button>`, 1);
 	var root_15$1 = from_html(`<div class="fixed inset-0 z-50 bg-foreground/95 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Image lightbox"><button aria-label="Close" class="absolute top-4 right-4 z-10 text-primary-foreground/70 hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button> <img class="max-h-[90vh] max-w-full object-contain"/> <!></div>`);
-	var root$2 = from_html(`<!> <!>`, 1);
+	var root$3 = from_html(`<!> <!>`, 1);
 
 	function LookbookDetail($$anchor, $$props) {
 		push($$props, false);
@@ -12258,7 +12771,7 @@
 			try {
 				set(data, await loadStoreData());
 
-				const lookbooks = ov?.lookbooks ?? base.lookbooks ?? [];
+				const lookbooks = get(data).lookbooks || [];
 
 				set(lb, lookbooks.find((l) => l.id === lookbookId()) ?? null);
 			} finally {
@@ -12281,7 +12794,7 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var fragment_2 = root$2();
+		var fragment_2 = root$3();
 
 		head('zdcrnd', ($$anchor) => {
 			var fragment = comment();
@@ -12289,7 +12802,7 @@
 
 			{
 				var consequent_1 = ($$anchor) => {
-					var fragment_1 = root_2$6();
+					var fragment_1 = root_2$7();
 					var meta = first_child(fragment_1);
 					var meta_1 = sibling(meta, 4);
 					var meta_2 = sibling(meta_1, 2);
@@ -12297,7 +12810,7 @@
 
 					{
 						var consequent = ($$anchor) => {
-							var meta_3 = root_3$6();
+							var meta_3 = root_3$7();
 
 							template_effect(() => set_attribute(meta_3, 'content', (
 								get(lb),
@@ -12349,19 +12862,19 @@
 
 		{
 			var consequent_2 = ($$anchor) => {
-				var div = root_5$5();
+				var div = root_5$6();
 
 				append($$anchor, div);
 			};
 
 			var consequent_3 = ($$anchor) => {
-				var div_1 = root_6$4();
+				var div_1 = root_6$5();
 
 				append($$anchor, div_1);
 			};
 
 			var alternate_2 = ($$anchor) => {
-				var div_2 = root_7$3();
+				var div_2 = root_7$4();
 				var node_3 = child(div_2);
 
 				Navbar(node_3, {
@@ -12392,7 +12905,7 @@
 
 				{
 					var consequent_4 = ($$anchor) => {
-						var p_1 = root_8$3();
+						var p_1 = root_8$4();
 						var text_3 = child(p_1);
 						template_effect(() => set_text(text_3, (get(lb), untrack(() => get(lb).description))));
 						append($$anchor, p_1);
@@ -12406,12 +12919,12 @@
 				var div_5 = sibling(div_4, 2);
 
 				each(div_5, 5, () => get(items), index, ($$anchor, item, i) => {
-					var div_6 = root_9$3();
+					var div_6 = root_9$4();
 					var node_5 = child(div_6);
 
 					{
 						var consequent_5 = ($$anchor) => {
-							var div_7 = root_10$2();
+							var div_7 = root_10$3();
 							var iframe = child(div_7);
 
 							template_effect(() => {
@@ -12425,7 +12938,7 @@
 						var d = user_derived(() => (get(item), untrack(() => isEmbed(get(item)))));
 
 						var consequent_6 = ($$anchor) => {
-							var video = root_11$1();
+							var video = root_11$2();
 
 							template_effect(() => set_attribute(video, 'src', (get(item), untrack(() => get(item).url))));
 							append($$anchor, video);
@@ -12434,7 +12947,7 @@
 						var d_1 = user_derived(() => (get(item), untrack(() => isVideo(get(item)))));
 
 						var alternate_1 = ($$anchor) => {
-							var button = root_12();
+							var button = root_12$1();
 							var img = child(button);
 
 							template_effect(() => {
@@ -12595,16 +13108,16 @@
 
 	delegate(['click']);
 
-	var root_1$3 = from_html(`<meta name="description" content="Stories, news, and culture from the Others. community. Collections, collaborations and announcements."/> <meta property="og:type" content="website"/> <meta property="og:title" content="Community — Others."/> <meta property="og:description" content="Stories, news, and culture from the Others. community."/>`, 1);
-	var root_2$5 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_5$4 = from_html(`<button> </button>`);
-	var root_4$3 = from_html(`<div class="flex flex-wrap gap-2 mb-10 border-b border-border pb-6"><button>ALL</button> <!></div>`);
-	var root_8$2 = from_html(`<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>`);
-	var root_9$2 = from_html(`<div class="w-full h-full flex items-center justify-center text-xs text-muted-foreground"> </div>`);
-	var root_7$2 = from_html(`<a class="group block cursor-pointer"><div class="aspect-[16/9] bg-secondary overflow-hidden mb-4"><!></div> <div><span class="text-label text-xs text-muted-foreground"> </span> <h2 class="text-lg font-display font-bold mt-1 mb-2 group-hover:underline underline-offset-2 transition-all"> </h2> <p class="text-sm text-muted-foreground line-clamp-2"> </p></div></a>`);
-	var root_6$3 = from_html(`<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8"></div>`);
-	var root_10$1 = from_html(`<div class="text-center py-24 text-muted-foreground">No posts yet.</div>`);
-	var root_3$5 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><div class="mb-10"><p class="text-label mb-2">Journal</p> <h1 class="text-4xl md:text-5xl font-display font-bold">Community</h1></div> <!> <!></div> <!></div>`);
+	var root_1$4 = from_html(`<meta name="description" content="Stories, news, and culture from the Others. community. Collections, collaborations and announcements."/> <meta property="og:type" content="website"/> <meta property="og:title" content="Community — Others."/> <meta property="og:description" content="Stories, news, and culture from the Others. community."/>`, 1);
+	var root_2$6 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_5$5 = from_html(`<button> </button>`);
+	var root_4$4 = from_html(`<div class="flex flex-wrap gap-2 mb-10 border-b border-border pb-6"><button>ALL</button> <!></div>`);
+	var root_8$3 = from_html(`<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>`);
+	var root_9$3 = from_html(`<div class="w-full h-full flex items-center justify-center text-xs text-muted-foreground"> </div>`);
+	var root_7$3 = from_html(`<a class="group block cursor-pointer"><div class="aspect-[16/9] bg-secondary overflow-hidden mb-4"><!></div> <div><span class="text-label text-xs text-muted-foreground"> </span> <h2 class="text-lg font-display font-bold mt-1 mb-2 group-hover:underline underline-offset-2 transition-all"> </h2> <p class="text-sm text-muted-foreground line-clamp-2"> </p></div></a>`);
+	var root_6$4 = from_html(`<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8"></div>`);
+	var root_10$2 = from_html(`<div class="text-center py-24 text-muted-foreground">No posts yet.</div>`);
+	var root_3$6 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><div class="mb-10"><p class="text-label mb-2">Journal</p> <h1 class="text-4xl md:text-5xl font-display font-bold">Community</h1></div> <!> <!></div> <!></div>`);
 
 	function Community($$anchor, $$props) {
 		push($$props, false);
@@ -12647,7 +13160,7 @@
 		var fragment_1 = comment();
 
 		head('ge4z2p', ($$anchor) => {
-			var fragment = root_1$3();
+			var fragment = root_1$4();
 
 			deferred_template_effect(() => {
 				$document.title = (
@@ -12663,13 +13176,13 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_2$5();
+				var div = root_2$6();
 
 				append($$anchor, div);
 			};
 
 			var alternate_2 = ($$anchor) => {
-				var div_1 = root_3$5();
+				var div_1 = root_3$6();
 				var node_1 = child(div_1);
 
 				Navbar(node_1, {
@@ -12687,12 +13200,12 @@
 
 				{
 					var consequent_1 = ($$anchor) => {
-						var div_3 = root_4$3();
+						var div_3 = root_4$4();
 						var button = child(div_3);
 						var node_3 = sibling(button, 2);
 
 						each(node_3, 1, () => get(categories), index, ($$anchor, cat) => {
-							var button_1 = root_5$4();
+							var button_1 = root_5$5();
 							var text = child(button_1);
 
 							template_effect(
@@ -12732,16 +13245,16 @@
 
 				{
 					var consequent_3 = ($$anchor) => {
-						var div_4 = root_6$3();
+						var div_4 = root_6$4();
 
 						each(div_4, 5, () => get(posts), index, ($$anchor, post) => {
-							var a = root_7$2();
+							var a = root_7$3();
 							var div_5 = child(a);
 							var node_5 = child(div_5);
 
 							{
 								var consequent_2 = ($$anchor) => {
-									var img = root_8$2();
+									var img = root_8$3();
 
 									template_effect(() => {
 										set_attribute(img, 'src', (get(post), untrack(() => get(post).image)));
@@ -12752,7 +13265,7 @@
 								};
 
 								var alternate = ($$anchor) => {
-									var div_6 = root_9$2();
+									var div_6 = root_9$3();
 									var text_1 = child(div_6);
 									template_effect(() => set_text(text_1, (get(post), untrack(() => get(post).category))));
 									append($$anchor, div_6);
@@ -12795,7 +13308,7 @@
 					};
 
 					var alternate_1 = ($$anchor) => {
-						var div_8 = root_10$1();
+						var div_8 = root_10$2();
 
 						append($$anchor, div_8);
 					};
@@ -12826,13 +13339,13 @@
 
 	delegate(['click']);
 
-	var root_3$4 = from_html(`<meta property="og:image"/>`);
-	var root_2$4 = from_html(`<meta name="description"/> <meta property="og:type" content="article"/> <meta property="og:title"/> <meta property="og:description"/> <!> <meta property="article:published_time"/> <meta property="article:author"/>`, 1);
-	var root_5$3 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_6$2 = from_html(`<div class="flex min-h-screen items-center justify-center flex-col gap-4"><p class="text-muted-foreground">Article not found.</p> <a href="/community" class="text-label border-b border-current">← Back to Community</a></div>`);
-	var root_8$1 = from_html(`<div class="aspect-[16/7] bg-secondary overflow-hidden mb-8"><img class="w-full h-full object-cover"/></div>`);
-	var root_9$1 = from_html(`<p class="text-lg text-muted-foreground mt-3 leading-relaxed"> </p>`);
-	var root_7$1 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-3xl mx-auto"><nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/community" class="hover:text-foreground transition-colors">Community</a> <span>/</span> <span class="text-foreground truncate max-w-[200px]"> </span></nav> <!> <header class="mb-8"><span class="text-label text-xs text-muted-foreground"> </span> <h1 class="text-3xl md:text-4xl font-display font-bold leading-tight mt-2"> </h1> <!></header> <article class="prose prose-sm max-w-none text-foreground [&amp;_h2]:font-display [&amp;_h2]:font-bold [&amp;_h2]:text-xl [&amp;_h2]:mt-6 [&amp;_h2]:mb-3 [&amp;_p]:text-muted-foreground [&amp;_p]:leading-relaxed [&amp;_p]:mb-4"></article> <div class="mt-12 pt-8 border-t border-border"><a href="/community" class="text-label hover:opacity-60 transition-opacity">← Back to Community</a></div></div> <!></div>`);
+	var root_3$5 = from_html(`<meta property="og:image"/>`);
+	var root_2$5 = from_html(`<meta name="description"/> <meta property="og:type" content="article"/> <meta property="og:title"/> <meta property="og:description"/> <!> <meta property="article:published_time"/> <meta property="article:author"/>`, 1);
+	var root_5$4 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_6$3 = from_html(`<div class="flex min-h-screen items-center justify-center flex-col gap-4"><p class="text-muted-foreground">Article not found.</p> <a href="/community" class="text-label border-b border-current">← Back to Community</a></div>`);
+	var root_8$2 = from_html(`<div class="aspect-[16/7] bg-secondary overflow-hidden mb-8"><img class="w-full h-full object-cover"/></div>`);
+	var root_9$2 = from_html(`<p class="text-lg text-muted-foreground mt-3 leading-relaxed"> </p>`);
+	var root_7$2 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-3xl mx-auto"><nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/community" class="hover:text-foreground transition-colors">Community</a> <span>/</span> <span class="text-foreground truncate max-w-[200px]"> </span></nav> <!> <header class="mb-8"><span class="text-label text-xs text-muted-foreground"> </span> <h1 class="text-3xl md:text-4xl font-display font-bold leading-tight mt-2"> </h1> <!></header> <article class="prose prose-sm max-w-none text-foreground [&amp;_h2]:font-display [&amp;_h2]:font-bold [&amp;_h2]:text-xl [&amp;_h2]:mt-6 [&amp;_h2]:mb-3 [&amp;_p]:text-muted-foreground [&amp;_p]:leading-relaxed [&amp;_p]:mb-4"></article> <div class="mt-12 pt-8 border-t border-border"><a href="/community" class="text-label hover:opacity-60 transition-opacity">← Back to Community</a></div></div> <!></div>`);
 
 	function Article($$anchor, $$props) {
 		push($$props, false);
@@ -12861,7 +13374,7 @@
 
 			{
 				var consequent_1 = ($$anchor) => {
-					var fragment_1 = root_2$4();
+					var fragment_1 = root_2$5();
 					var meta = first_child(fragment_1);
 					var meta_1 = sibling(meta, 4);
 					var meta_2 = sibling(meta_1, 2);
@@ -12869,7 +13382,7 @@
 
 					{
 						var consequent = ($$anchor) => {
-							var meta_3 = root_3$4();
+							var meta_3 = root_3$5();
 
 							template_effect(() => set_attribute(meta_3, 'content', (get(post), untrack(() => get(post).image))));
 							append($$anchor, meta_3);
@@ -12919,19 +13432,19 @@
 
 		{
 			var consequent_2 = ($$anchor) => {
-				var div = root_5$3();
+				var div = root_5$4();
 
 				append($$anchor, div);
 			};
 
 			var consequent_3 = ($$anchor) => {
-				var div_1 = root_6$2();
+				var div_1 = root_6$3();
 
 				append($$anchor, div_1);
 			};
 
 			var alternate_1 = ($$anchor) => {
-				var div_2 = root_7$1();
+				var div_2 = root_7$2();
 				var node_3 = child(div_2);
 
 				Navbar(node_3, {
@@ -12953,7 +13466,7 @@
 
 				{
 					var consequent_4 = ($$anchor) => {
-						var div_4 = root_8$1();
+						var div_4 = root_8$2();
 						var img = child(div_4);
 
 						template_effect(() => {
@@ -12980,7 +13493,7 @@
 
 				{
 					var consequent_5 = ($$anchor) => {
-						var p_1 = root_9$1();
+						var p_1 = root_9$2();
 						var text_3 = child(p_1);
 						template_effect(() => set_text(text_3, (get(post), untrack(() => get(post).excerpt))));
 						append($$anchor, p_1);
@@ -13021,23 +13534,23 @@
 		pop();
 	}
 
-	var root_2$3 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_4$2 = from_html(`<div class="flex flex-col items-center justify-center py-32 gap-6"><div class="w-10 h-10 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div> <p class="text-sm text-muted-foreground">Redirecting to secure payment…</p></div>`);
-	var root_5$2 = from_html(`<div class="text-center py-24"><div class="w-16 h-16 border-2 border-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg></div> <h1 class="text-3xl font-display font-bold mb-3">Payment Successful</h1> <p class="text-muted-foreground mb-2">Your order has been confirmed and is being processed.</p> <p class="text-sm text-muted-foreground mb-10">A confirmation will be sent to your email address.</p> <a href="/products" class="inline-block bg-foreground text-primary-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground/90 transition-colors">CONTINUE SHOPPING</a></div>`);
-	var root_6$1 = from_html(`<div class="text-center py-24"><div class="w-16 h-16 border-2 border-muted-foreground rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></div> <h1 class="text-3xl font-display font-bold mb-3">Payment Cancelled</h1> <p class="text-muted-foreground mb-10">Your payment was not completed. Your cart has been saved.</p> <a href="/cart" class="inline-block border border-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">BACK TO CART</a></div>`);
-	var root_8 = from_html(`<div class="text-center py-24"><p class="text-muted-foreground mb-6">Your cart is empty.</p> <a href="/products" class="inline-block border border-foreground px-8 py-3 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">SHOP NOW</a></div>`);
-	var root_10 = from_html(`<div class="flex gap-4 border-b border-border pb-4"><img class="w-20 h-24 object-cover bg-secondary flex-shrink-0"/> <div class="flex-1 min-w-0"><p class="font-medium"> </p> <p class="text-xs text-muted-foreground mt-0.5"> </p> <p class="text-sm font-medium mt-1 tabular-nums"> </p> <div class="flex items-center gap-2 mt-2"><button aria-label="Decrease quantity" class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">−</button> <span class="w-6 text-center text-sm tabular-nums"> </span> <button aria-label="Increase quantity" class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">+</button> <button aria-label="Remove item" class="ml-2 text-xs text-muted-foreground hover:text-destructive transition-colors">Remove</button></div></div> <p class="font-medium tabular-nums flex-shrink-0"> </p></div>`);
-	var root_11 = from_html(`<span class="text-green-600">Free</span>`);
+	var root_2$4 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_4$3 = from_html(`<div class="flex flex-col items-center justify-center py-32 gap-6"><div class="w-10 h-10 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div> <p class="text-sm text-muted-foreground">Redirecting to secure payment…</p></div>`);
+	var root_5$3 = from_html(`<div class="text-center py-24"><div class="w-16 h-16 border-2 border-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg></div> <h1 class="text-3xl font-display font-bold mb-3">Payment Successful</h1> <p class="text-muted-foreground mb-2">Your order has been confirmed and is being processed.</p> <p class="text-sm text-muted-foreground mb-10">A confirmation will be sent to your email address.</p> <a href="/products" class="inline-block bg-foreground text-primary-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground/90 transition-colors">CONTINUE SHOPPING</a></div>`);
+	var root_6$2 = from_html(`<div class="text-center py-24"><div class="w-16 h-16 border-2 border-muted-foreground rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></div> <h1 class="text-3xl font-display font-bold mb-3">Payment Cancelled</h1> <p class="text-muted-foreground mb-10">Your payment was not completed. Your cart has been saved.</p> <a href="/cart" class="inline-block border border-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">BACK TO CART</a></div>`);
+	var root_8$1 = from_html(`<div class="text-center py-24"><p class="text-muted-foreground mb-6">Your cart is empty.</p> <a href="/products" class="inline-block border border-foreground px-8 py-3 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">SHOP NOW</a></div>`);
+	var root_10$1 = from_html(`<div class="flex gap-4 border-b border-border pb-4"><img class="w-20 h-24 object-cover bg-secondary flex-shrink-0"/> <div class="flex-1 min-w-0"><p class="font-medium"> </p> <p class="text-xs text-muted-foreground mt-0.5"> </p> <p class="text-sm font-medium mt-1 tabular-nums"> </p> <div class="flex items-center gap-2 mt-2"><button aria-label="Decrease quantity" class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">−</button> <span class="w-6 text-center text-sm tabular-nums"> </span> <button aria-label="Increase quantity" class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">+</button> <button aria-label="Remove item" class="ml-2 text-xs text-muted-foreground hover:text-destructive transition-colors">Remove</button></div></div> <p class="font-medium tabular-nums flex-shrink-0"> </p></div>`);
+	var root_11$1 = from_html(`<span class="text-green-600">Free</span>`);
 	var root_13 = from_html(`<p class="text-xs text-muted-foreground"> </p>`);
-	var root_9 = from_html(`<div class="grid md:grid-cols-[1fr_320px] gap-10"><div class="space-y-4"></div> <div class="bg-card border border-border p-6 h-fit space-y-4"><h2 class="font-display font-bold text-lg">Order Summary</h2> <div class="space-y-2 text-sm"><div class="flex justify-between"><span class="text-muted-foreground">Subtotal</span><span class="tabular-nums"> </span></div> <div class="flex justify-between"><span class="text-muted-foreground">Shipping</span> <span><!></span></div> <!> <div class="border-t border-border pt-2 flex justify-between font-medium"><span>Total</span> <span class="tabular-nums"> </span></div></div> <div class="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Secured by PayFast · SA only</div> <button class="w-full py-3.5 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">CHECKOUT</button></div></div>`);
-	var root_7 = from_html(`<div class="mb-8"><h1 class="text-3xl md:text-4xl font-display font-bold">Your Cart</h1> <p class="text-sm text-muted-foreground mt-1"> </p></div> <!>`, 1);
+	var root_9$1 = from_html(`<div class="grid md:grid-cols-[1fr_320px] gap-10"><div class="space-y-4"></div> <div class="bg-card border border-border p-6 h-fit space-y-4"><h2 class="font-display font-bold text-lg">Order Summary</h2> <div class="space-y-2 text-sm"><div class="flex justify-between"><span class="text-muted-foreground">Subtotal</span><span class="tabular-nums"> </span></div> <div class="flex justify-between"><span class="text-muted-foreground">Shipping</span> <span><!></span></div> <!> <div class="border-t border-border pt-2 flex justify-between font-medium"><span>Total</span> <span class="tabular-nums"> </span></div></div> <div class="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Secured by PayFast · SA only</div> <button class="w-full py-3.5 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">CHECKOUT</button></div></div>`);
+	var root_7$1 = from_html(`<div class="mb-8"><h1 class="text-3xl md:text-4xl font-display font-bold">Your Cart</h1> <p class="text-sm text-muted-foreground mt-1"> </p></div> <!>`, 1);
 	var root_15 = from_html(`<option> </option>`);
 	var root_17 = from_html(`<p class="text-xs text-destructive"> </p>`);
 	var root_16 = from_html(`<div class="border border-destructive bg-destructive/5 px-4 py-3 space-y-1"><p class="text-sm font-medium text-destructive">Cannot complete checkout:</p> <!> <p class="text-xs text-muted-foreground mt-1">Please update your cart and try again.</p></div>`);
 	var root_18 = from_html(`<p class="text-sm text-destructive"> </p>`);
 	var root_19 = from_html(`<div class="flex gap-3 text-sm"><img class="w-12 h-12 object-cover bg-secondary flex-shrink-0"/> <div class="flex-1"><p class="font-medium"> </p> <p class="text-xs text-muted-foreground"> </p></div> <span class="tabular-nums"> </span></div>`);
 	var root_14 = from_html(`<div class="mb-8"><button class="text-xs text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"></path></svg> Back to cart</button> <h1 class="text-3xl md:text-4xl font-display font-bold">Delivery Details</h1> <p class="text-sm text-muted-foreground mt-1 flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg> South Africa delivery only</p></div> <div class="grid md:grid-cols-[1fr_320px] gap-10"><form class="space-y-6"><div class="space-y-4"><h2 class="text-label border-b border-border pb-3">CONTACT INFORMATION</h2> <div class="grid sm:grid-cols-2 gap-4"><div><label for="co-first" class="text-label block mb-1.5">FIRST NAME</label> <input id="co-first" required=""/></div> <div><label for="co-last" class="text-label block mb-1.5">LAST NAME</label> <input id="co-last" required=""/></div></div> <div class="grid sm:grid-cols-2 gap-4"><div><label for="co-email" class="text-label block mb-1.5">EMAIL</label> <input id="co-email" type="email" required=""/></div> <div><label for="co-phone" class="text-label block mb-1.5">PHONE</label> <input id="co-phone" type="tel" required=""/></div></div></div> <div class="space-y-4"><h2 class="text-label border-b border-border pb-3">DELIVERY ADDRESS</h2> <div><label for="co-addr" class="text-label block mb-1.5">STREET ADDRESS</label> <input id="co-addr" required=""/></div> <div class="grid sm:grid-cols-3 gap-4"><div class="sm:col-span-1"><label for="co-post" class="text-label block mb-1.5">POSTAL CODE</label> <input id="co-post" required=""/></div> <div class="sm:col-span-2"><label for="co-city" class="text-label block mb-1.5">CITY / SUBURB</label> <input id="co-city" required=""/></div></div> <div><label for="co-prov" class="text-label block mb-1.5">PROVINCE</label> <select id="co-prov" required="" class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"><option>Select province…</option><!></select></div> <div><p class="text-label block mb-1.5">COUNTRY</p> <div class="flex items-center gap-2 border border-border/50 bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">🇿🇦 South Africa <span class="ml-auto text-xs">(delivery locked to SA)</span></div></div></div> <!> <button type="submit" class="w-full py-4 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> </button> <p class="text-xs text-center text-muted-foreground">Powered by PayFast · Secured with 256-bit SSL</p></form> <div class="bg-card border border-border p-5 h-fit space-y-3"><h2 class="text-label">ORDER SUMMARY</h2> <!> <div class="border-t border-border pt-3 text-sm space-y-1"><div class="flex justify-between"><span class="text-muted-foreground">Shipping</span><span> </span></div> <div class="flex justify-between font-medium"><span>Total</span><span> </span></div></div></div></div>`, 1);
-	var root_3$3 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-5xl mx-auto"><!></div> <!></div>`);
+	var root_3$4 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-5xl mx-auto"><!></div> <!></div>`);
 
 	function Cart($$anchor, $$props) {
 		push($$props, false);
@@ -13195,13 +13708,13 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_2$3();
+				var div = root_2$4();
 
 				append($$anchor, div);
 			};
 
 			var alternate_2 = ($$anchor) => {
-				var div_1 = root_3$3();
+				var div_1 = root_3$4();
 				var node_1 = child(div_1);
 
 				Navbar(node_1, {
@@ -13219,13 +13732,13 @@
 
 				{
 					var consequent_1 = ($$anchor) => {
-						var div_3 = root_4$2();
+						var div_3 = root_4$3();
 
 						append($$anchor, div_3);
 					};
 
 					var consequent_2 = ($$anchor) => {
-						var div_4 = root_5$2();
+						var div_4 = root_5$3();
 						var a = sibling(child(div_4), 8);
 
 						delegated('click', a, (e) => {
@@ -13237,7 +13750,7 @@
 					};
 
 					var consequent_3 = ($$anchor) => {
-						var div_5 = root_6$1();
+						var div_5 = root_6$2();
 						var a_1 = sibling(child(div_5), 6);
 
 						delegated('click', a_1, (e) => {
@@ -13249,7 +13762,7 @@
 					};
 
 					var consequent_7 = ($$anchor) => {
-						var fragment_1 = root_7();
+						var fragment_1 = root_7$1();
 						var div_6 = first_child(fragment_1);
 						var p_1 = sibling(child(div_6), 2);
 						var text$1 = child(p_1);
@@ -13258,7 +13771,7 @@
 
 						{
 							var consequent_4 = ($$anchor) => {
-								var div_7 = root_8();
+								var div_7 = root_8$1();
 								var a_2 = sibling(child(div_7), 2);
 
 								delegated('click', a_2, (e) => {
@@ -13270,11 +13783,11 @@
 							};
 
 							var alternate_1 = ($$anchor) => {
-								var div_8 = root_9();
+								var div_8 = root_9$1();
 								var div_9 = child(div_8);
 
 								each(div_9, 5, $cart, index, ($$anchor, item) => {
-									var div_10 = root_10();
+									var div_10 = root_10$1();
 									var img = child(div_10);
 									var div_11 = sibling(img, 2);
 									var p_2 = child(div_11);
@@ -13334,7 +13847,7 @@
 
 								{
 									var consequent_5 = ($$anchor) => {
-										var span_3 = root_11();
+										var span_3 = root_11$1();
 
 										append($$anchor, span_3);
 									};
@@ -13676,9 +14189,9 @@
 
 	delegate(['click']);
 
-	var root_1$2 = from_html(`<meta name="description" content="Others. shipping policy, return information and delivery times."/>`);
-	var root_2$2 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_3$2 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-3xl mx-auto"><h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Shipping &amp; Returns</h1> <div class="prose prose-sm max-w-none text-foreground [&amp;_h2]:font-display [&amp;_h2]:font-bold [&amp;_h2]:text-xl [&amp;_h2]:mt-6 [&amp;_h2]:mb-3 [&amp;_p]:text-muted-foreground [&amp;_p]:leading-relaxed [&amp;_p]:mb-4"></div></div> <!></div>`);
+	var root_1$3 = from_html(`<meta name="description" content="Others. shipping policy, return information and delivery times."/>`);
+	var root_2$3 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_3$3 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-3xl mx-auto"><h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Shipping &amp; Returns</h1> <div class="prose prose-sm max-w-none text-foreground [&amp;_h2]:font-display [&amp;_h2]:font-bold [&amp;_h2]:text-xl [&amp;_h2]:mt-6 [&amp;_h2]:mb-3 [&amp;_p]:text-muted-foreground [&amp;_p]:leading-relaxed [&amp;_p]:mb-4"></div></div> <!></div>`);
 
 	function Shipping($$anchor, $$props) {
 		push($$props, false);
@@ -13699,7 +14212,7 @@
 		var fragment = comment();
 
 		head('aputeo', ($$anchor) => {
-			var meta = root_1$2();
+			var meta = root_1$3();
 
 			deferred_template_effect(() => {
 				$document.title = get(data)
@@ -13714,13 +14227,13 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_2$2();
+				var div = root_2$3();
 
 				append($$anchor, div);
 			};
 
 			var alternate = ($$anchor) => {
-				var div_1 = root_3$2();
+				var div_1 = root_3$3();
 				var node_1 = child(div_1);
 
 				Navbar(node_1, {
@@ -13757,12 +14270,12 @@
 		pop();
 	}
 
-	var root_1$1 = from_html(`<meta name="description" content="Frequently asked questions about Others. products, shipping, returns and more."/>`);
-	var root_2$1 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_5$1 = from_html(`<p class="pb-5 text-sm text-muted-foreground leading-relaxed animate-fade-in"> </p>`);
-	var root_4$1 = from_html(`<div><button class="w-full flex items-center justify-between py-5 text-left font-medium hover:text-foreground transition-colors"><span> </span> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m6 9 6 6 6-6"></path></svg></button> <!></div>`);
-	var root_6 = from_html(`<p class="py-8 text-muted-foreground text-sm">No FAQs yet.</p>`);
-	var root_3$1 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-3xl mx-auto"><h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Frequently Asked Questions</h1> <div class="space-y-0 divide-y divide-border"><!> <!></div></div> <!></div>`);
+	var root_1$2 = from_html(`<meta name="description" content="Frequently asked questions about Others. products, shipping, returns and more."/>`);
+	var root_2$2 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_5$2 = from_html(`<p class="pb-5 text-sm text-muted-foreground leading-relaxed animate-fade-in"> </p>`);
+	var root_4$2 = from_html(`<div><button class="w-full flex items-center justify-between py-5 text-left font-medium hover:text-foreground transition-colors"><span> </span> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m6 9 6 6 6-6"></path></svg></button> <!></div>`);
+	var root_6$1 = from_html(`<p class="py-8 text-muted-foreground text-sm">No FAQs yet.</p>`);
+	var root_3$2 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-3xl mx-auto"><h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Frequently Asked Questions</h1> <div class="space-y-0 divide-y divide-border"><!> <!></div></div> <!></div>`);
 
 	function FAQ($$anchor, $$props) {
 		push($$props, false);
@@ -13792,7 +14305,7 @@
 		var fragment = comment();
 
 		head('1s9hvqm', ($$anchor) => {
-			var meta = root_1$1();
+			var meta = root_1$2();
 
 			deferred_template_effect(() => {
 				$document.title = (
@@ -13808,13 +14321,13 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_2$1();
+				var div = root_2$2();
 
 				append($$anchor, div);
 			};
 
 			var alternate = ($$anchor) => {
-				var div_1 = root_3$1();
+				var div_1 = root_3$2();
 				var node_1 = child(div_1);
 
 				Navbar(node_1, {
@@ -13832,7 +14345,7 @@
 				var node_2 = child(div_3);
 
 				each(node_2, 1, () => get(faqItems), index, ($$anchor, item) => {
-					var div_4 = root_4$1();
+					var div_4 = root_4$2();
 					var button = child(div_4);
 					var span = child(button);
 					var text = child(span);
@@ -13843,7 +14356,7 @@
 
 					{
 						var consequent_1 = ($$anchor) => {
-							var p = root_5$1();
+							var p = root_5$2();
 							var text_1 = child(p);
 							template_effect(() => set_text(text_1, (get(item), untrack(() => get(item).answer))));
 							append($$anchor, p);
@@ -13876,7 +14389,7 @@
 
 				{
 					var consequent_2 = ($$anchor) => {
-						var p_1 = root_6();
+						var p_1 = root_6$1();
 
 						append($$anchor, p_1);
 					};
@@ -13907,11 +14420,11 @@
 
 	delegate(['click']);
 
-	var root_1 = from_html(`<meta name="description" content="Get in touch with the Others. team. Enquiries, returns, press and collaborations."/>`);
-	var root_2 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_4 = from_html(`<div><p class="text-label mb-1"> </p> <a class="text-sm hover:underline underline-offset-2 transition-all"> </a></div>`);
-	var root_5 = from_html(`<div><p class="text-label mb-1">FIND US</p> <address class="text-sm not-italic text-muted-foreground leading-relaxed"> </address></div>`);
-	var root_3 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-4xl mx-auto"><h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Contact</h1> <div class="grid md:grid-cols-2 gap-12"><div class="space-y-6"></div> <!></div></div> <!></div>`);
+	var root_1$1 = from_html(`<meta name="description" content="Get in touch with the Others. team. Enquiries, returns, press and collaborations."/>`);
+	var root_2$1 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
+	var root_4$1 = from_html(`<div><p class="text-label mb-1"> </p> <a class="text-sm hover:underline underline-offset-2 transition-all"> </a></div>`);
+	var root_5$1 = from_html(`<div><p class="text-label mb-1">FIND US</p> <address class="text-sm not-italic text-muted-foreground leading-relaxed"> </address></div>`);
+	var root_3$1 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-4xl mx-auto"><h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Contact</h1> <div class="grid md:grid-cols-2 gap-12"><div class="space-y-6"></div> <!></div></div> <!></div>`);
 
 	function Contact($$anchor, $$props) {
 		push($$props, false);
@@ -13938,7 +14451,7 @@
 		var fragment = comment();
 
 		head('1ffqsuu', ($$anchor) => {
-			var meta = root_1();
+			var meta = root_1$1();
 
 			deferred_template_effect(() => {
 				$document.title = (
@@ -13954,13 +14467,13 @@
 
 		{
 			var consequent = ($$anchor) => {
-				var div = root_2();
+				var div = root_2$1();
 
 				append($$anchor, div);
 			};
 
 			var alternate = ($$anchor) => {
-				var div_1 = root_3();
+				var div_1 = root_3$1();
 				var node_1 = child(div_1);
 
 				Navbar(node_1, {
@@ -13978,7 +14491,7 @@
 				var div_4 = child(div_3);
 
 				each(div_4, 5, () => (get(contact), untrack(() => get(contact).details)), index, ($$anchor, detail) => {
-					var div_5 = root_4();
+					var div_5 = root_4$1();
 					var p = child(div_5);
 					var text = child(p);
 
@@ -14013,7 +14526,7 @@
 
 				{
 					var consequent_1 = ($$anchor) => {
-						var div_6 = root_5();
+						var div_6 = root_5$1();
 						var address = sibling(child(div_6), 2);
 						var text_2 = child(address);
 						template_effect(() => set_text(text_2, (get(contact), untrack(() => get(contact).address))));
@@ -14044,7 +14557,7 @@
 		pop();
 	}
 
-	var root$1 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="text-center px-6"><p class="text-label mb-4">404</p> <h1 class="text-4xl font-display font-bold mb-6">Page Not Found</h1> <a href="/" class="inline-block border border-foreground px-8 py-3 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">GO HOME</a></div></div>`);
+	var root$2 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="text-center px-6"><p class="text-label mb-4">404</p> <h1 class="text-4xl font-display font-bold mb-6">Page Not Found</h1> <a href="/" class="inline-block border border-foreground px-8 py-3 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">GO HOME</a></div></div>`);
 
 	function NotFound($$anchor) {
 		function goHome(e) {
@@ -14053,7 +14566,7 @@
 			if (window.__navigate) window.__navigate('/');
 		}
 
-		var div = root$1();
+		var div = root$2();
 		var div_1 = child(div);
 		var a = sibling(child(div_1), 4);
 		delegated('click', a, goHome);
@@ -14061,6 +14574,307 @@
 	}
 
 	delegate(['click']);
+
+	var root_1 = from_html(`<meta name="robots" content="noindex"/>`);
+	var root_2 = from_html(`<div class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>`);
+	var root_3 = from_html(`<img class="h-10 w-auto mx-auto mb-10 object-contain drop-shadow"/>`);
+	var root_4 = from_html(`<p class="text-label tracking-[0.4em] mb-10 opacity-60"> </p>`);
+	var root_6 = from_html(`<div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"></path></svg> You're on the list — we'll notify you when we're back!</div>`);
+	var root_8 = from_html(`<p class="text-xs text-red-400 mt-2"> </p>`);
+	var root_7 = from_html(`<p class="text-xs opacity-60 mb-3 tracking-widest uppercase">Notify me when you're back</p> <form class="flex gap-2 max-w-sm mx-auto"><input type="email" required="" placeholder="your@email.com"/> <button type="submit" aria-label="Notify me"> </button></form> <!>`, 1);
+	var root_5 = from_html(`<div class="mt-10"><!></div>`);
+	var root_10 = from_html(`<a target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="Instagram"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>`);
+	var root_11 = from_html(`<a target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="X (Twitter)"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a>`);
+	var root_12 = from_html(`<a target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="TikTok"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg></a>`);
+	var root_9 = from_html(`<div class="flex items-center justify-center gap-6 mt-10"><!> <!> <!></div>`);
+	var root$1 = from_html(`<div class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-background"><!> <div><!> <div><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"></path></svg></div> <h1 class="font-display text-3xl md:text-4xl font-bold mb-5 leading-tight"> </h1> <p class="text-sm leading-relaxed opacity-75 max-w-sm mx-auto"> </p> <!> <div></div> <p class="text-xs mt-4 opacity-40 tracking-widest uppercase">Back Soon</p> <!></div></div>`);
+
+	function Maintenance($$anchor, $$props) {
+		push($$props, false);
+
+		let title = prop($$props, 'title', 8, "We'll be back soon.");
+		let message = prop($$props, 'message', 8, "Our store is currently undergoing scheduled maintenance. Please check back shortly.");
+		let background = prop($$props, 'background', 8, '');
+		let siteName = prop($$props, 'siteName', 8, 'Others.');
+		let logo = prop($$props, 'logo', 8, '');
+		let socials = prop($$props, 'socials', 24, () => ({}));
+		let collectEmails = prop($$props, 'collectEmails', 8, false);
+		let email = mutable_source('');
+		let submitted = mutable_source(false);
+		let submitting = mutable_source(false);
+		let submitError = mutable_source('');
+
+		async function handleSubmit(e) {
+			e.preventDefault();
+
+			if (!get(email) || get(submitting)) return;
+
+			set(submitting, true);
+			set(submitError, '');
+
+			try {
+				const res = await fetch('/api/newsletter', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ email: get(email) })
+				});
+
+				const body = await res.json();
+
+				if (!res.ok) throw new Error(body.error || 'Something went wrong.');
+
+				set(submitted, true);
+			} catch(err) {
+				set(submitError, err.message);
+			} finally {
+				set(submitting, false);
+			}
+		}
+
+		init();
+
+		var div = root$1();
+
+		head('1k05bxv', ($$anchor) => {
+			var meta = root_1();
+
+			deferred_template_effect(() => {
+				$document.title = `Maintenance — ${siteName() ?? ''}`;
+			});
+
+			append($$anchor, meta);
+		});
+
+		var node = child(div);
+
+		{
+			var consequent = ($$anchor) => {
+				var div_1 = root_2();
+
+				append($$anchor, div_1);
+			};
+
+			if_block(node, ($$render) => {
+				if (background()) $$render(consequent);
+			});
+		}
+
+		var div_2 = sibling(node, 2);
+		var node_1 = child(div_2);
+
+		{
+			var consequent_1 = ($$anchor) => {
+				var img = root_3();
+
+				template_effect(() => {
+					set_attribute(img, 'src', logo());
+					set_attribute(img, 'alt', siteName());
+				});
+
+				append($$anchor, img);
+			};
+
+			var alternate = ($$anchor) => {
+				var p = root_4();
+				var text = child(p);
+				template_effect(() => set_text(text, siteName()));
+				append($$anchor, p);
+			};
+
+			if_block(node_1, ($$render) => {
+				if (logo()) $$render(consequent_1); else $$render(alternate, -1);
+			});
+		}
+
+		var div_3 = sibling(node_1, 2);
+		var h1 = sibling(div_3, 2);
+		var text_1 = child(h1);
+
+		var p_1 = sibling(h1, 2);
+		var text_2 = child(p_1);
+
+		var node_2 = sibling(p_1, 2);
+
+		{
+			var consequent_4 = ($$anchor) => {
+				var div_4 = root_5();
+				var node_3 = child(div_4);
+
+				{
+					var consequent_2 = ($$anchor) => {
+						var div_5 = root_6();
+
+						template_effect(() => set_class(div_5, 1, `flex items-center justify-center gap-2 text-sm ${background() ? 'text-white' : 'text-foreground'} opacity-80`));
+						append($$anchor, div_5);
+					};
+
+					var alternate_1 = ($$anchor) => {
+						var fragment = root_7();
+						var form = sibling(first_child(fragment), 2);
+						var input = child(form);
+
+						var button = sibling(input, 2);
+						var text_3 = child(button);
+
+						var node_4 = sibling(form, 2);
+
+						{
+							var consequent_3 = ($$anchor) => {
+								var p_2 = root_8();
+								var text_4 = child(p_2);
+								template_effect(() => set_text(text_4, get(submitError)));
+								append($$anchor, p_2);
+							};
+
+							if_block(node_4, ($$render) => {
+								if (get(submitError)) $$render(consequent_3);
+							});
+						}
+
+						template_effect(() => {
+							set_class(input, 1, `flex-1 px-4 py-2.5 text-sm bg-transparent border focus:outline-none transition-colors
+                ${background()
+							? 'border-white/40 text-white placeholder-white/40 focus:border-white/80'
+							: 'border-border focus:border-foreground'}`);
+
+							button.disabled = get(submitting);
+
+							set_class(button, 1, `px-5 py-2.5 text-[10px] tracking-[0.2em] uppercase font-medium transition-colors disabled:opacity-60
+                ${background()
+							? 'bg-white text-black hover:bg-white/90'
+							: 'bg-foreground text-primary-foreground hover:bg-foreground/90'}`);
+
+							set_text(text_3, get(submitting) ? '…' : 'NOTIFY');
+						});
+
+						event('submit', form, handleSubmit);
+						bind_value(input, () => get(email), ($$value) => set(email, $$value));
+						append($$anchor, fragment);
+					};
+
+					if_block(node_3, ($$render) => {
+						if (get(submitted)) $$render(consequent_2); else $$render(alternate_1, -1);
+					});
+				}
+				append($$anchor, div_4);
+			};
+
+			if_block(node_2, ($$render) => {
+				if (collectEmails()) $$render(consequent_4);
+			});
+		}
+
+		var div_6 = sibling(node_2, 2);
+		var node_5 = sibling(div_6, 4);
+
+		{
+			var consequent_8 = ($$anchor) => {
+				var div_7 = root_9();
+				var node_6 = child(div_7);
+
+				{
+					var consequent_5 = ($$anchor) => {
+						var a = root_10();
+
+						template_effect(($0) => set_attribute(a, 'href', $0), [
+							() => (
+								deep_read_state(socials()),
+								untrack(() => socials().instagram.trim())
+							)
+						]);
+
+						append($$anchor, a);
+					};
+
+					var d = user_derived(() => (
+						deep_read_state(socials()),
+						untrack(() => socials().instagram?.trim())
+					));
+
+					if_block(node_6, ($$render) => {
+						if (get(d)) $$render(consequent_5);
+					});
+				}
+
+				var node_7 = sibling(node_6, 2);
+
+				{
+					var consequent_6 = ($$anchor) => {
+						var a_1 = root_11();
+
+						template_effect(($0) => set_attribute(a_1, 'href', $0), [
+							() => (
+								deep_read_state(socials()),
+								untrack(() => socials().twitter.trim())
+							)
+						]);
+
+						append($$anchor, a_1);
+					};
+
+					var d_1 = user_derived(() => (
+						deep_read_state(socials()),
+						untrack(() => socials().twitter?.trim())
+					));
+
+					if_block(node_7, ($$render) => {
+						if (get(d_1)) $$render(consequent_6);
+					});
+				}
+
+				var node_8 = sibling(node_7, 2);
+
+				{
+					var consequent_7 = ($$anchor) => {
+						var a_2 = root_12();
+
+						template_effect(($0) => set_attribute(a_2, 'href', $0), [
+							() => (
+								deep_read_state(socials()),
+								untrack(() => socials().tiktok.trim())
+							)
+						]);
+
+						append($$anchor, a_2);
+					};
+
+					var d_2 = user_derived(() => (
+						deep_read_state(socials()),
+						untrack(() => socials().tiktok?.trim())
+					));
+
+					if_block(node_8, ($$render) => {
+						if (get(d_2)) $$render(consequent_7);
+					});
+				}
+				append($$anchor, div_7);
+			};
+
+			var d_3 = user_derived(() => (
+				deep_read_state(socials()),
+				untrack(() => socials() && (socials().instagram?.trim() || socials().twitter?.trim() || socials().tiktok?.trim()))
+			));
+
+			if_block(node_5, ($$render) => {
+				if (get(d_3)) $$render(consequent_8);
+			});
+		}
+
+		template_effect(() => {
+			set_style(div, background()
+				? `background-image: url('${background()}'); background-size: cover; background-position: center;`
+				: '');
+
+			set_class(div_2, 1, `relative z-10 text-center max-w-lg px-8 py-16 ${background() ? 'text-white' : ''}`);
+			set_class(div_3, 1, `w-16 h-16 mx-auto mb-8 rounded-full flex items-center justify-center border ${background() ? 'border-white/30' : 'border-border'}`);
+			set_text(text_1, title());
+			set_text(text_2, message());
+			set_class(div_6, 1, `w-12 h-px mx-auto mt-12 ${background() ? 'bg-white/30' : 'bg-border'}`);
+		});
+
+		append($$anchor, div);
+		pop();
+	}
 
 	var root = from_html(`<!> <!>`, 1);
 
@@ -14072,12 +14886,25 @@
 		// ── Pages ──────────────────────────────────────────────────────────────────
 		let path = mutable_source(window.location.pathname);
 
-		onMount(() => {
+		let maintenance = mutable_source(null // null = not yet checked
+		);
+		let site = mutable_source(null);
+
+		onMount(async () => {
 			const handler = () => {
 				set(path, window.location.pathname);
 			};
 
 			window.addEventListener('popstate', handler);
+
+			try {
+				const data = await loadStoreData();
+
+				set(site, data?.site);
+				set(maintenance, data?.site?.maintenance?.enabled ? data.site.maintenance : false);
+			} catch {
+				set(maintenance, false);
+			}
 
 			return () => window.removeEventListener('popstate', handler);
 		});
@@ -14124,18 +14951,63 @@
 
 		{
 			var consequent = ($$anchor) => {
-				Index($$anchor, {});
+				{
+					let $0 = derived_safe_equal(() => (get(site), untrack(() => get(site)?.logo)));
+					let $1 = derived_safe_equal(() => (get(site), untrack(() => get(site)?.socials)));
+
+					Maintenance($$anchor, {
+						get title() {
+							return (
+								get(maintenance),
+								untrack(() => get(maintenance).title)
+							);
+						},
+
+						get message() {
+							return (
+								get(maintenance),
+								untrack(() => get(maintenance).message)
+							);
+						},
+
+						get background() {
+							return (
+								get(maintenance),
+								untrack(() => get(maintenance).background)
+							);
+						},
+
+						get collectEmails() {
+							return (
+								get(maintenance),
+								untrack(() => get(maintenance).collectEmails)
+							);
+						},
+
+						get logo() {
+							return get($0);
+						},
+
+						get socials() {
+							return get($1);
+						}
+					});
+				}
 			};
 
 			var consequent_1 = ($$anchor) => {
-				Admin($$anchor, {});
+				Index($$anchor, {});
 			};
 
 			var consequent_2 = ($$anchor) => {
-				Products($$anchor, {});
+				Admin($$anchor, {});
 			};
 
 			var consequent_3 = ($$anchor) => {
+				Products($$anchor, {});
+			};
+
+			var consequent_4 = ($$anchor) => {
 				Product($$anchor, {
 					get productId() {
 						return (get(route), untrack(() => get(route).id));
@@ -14143,11 +15015,11 @@
 				});
 			};
 
-			var consequent_4 = ($$anchor) => {
+			var consequent_5 = ($$anchor) => {
 				Lookbook($$anchor, {});
 			};
 
-			var consequent_5 = ($$anchor) => {
+			var consequent_6 = ($$anchor) => {
 				LookbookDetail($$anchor, {
 					get lookbookId() {
 						return (get(route), untrack(() => get(route).id));
@@ -14155,11 +15027,11 @@
 				});
 			};
 
-			var consequent_6 = ($$anchor) => {
+			var consequent_7 = ($$anchor) => {
 				Community($$anchor, {});
 			};
 
-			var consequent_7 = ($$anchor) => {
+			var consequent_8 = ($$anchor) => {
 				Article($$anchor, {
 					get slug() {
 						return (get(route), untrack(() => get(route).slug));
@@ -14167,19 +15039,19 @@
 				});
 			};
 
-			var consequent_8 = ($$anchor) => {
+			var consequent_9 = ($$anchor) => {
 				Cart($$anchor, {});
 			};
 
-			var consequent_9 = ($$anchor) => {
+			var consequent_10 = ($$anchor) => {
 				Shipping($$anchor, {});
 			};
 
-			var consequent_10 = ($$anchor) => {
+			var consequent_11 = ($$anchor) => {
 				FAQ($$anchor, {});
 			};
 
-			var consequent_11 = ($$anchor) => {
+			var consequent_12 = ($$anchor) => {
 				Contact($$anchor, {});
 			};
 
@@ -14188,31 +15060,35 @@
 			};
 
 			if_block(node_1, ($$render) => {
-				if ((get(route), untrack(() => get(route).page === 'index'))) $$render(consequent); else if ((get(route), untrack(() => get(route).page === 'admin'))) $$render(consequent_1, 1); else if ((
+				if ((
+					get(maintenance),
+					get(route),
+					untrack(() => get(maintenance) !== null && get(maintenance) !== false && get(route).page !== 'admin')
+				)) $$render(consequent); else if ((get(route), untrack(() => get(route).page === 'index'))) $$render(consequent_1, 1); else if ((get(route), untrack(() => get(route).page === 'admin'))) $$render(consequent_2, 2); else if ((
 					get(route),
 					untrack(() => get(route).page === 'products')
-				)) $$render(consequent_2, 2); else if ((
-					get(route),
-					untrack(() => get(route).page === 'product')
 				)) $$render(consequent_3, 3); else if ((
 					get(route),
-					untrack(() => get(route).page === 'lookbook')
+					untrack(() => get(route).page === 'product')
 				)) $$render(consequent_4, 4); else if ((
 					get(route),
-					untrack(() => get(route).page === 'lookbook-detail')
+					untrack(() => get(route).page === 'lookbook')
 				)) $$render(consequent_5, 5); else if ((
 					get(route),
-					untrack(() => get(route).page === 'community')
+					untrack(() => get(route).page === 'lookbook-detail')
 				)) $$render(consequent_6, 6); else if ((
 					get(route),
+					untrack(() => get(route).page === 'community')
+				)) $$render(consequent_7, 7); else if ((
+					get(route),
 					untrack(() => get(route).page === 'article')
-				)) $$render(consequent_7, 7); else if ((get(route), untrack(() => get(route).page === 'cart'))) $$render(consequent_8, 8); else if ((
+				)) $$render(consequent_8, 8); else if ((get(route), untrack(() => get(route).page === 'cart'))) $$render(consequent_9, 9); else if ((
 					get(route),
 					untrack(() => get(route).page === 'shipping')
-				)) $$render(consequent_9, 9); else if ((get(route), untrack(() => get(route).page === 'faq'))) $$render(consequent_10, 10); else if ((
+				)) $$render(consequent_10, 10); else if ((get(route), untrack(() => get(route).page === 'faq'))) $$render(consequent_11, 11); else if ((
 					get(route),
 					untrack(() => get(route).page === 'contact')
-				)) $$render(consequent_11, 11); else $$render(alternate, -1);
+				)) $$render(consequent_12, 12); else $$render(alternate, -1);
 			});
 		}
 

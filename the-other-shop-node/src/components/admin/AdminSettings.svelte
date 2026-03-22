@@ -4,12 +4,17 @@
   export let site = {};
   export let onUpdate = () => {};
   export let onReset = () => {};
+  export let lookbooks = [];
 
   let form = JSON.parse(JSON.stringify(site));
   if (!form.shipping) form.shipping = { freeMinimum: 500, standardRate: 99, country: 'South Africa' };
   if (!form.hero) form.hero = {};
   if (form.hero.ctaLink === undefined) form.hero.ctaLink = '/products';
   if (form.hero.video === undefined) form.hero.video = '';
+  if (!form.maintenance) form.maintenance = { enabled: false, collectEmails: false, title: "We'll be back soon.", message: 'Our store is currently undergoing scheduled maintenance. Please check back shortly.', background: '' };
+  if (form.maintenance.collectEmails === undefined) form.maintenance.collectEmails = false;
+  if (!form.socials) form.socials = { instagram: '', twitter: '', tiktok: '' };
+  if (form.featuredLookbook === undefined) form.featuredLookbook = '';
   let saved = false;
 
   function handleSave() {
@@ -142,6 +147,87 @@
           </label>
         </div>
       </div>
+    </div>
+
+    <!-- Maintenance Mode -->
+    <div class="space-y-4 bg-card border {form.maintenance.enabled ? 'border-red-400' : 'border-border'} p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h3 class="text-label text-red-500">MAINTENANCE MODE</h3>
+          <p class="text-xs text-muted-foreground mt-0.5">When enabled, visitors see a maintenance page. Admins can still access /admin.</p>
+        </div>
+        <!-- Toggle switch -->
+        <button
+          role="switch"
+          aria-label="Toggle maintenance mode"
+          aria-checked={form.maintenance.enabled}
+          onclick={() => (form.maintenance.enabled = !form.maintenance.enabled)}
+          class="relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none {form.maintenance.enabled ? 'bg-red-500' : 'bg-muted'}"
+        >
+          <span class="absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 {form.maintenance.enabled ? 'translate-x-6' : 'translate-x-0'}"></span>
+        </button>
+      </div>
+
+      {#if form.maintenance.enabled}
+        <div class="pt-2 space-y-4 border-t border-border/50">
+          <p class="text-[11px] uppercase tracking-widest text-red-500 font-medium">⚠ Maintenance mode is ON — visitors cannot access the store.</p>
+
+          <!-- Collect emails toggle -->
+          <div class="flex items-center justify-between bg-muted/40 px-4 py-3 rounded">
+            <div>
+              <p class="text-sm font-medium">Collect email addresses</p>
+              <p class="text-xs text-muted-foreground mt-0.5">Show a "Notify me" form on the maintenance page.</p>
+            </div>
+            <button
+              role="switch"
+              aria-label="Toggle email collection"
+              aria-checked={form.maintenance.collectEmails}
+              onclick={() => (form.maintenance.collectEmails = !form.maintenance.collectEmails)}
+              class="relative flex-shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none {form.maintenance.collectEmails ? 'bg-foreground' : 'bg-muted'}"
+            >
+              <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 {form.maintenance.collectEmails ? 'translate-x-5' : 'translate-x-0'}"></span>
+            </button>
+          </div>
+
+          <div>
+            <label for="maint-title" class="text-label block mb-1.5">MAINTENANCE TITLE</label>
+            <input id="maint-title" bind:value={form.maintenance.title} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+          </div>
+          <div>
+            <label for="maint-msg" class="text-label block mb-1.5">MAINTENANCE MESSAGE</label>
+            <textarea id="maint-msg" bind:value={form.maintenance.message} rows={3} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
+          </div>
+          <div>
+            <p class="text-label block mb-1.5">BACKGROUND IMAGE (optional)</p>
+            <p class="text-xs text-muted-foreground mb-2">Shown behind the maintenance message. Recommended: a dark or moody image.</p>
+            <div class="flex items-start gap-4">
+              {#if form.maintenance.background}
+                <div class="flex items-center gap-3">
+                  <img src={form.maintenance.background} alt="Maintenance BG" class="h-16 w-24 object-cover bg-secondary" />
+                  <button onclick={() => (form.maintenance.background = '')} class="text-xs text-destructive hover:underline">Remove</button>
+                </div>
+              {/if}
+              <ImageUpload label="" value={form.maintenance.background || ''} onChange={(url) => (form.maintenance.background = url)} />
+            </div>
+          </div>
+        </div>
+      {/if}
+    </div>
+
+    <!-- Featured Lookbook -->
+    <div class="space-y-3 bg-card border border-border p-5">
+      <h3 class="text-label">FEATURED LOOKBOOK</h3>
+      <p class="text-xs text-muted-foreground">Choose which lookbook is shown on the homepage.</p>
+      {#if lookbooks.length === 0}
+        <p class="text-xs text-muted-foreground italic">No lookbooks yet — create one in the Lookbook section first.</p>
+      {:else}
+        <select bind:value={form.featuredLookbook} class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer">
+          <option value="">— Latest lookbook (default) —</option>
+          {#each lookbooks as lb}
+            <option value={lb.id}>{lb.title}</option>
+          {/each}
+        </select>
+      {/if}
     </div>
 
     <!-- Socials -->

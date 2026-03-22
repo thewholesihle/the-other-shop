@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import GeoBlock from './components/GeoBlock.svelte';
   import { cartCount } from './stores/cart.js';
+  import { loadStoreData } from './lib/storeData.js';
 
   // ── Pages ──────────────────────────────────────────────────────────────────
   import Index        from './pages/Index.svelte';
@@ -17,12 +18,22 @@
   import FAQ          from './pages/FAQ.svelte';
   import Contact      from './pages/Contact.svelte';
   import NotFound     from './pages/NotFound.svelte';
+  import Maintenance  from './pages/Maintenance.svelte';
 
   let path = window.location.pathname;
+  let maintenance = null; // null = not yet checked
+  let site = null;
 
-  onMount(() => {
+  onMount(async () => {
     const handler = () => { path = window.location.pathname; };
     window.addEventListener('popstate', handler);
+    try {
+      const data = await loadStoreData();
+      site = data?.site;
+      maintenance = data?.site?.maintenance?.enabled ? data.site.maintenance : false;
+    } catch {
+      maintenance = false;
+    }
     return () => window.removeEventListener('popstate', handler);
   });
 
@@ -57,7 +68,17 @@
 <!-- SA Geo-gating popup (silent on network failure) -->
 <GeoBlock />
 
-{#if route.page === 'index'}
+<!-- Maintenance mode intercept (admin route always bypasses it) -->
+{#if maintenance !== null && maintenance !== false && route.page !== 'admin'}
+  <Maintenance
+    title={maintenance.title}
+    message={maintenance.message}
+    background={maintenance.background}
+    collectEmails={maintenance.collectEmails}
+    logo={site?.logo}
+    socials={site?.socials}
+  />
+{:else if route.page === 'index'}
   <Index />
 {:else if route.page === 'admin'}
   <Admin />

@@ -16,6 +16,12 @@
     catch (e) { console.error(e); }
     finally { loading = false; }
   });
+
+  $: featuredId = data?.site?.featuredLookbook;
+  $: allLookbooks = data?.lookbooks ?? [];
+  $: featuredLookbook = featuredId
+    ? allLookbooks.find(lb => lb.id === featuredId) || allLookbooks[0] || null
+    : allLookbooks[0] || null;
 </script>
 
 <svelte:head>
@@ -33,7 +39,7 @@
     <Hero hero={data.site.hero} />
     <AnnouncementBar text={data.site.announcement} />
     <ProductGrid products={data.products} currency={data.site.currency} />
-    <LookbookSection />
+    <LookbookSection lookbook={featuredLookbook} allLookbooks={allLookbooks} />
     <Footer site={data.site} />
   </div>
 {/if}

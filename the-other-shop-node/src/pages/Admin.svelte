@@ -117,7 +117,7 @@
     {:else if activeSection === 'subscribers'}
       <AdminSubscribers subscribers={data.subscribers} onUpdate={updateSubscribers} />
     {:else if activeSection === 'settings'}
-      <AdminSettings site={data.site} onUpdate={updateSite} onReset={resetData} />
+      <AdminSettings site={data.site} lookbooks={data.lookbooks} onUpdate={updateSite} onReset={resetData} />
     {/if}
   </AdminLayout>
 {/if}

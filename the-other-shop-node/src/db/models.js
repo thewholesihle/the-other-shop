@@ -29,6 +29,14 @@ const SettingsSchema = new mongoose.Schema({
     twitter:   { type: String, default: '' },
     tiktok:    { type: String, default: '' },
   },
+  maintenance: {
+    enabled:       { type: Boolean, default: false },
+    collectEmails: { type: Boolean, default: false },
+    title:         { type: String, default: 'We\'ll be back soon.' },
+    message:       { type: String, default: 'Our store is currently undergoing scheduled maintenance. Please check back shortly.' },
+    background:    { type: String, default: '' },
+  },
+  featuredLookbook: { type: String, default: '' },
 }, { strict: true, _id: false, versionKey: false });
 
 // ── Category ──────────────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@
   onMount(async () => {
     try {
       data = await loadStoreData();
-      const lookbooks = ov?.lookbooks ?? base.lookbooks ?? [];
+      const lookbooks = data.lookbooks || [];
       lb = lookbooks.find(l => l.id === lookbookId) ?? null;
     } finally { loading = false; }
   });
@@ -73,16 +73,16 @@
         {/if}
       </div>
 
-      <!-- Masonry-style gallery -->
-      <div class="columns-1 md:columns-2 lg:columns-3 gap-3 space-y-3">
+      <!-- Masonry-style gallery, max 3 columns -->
+      <div class="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
         {#each items as item, i}
           <div class="break-inside-avoid">
             {#if isEmbed(item)}
-              <div class="relative" style="padding-bottom:56.25%;height:0;">
+              <div class="relative w-full" style="padding-bottom:56.25%;height:0;">
                 <iframe src={item.url} class="absolute inset-0 w-full h-full" frameborder="0" allowfullscreen title={item.caption || 'Video'}></iframe>
               </div>
             {:else if isVideo(item)}
-              <video src={item.url} controls class="w-full h-auto" preload="metadata">
+              <video src={item.url} controls class="w-full h-auto object-cover" preload="metadata">
                 <track kind="captions" />
               </video>
             {:else}
@@ -91,11 +91,12 @@
                 onclick={() => (expanded = { items, index: i })}
                 class="group w-full overflow-hidden bg-secondary block"
               >
+                <!-- h-auto ensures intrinsic height is maintained so the image never stretches, object-cover guarantees perfect fit -->
                 <img src={item.url} alt={item.caption || lb.title} class="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="lazy" />
               </button>
             {/if}
             {#if item.caption}
-              <p class="text-xs text-muted-foreground mt-1.5 italic">{item.caption}</p>
+              <p class="text-xs text-muted-foreground mt-2 italic">{item.caption}</p>
             {/if}
           </div>
         {/each}
