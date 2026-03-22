@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
 
   export let lookbook = null; // single lookbook object from parent
   export let allLookbooks = [];
@@ -21,10 +22,32 @@
   }
 
   $: lb = lookbook || allLookbooks[0] || null;
-  $: images = lb ? (lb.images || [lb.cover].filter(Boolean)) : [];
-  $: primary   = images[0] || '';
-  $: secondary = images[1] || images[0] || '';
-  $: lbPath    = lb ? `/lookbook/${lb.id}` : '/lookbook';
+  $: images = lb ? (lb.images?.length ? lb.images : [lb.cover].filter(Boolean)) : [];
+  
+  // Showcase up to 4 images
+  $: showcase = images.slice(0, 4);
+  $: lbPath = lb ? `/lookbook/${lb.id}` : '/lookbook';
+
+  function getGridClass(total, index) {
+    let base = "relative overflow-hidden group w-full h-full ";
+    
+    if (total === 1) {
+      return base + "col-span-2 md:col-span-4 md:row-span-2 aspect-[4/5] md:aspect-auto";
+    }
+    if (total === 2) {
+      return base + "col-span-2 md:col-span-2 md:row-span-2 aspect-square md:aspect-auto";
+    }
+    if (total === 3) {
+      if (index === 0) return base + "col-span-2 md:row-span-2 aspect-[4/5] md:aspect-auto";
+      return base + "col-span-2 md:row-span-1 aspect-square md:aspect-auto";
+    }
+    if (total === 4) {
+      if (index === 0) return base + "col-span-2 md:row-span-2 aspect-[4/5] md:aspect-auto";
+      if (index === 1) return base + "col-span-2 md:row-span-1 aspect-video md:aspect-auto";
+      return base + "col-span-1 md:row-span-1 aspect-square md:aspect-auto";
+    }
+    return base;
+  }
 </script>
 
 <section bind:this={ref} class="px-6 md:px-10 pb-20 md:pb-32">
@@ -35,44 +58,32 @@
     </h2>
   </div>
 
-  {#if lb && (primary || secondary)}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-      <!-- Primary image -->
-      <a
-        href={lbPath}
-        onclick={(e) => goTo(lbPath, e)}
-        class="relative aspect-square md:aspect-[3/4] overflow-hidden group {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'}"
-        style="animation-delay:0.15s"
-      >
-        <img src={primary} alt={lb.title} class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />
-        <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent">
-          <span class="text-label text-white group-hover:underline underline-offset-4">VIEW LOOKBOOK</span>
-        </div>
-      </a>
-
-      <!-- Secondary image (or same if only one) -->
-      <a
-        href={lbPath}
-        onclick={(e) => goTo(lbPath, e)}
-        class="relative aspect-square md:aspect-[3/4] overflow-hidden group {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'}"
-        style="animation-delay:0.25s"
-      >
-        <img src={secondary} alt="{lb.title} — behind the scenes" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />
-        <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent">
-          <span class="text-label text-white group-hover:underline underline-offset-4">EXPLORE</span>
-        </div>
-      </a>
+  {#if lb && showcase.length > 0}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 md:auto-rows-[300px] lg:auto-rows-[360px]">
+      {#each showcase as img, i}
+        <a
+          href={lbPath}
+          onclick={(e) => goTo(lbPath, e)}
+          class="{getGridClass(showcase.length, i)} {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'}"
+          style="animation-delay:{0.1 + i * 0.15}s"
+        >
+          <img src={getOptimizedUrl(img, 800)} srcset={getSrcset(img)} sizes="(max-width: 768px) 50vw, 25vw" alt={lb.title} class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />
+          <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500"></div>
+          <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span class="text-label text-white tracking-widest">{i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE'}</span>
+          </div>
+        </a>
+      {/each}
     </div>
   {:else}
-    <!-- Fallback placeholder grid when no lookbook data is available yet -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-      {#each ['/images/lookbook-1.jpg', '/images/lookbook-2.jpg'] as src, i}
+    <!-- Fallback asymmetrical placeholder grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 md:auto-rows-[300px] lg:auto-rows-[360px]">
+      {#each [1, 2, 3] as item, i}
         <a href="/lookbook" onclick={(e) => goTo('/lookbook', e)}
-          class="relative aspect-square md:aspect-[3/4] overflow-hidden group {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'}"
-          style="animation-delay:{0.15 + i * 0.1}s">
-          <img {src} alt="Lookbook" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />
+          class="{getGridClass(3, i)} {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'} bg-secondary"
+          style="animation-delay:{0.1 + i * 0.15}s">
           <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent">
-            <span class="text-label text-white group-hover:underline underline-offset-4">{i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE'}</span>
+            <span class="text-label text-white">{i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE'}</span>
           </div>
         </a>
       {/each}

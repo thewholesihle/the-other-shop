@@ -233,6 +233,34 @@ app.delete('/api/products/:id', basicAuth, async (req, res) => {
   }
 });
 
+// ─── API: Delete Community Post ──────────────────────────────────────────────
+app.delete('/api/community/:id', basicAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await Article.deleteOne({ id });
+    if (result.deletedCount === 0)
+      return res.status(404).json({ error: 'Post not found.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/community/:id', err);
+    res.status(500).json({ error: 'Could not delete post.' });
+  }
+});
+
+// ─── API: Delete Lookbook ────────────────────────────────────────────────────
+app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await Lookbook.deleteOne({ id });
+    if (result.deletedCount === 0)
+      return res.status(404).json({ error: 'Lookbook not found.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/lookbooks/:id', err);
+    res.status(500).json({ error: 'Could not delete lookbook.' });
+  }
+});
+
 // ─── API: Update Order Status (accept / reject) ─────────────────────────────────
 app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
   const allowed = ['processing', 'shipped', 'delivered', 'cancelled', 'paid', 'pending'];
@@ -368,8 +396,15 @@ app.post('/api/checkout', async (req, res) => {
   const orderItems = Array.isArray(order.items) ? order.items : [];
   const stockErrors = [];
   for (const item of orderItems) {
-    // Check both 'id' and '_id' in case the frontend sent the MongoDB _id as 'id'
-    const product = await Product.findOne({ $or: [{ id: item.id }, { _id: item.id }] }).lean();
+    const pId = item.productId || item.id;
+    
+    // Only query _id if pId is a valid MongoDB ObjectId to prevent CastError crashes
+    let query = { id: pId };
+    if (mongoose.Types.ObjectId.isValid(pId)) {
+      query = { $or: [{ id: pId }, { _id: pId }] };
+    }
+    
+    const product = await Product.findOne(query).lean();
     if (!product) {
       stockErrors.push(`"${item.name}" is no longer available.`);
     } else if (product.stock < item.quantity) {

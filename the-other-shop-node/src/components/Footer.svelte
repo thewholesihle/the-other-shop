@@ -22,7 +22,7 @@
     ],
   };
 
-  $: socials = site.socials ? Object.entries(site.socials) : [];
+  $: socials = site.socials ? Object.entries(site.socials).filter(([_, href]) => href && href.trim() !== '') : [];
 
   let email = '';
   let subState = 'idle'; // 'idle' | 'loading' | 'done' | 'error' | 'exists'
@@ -52,8 +52,12 @@
 <footer class="bg-foreground text-primary-foreground px-6 md:px-10 pt-16 pb-8">
   <div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16">
     <div class="col-span-2 md:col-span-1">
-      <h3 class="font-display text-2xl font-bold mb-4">{site.name}</h3>
-      <p class="text-sm text-primary-foreground/60 max-w-xs leading-relaxed">{site.description}</p>
+      {#if site.footerLogo}
+        <img src={site.footerLogo} alt={site.name} class="h-10 w-auto mb-4 object-contain !border-0 bg-transparent" />
+      {:else}
+        <h3 class="font-display text-2xl font-bold mb-4">{site.name}</h3>
+      {/if}
+      <p class="text-sm text-primary-foreground/60 max-w-xs leading-relaxed">{site.footerTagline || site.description}</p>
     </div>
     {#each Object.entries(footerLinks) as [title, links]}
       <div>

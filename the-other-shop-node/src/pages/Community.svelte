@@ -23,11 +23,11 @@
 </script>
 
 <svelte:head>
-  <title>{data ? `Community — ${data.site.name}` : 'Community'}</title>
-  <meta name="description" content="Stories, news, and culture from the Others. community. Collections, collaborations and announcements." />
+  <title>{data ? `Community — ${data.site.metaTitle || data.site.name}` : 'Community'}</title>
+  <meta name="description" content={data?.site?.metaDescription || "Stories, news, and culture from the Others. community. Collections, collaborations and announcements."} />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Community — Others." />
-  <meta property="og:description" content="Stories, news, and culture from the Others. community." />
+  <meta property="og:title" content="Community — {data?.site?.name || 'Others.'}" />
+  <meta property="og:description" content={data?.site?.metaDescription || "Stories, news, and culture from the Others. community."} />
 </svelte:head>
 
 {#if loading || !data}

@@ -63,7 +63,92 @@
     if (p === '/contact')                    return { page: 'contact' };
     return { page: 'notfound' };
   }
+
+  function hexToHsl(hex) {
+    if (!hex) return '';
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    let r = parseInt(hex.substring(0,2), 16) / 255;
+    let g = parseInt(hex.substring(2,4), 16) / 255;
+    let b = parseInt(hex.substring(4,6), 16) / 255;
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max === min) { h = s = 0; }
+    else {
+      let d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  }
+
+  function mixHex(hex1, hex2, weight) {
+    if (!hex1 || !hex2) return hex1 || hex2 || '#000000';
+    hex1 = hex1.replace('#', '');
+    hex2 = hex2.replace('#', '');
+    if (hex1.length === 3) hex1 = hex1.split('').map(c=>c+c).join('');
+    if (hex2.length === 3) hex2 = hex2.split('').map(c=>c+c).join('');
+    let color = "#";
+    for (let i = 0; i < 3; i++) {
+      let v1 = parseInt(hex1.substring(i*2, i*2+2), 16);
+      let v2 = parseInt(hex2.substring(i*2, i*2+2), 16);
+      let val = Math.floor(v2 + (v1 - v2) * weight).toString(16).padStart(2, '0');
+      color += val;
+    }
+    return color;
+  }
 </script>
+
+<svelte:head>
+  {#if site?.colors && route.page !== 'admin'}
+    {@html `
+      <style>
+        :root {
+          --background: ${hexToHsl(site.colors.background)};
+          --foreground: ${hexToHsl(site.colors.foreground)};
+          --primary: ${hexToHsl(site.colors.primary)};
+          --primary-foreground: ${hexToHsl(site.colors.background)};
+          --border: ${hexToHsl(site.colors.border)};
+          --hover: ${hexToHsl(site.colors.hover)};
+          
+          /* Derived Theme Variables */
+          --card: ${hexToHsl(site.colors.background)};
+          --card-foreground: ${hexToHsl(site.colors.foreground)};
+          --popover: ${hexToHsl(site.colors.background)};
+          --popover-foreground: ${hexToHsl(site.colors.foreground)};
+          --secondary: ${hexToHsl(site.colors.border)};
+          --secondary-foreground: ${hexToHsl(site.colors.foreground)};
+          --muted: ${hexToHsl(mixHex(site.colors.background, site.colors.border, 0.5))};
+          --muted-foreground: ${hexToHsl(mixHex(site.colors.background, site.colors.foreground, 0.45))};
+          --accent: ${hexToHsl(site.colors.hover)};
+          --accent-foreground: ${hexToHsl(site.colors.background)};
+          --input: ${hexToHsl(site.colors.border)};
+          --ring: ${hexToHsl(site.colors.primary)};
+        }
+
+        /* Safely target interactive elements to apply the global hover color */
+        @media (hover: hover) {
+          a:not(.bg-foreground):hover, 
+          button:not(.bg-foreground):hover {
+            color: hsl(var(--hover)) !important;
+          }
+
+          a.bg-foreground:hover,
+          button.bg-foreground:hover {
+            background-color: hsl(var(--hover)) !important;
+            border-color: hsl(var(--hover)) !important;
+            color: hsl(var(--background)) !important;
+          }
+        }
+      </style>
+    `}
+  {/if}
+</svelte:head>
 
 <!-- SA Geo-gating popup (silent on network failure) -->
 <GeoBlock />

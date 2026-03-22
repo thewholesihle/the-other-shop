@@ -4,6 +4,7 @@
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
   import { cart } from '../stores/cart.js';
+  import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
 
   export let productId = '';
 
@@ -69,7 +70,7 @@
         <!-- Image gallery -->
         <div class="space-y-3">
           <div class="aspect-[4/5] bg-secondary overflow-hidden">
-            <img src={images[selectedImage]} alt={product.name} class="w-full h-full object-cover transition-opacity duration-300" />
+            <img src={getOptimizedUrl(images[selectedImage], 1200)} srcset={getSrcset(images[selectedImage])} sizes="(max-width: 768px) 100vw, 50vw" alt={product.name} class="w-full h-full object-cover transition-opacity duration-300" />
           </div>
           {#if images.length > 1}
             <div class="flex gap-2 flex-wrap">
@@ -78,7 +79,7 @@
                   aria-label="View image {i + 1}"
                   onclick={() => (selectedImage = i)}
                   class="w-16 h-16 border-2 transition-colors overflow-hidden flex-shrink-0 {selectedImage === i ? 'border-foreground' : 'border-transparent'}">
-                  <img src={img} alt="" class="w-full h-full object-cover" />
+                  <img src={getOptimizedUrl(img, 200)} srcset={getSrcset(img)} sizes="64px" alt="" class="w-full h-full object-cover" loading="lazy" />
                 </button>
               {/each}
             </div>

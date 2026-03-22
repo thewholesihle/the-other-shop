@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const SettingsSchema = new mongoose.Schema({
   _id:          { type: String, default: 'main' },
   name:         { type: String, default: 'Others.' },
+  metaTitle:    { type: String, default: '' },
+  metaDescription: { type: String, default: '' },
   tagline:      { type: String, default: '' },
   description:  { type: String, default: '' },
   announcement: { type: String, default: '' },
@@ -24,11 +26,21 @@ const SettingsSchema = new mongoose.Schema({
     standardRate: { type: Number, default: 99 },
     country:      { type: String, default: 'South Africa' },
   },
+  colors: {
+    background: { type: String, default: '' },
+    foreground: { type: String, default: '' },
+    primary:    { type: String, default: '' },
+    border:     { type: String, default: '' },
+    hover:      { type: String, default: '' },
+  },
   socials: {
     instagram: { type: String, default: '' },
     twitter:   { type: String, default: '' },
     tiktok:    { type: String, default: '' },
+    youtube:   { type: String, default: '' },
   },
+  footerLogo:    { type: String, default: '' },
+  footerTagline: { type: String, default: '' },
   maintenance: {
     enabled:       { type: Boolean, default: false },
     collectEmails: { type: Boolean, default: false },

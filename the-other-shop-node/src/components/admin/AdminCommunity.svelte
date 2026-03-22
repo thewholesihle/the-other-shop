@@ -27,7 +27,16 @@
     }
     editing = null; isNew = false;
   }
-  function handleDelete(id) { onUpdate(community.filter(p => p.id !== id)); }
+  async function handleDelete(id) {
+    if (!confirm('Are you sure you want to delete this post?')) return;
+    try {
+      const res = await fetch('/api/community/' + id, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete post.');
+      onUpdate(community.filter(p => p.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  }
 
   const CATEGORIES = ['Collection', 'Community', 'News', 'Collaboration', 'Culture', 'Other'];
 </script>

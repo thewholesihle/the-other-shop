@@ -3,6 +3,7 @@
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
+  import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
 
   export let lookbookId = '';
 
@@ -73,30 +74,30 @@
         {/if}
       </div>
 
-      <!-- Masonry-style gallery, max 3 columns -->
-      <div class="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
+      <!-- Clean, responsive 3-column max grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {#each items as item, i}
-          <div class="break-inside-avoid">
+          <div class="flex flex-col">
             {#if isEmbed(item)}
-              <div class="relative w-full" style="padding-bottom:56.25%;height:0;">
+              <div class="relative w-full aspect-video bg-black">
                 <iframe src={item.url} class="absolute inset-0 w-full h-full" frameborder="0" allowfullscreen title={item.caption || 'Video'}></iframe>
               </div>
             {:else if isVideo(item)}
-              <video src={item.url} controls class="w-full h-auto object-cover" preload="metadata">
+              <video src={item.url} controls class="w-full aspect-[4/5] object-cover bg-secondary" preload="metadata">
                 <track kind="captions" />
               </video>
             {:else}
               <button
                 aria-label="View full image"
                 onclick={() => (expanded = { items, index: i })}
-                class="group w-full overflow-hidden bg-secondary block"
+                class="group w-full aspect-[4/5] overflow-hidden bg-secondary block"
               >
-                <!-- h-auto ensures intrinsic height is maintained so the image never stretches, object-cover guarantees perfect fit -->
-                <img src={item.url} alt={item.caption || lb.title} class="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="lazy" />
+                <!-- w-full h-full object-cover ensures the image perfectly crops the aspect ratio without stretching the actual pixels -->
+                <img src={getOptimizedUrl(item.url, 800)} srcset={getSrcset(item.url)} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" alt={item.caption || lb.title} class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="lazy" />
               </button>
             {/if}
             {#if item.caption}
-              <p class="text-xs text-muted-foreground mt-2 italic">{item.caption}</p>
+              <p class="text-xs text-muted-foreground mt-2 italic px-1">{item.caption}</p>
             {/if}
           </div>
         {/each}
@@ -122,7 +123,7 @@
     <button aria-label="Close" onclick={() => (expanded = null)} class="absolute top-4 right-4 z-10 text-primary-foreground/70 hover:text-primary-foreground">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </button>
-    <img src={cur.url} alt={cur.caption || ''} class="max-h-[90vh] max-w-full object-contain" />
+    <img src={getOptimizedUrl(cur.url, 2000)} srcset={getSrcset(cur.url)} sizes="100vw" alt={cur.caption || ''} class="max-h-[90vh] max-w-full object-contain" />
     {#if expanded.items.length > 1}
       <button aria-label="Previous" onclick={() => (expanded = { ...expanded, index: (expanded.index - 1 + expanded.items.length) % expanded.items.length })} class="absolute left-4 text-primary-foreground/70 hover:text-primary-foreground">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m15 18-6-6 6-6"/></svg>

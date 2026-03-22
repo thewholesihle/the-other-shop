@@ -5,6 +5,7 @@
   import { cart, cartTotal, cartCount } from '../stores/cart.js';
 
   import { loadStoreData } from '../lib/storeData.js';
+  import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
 
   let data = null;
   let loading = true;
@@ -13,6 +14,7 @@
   let orderId = '';
   let stockErrors = [];
   let checkoutError = '';
+  let processingPayment = false;
 
   let form = {
     firstName: '', lastName: '', email: '', phone: '',
@@ -38,7 +40,7 @@
     submitting = true;
     stockErrors = [];
     checkoutError = '';
-    step = 'processing';
+    processingPayment = true;
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -57,9 +59,14 @@
       if (!res.ok) {
         const body = await res.json();
         stockErrors = body.stockErrors || [];
-        checkoutError = body.error || 'Something went wrong.';
-        step = 'checkout';
+        checkoutError = body.error || 'Payment initialization failed. Please try again.';
+        processingPayment = false;
         submitting = false;
+        
+        setTimeout(() => {
+          const errEl = document.getElementById('checkout-errors');
+          if (errEl) errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
         return;
       }
       const { paymentUrl, params, orderId: oid } = await res.json();
@@ -80,8 +87,13 @@
     } catch (e) {
       console.error(e);
       checkoutError = 'Connection error. Please try again.';
-      step = 'checkout';
+      processingPayment = false;
       submitting = false;
+      
+      setTimeout(() => {
+        const errEl = document.getElementById('checkout-errors');
+        if (errEl) errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
     }
   }
 
@@ -108,13 +120,17 @@
     <Navbar siteName={data.site.name} logo={data.site.logo} />
     <div class="pt-24 pb-20 px-6 md:px-10 max-w-5xl mx-auto">
 
-      {#if step === 'processing'}
-        <div class="flex flex-col items-center justify-center py-32 gap-6">
-          <div class="w-10 h-10 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div>
-          <p class="text-sm text-muted-foreground">Redirecting to secure payment…</p>
+      {#if processingPayment}
+        <div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div class="bg-card p-10 shadow-2xl text-center border border-border border-b-4 border-b-foreground max-w-md mx-4 animate-fade-up">
+            <div class="w-10 h-10 border-4 border-foreground/20 border-t-foreground rounded-full animate-spin mx-auto mb-6"></div>
+            <h2 class="text-2xl font-bold font-display mb-3">Processing Payment</h2>
+            <p class="text-sm text-muted-foreground leading-relaxed">Securely redirecting to PayFast.<br/>Please do not refresh or close this page.</p>
+          </div>
         </div>
+      {/if}
 
-      {:else if step === 'success'}
+      {#if step === 'success'}
         <div class="text-center py-24">
           <div class="w-16 h-16 border-2 border-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
@@ -152,7 +168,7 @@
             <div class="space-y-4">
               {#each $cart as item}
                 <div class="flex gap-4 border-b border-border pb-4">
-                  <img src={item.image} alt={item.name} class="w-20 h-24 object-cover bg-secondary flex-shrink-0" />
+                  <img src={getOptimizedUrl(item.image, 200)} srcset={getSrcset(item.image)} sizes="80px" alt={item.name} class="w-20 h-24 object-cover bg-secondary flex-shrink-0" loading="lazy" />
                   <div class="flex-1 min-w-0">
                     <p class="font-medium">{item.name}</p>
                     <p class="text-xs text-muted-foreground mt-0.5">Size: {item.size}</p>
@@ -275,17 +291,21 @@
             </div>
 
             <!-- Stock/checkout errors -->
-            {#if stockErrors.length > 0}
-              <div class="border border-destructive bg-destructive/5 px-4 py-3 space-y-1">
-                <p class="text-sm font-medium text-destructive">Cannot complete checkout:</p>
-                {#each stockErrors as err}
-                  <p class="text-xs text-destructive">{err}</p>
-                {/each}
-                <p class="text-xs text-muted-foreground mt-1">Please update your cart and try again.</p>
-              </div>
-            {:else if checkoutError}
-              <p class="text-sm text-destructive">{checkoutError}</p>
-            {/if}
+            <div id="checkout-errors" class="scroll-mt-32">
+              {#if stockErrors.length > 0}
+                <div class="border border-destructive bg-destructive/5 px-4 py-3 space-y-1">
+                  <p class="text-sm font-medium text-destructive">Cannot complete checkout:</p>
+                  {#each stockErrors as err}
+                    <p class="text-xs text-destructive">{err}</p>
+                  {/each}
+                  <p class="text-xs text-muted-foreground mt-1">Please update your cart and try again.</p>
+                </div>
+              {:else if checkoutError}
+                <div class="border border-destructive bg-destructive/5 px-4 py-3">
+                  <p class="text-sm font-medium text-destructive">{checkoutError}</p>
+                </div>
+              {/if}
+            </div>
 
             <!-- Pay button -->
             <button type="submit" disabled={submitting} class="w-full py-4 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2">

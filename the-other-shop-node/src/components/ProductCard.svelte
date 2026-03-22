@@ -1,4 +1,5 @@
 <script>
+  import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
   export let product;
   export let currency = 'R';
 
@@ -26,9 +27,12 @@
   <!-- Image container -->
   <div class="relative aspect-[3/4] overflow-hidden bg-secondary mb-3">
     <img
-      src={isHovered ? hoverImage : primaryImage}
+      src={getOptimizedUrl(isHovered ? hoverImage : primaryImage, 600)}
+      srcset={getSrcset(isHovered ? hoverImage : primaryImage)}
+      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
       alt={product.name}
       class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+      loading="lazy"
     />
 
     {#if isOutOfStock}

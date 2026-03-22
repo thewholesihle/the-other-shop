@@ -13,8 +13,15 @@
   if (form.hero.video === undefined) form.hero.video = '';
   if (!form.maintenance) form.maintenance = { enabled: false, collectEmails: false, title: "We'll be back soon.", message: 'Our store is currently undergoing scheduled maintenance. Please check back shortly.', background: '' };
   if (form.maintenance.collectEmails === undefined) form.maintenance.collectEmails = false;
-  if (!form.socials) form.socials = { instagram: '', twitter: '', tiktok: '' };
+  if (!form.socials) form.socials = { instagram: '', twitter: '', tiktok: '', youtube: '' };
+  if (form.socials.youtube === undefined) form.socials.youtube = '';
   if (form.featuredLookbook === undefined) form.featuredLookbook = '';
+  if (!form.colors) form.colors = { background: '#f8f5f2', foreground: '#211c1a', primary: '#211c1a', border: '#dbd8d4', hover: '#ff4400' };
+  if (form.colors.hover === undefined) form.colors.hover = form.colors.primary || '#ff4400';
+  if (form.footerLogo === undefined) form.footerLogo = '';
+  if (form.footerTagline === undefined) form.footerTagline = '';
+  if (form.metaTitle === undefined) form.metaTitle = '';
+  if (form.metaDescription === undefined) form.metaDescription = '';
   let saved = false;
 
   function handleSave() {
@@ -43,7 +50,18 @@
         <input id="s-tagline" bind:value={form.tagline} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
       </div>
       <div>
-        <label for="s-desc" class="text-label block mb-1.5">DESCRIPTION</label>
+        <label for="s-meta-title" class="text-label block mb-1.5">META TITLE (SEO)</label>
+        <p class="text-xs text-muted-foreground mb-1.5">Overrides the title shown in browser tabs and search engines.</p>
+        <input id="s-meta-title" bind:value={form.metaTitle} placeholder="e.g. Others. — Official Store" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+      </div>
+      <div>
+        <label for="s-meta-desc" class="text-label block mb-1.5">META DESCRIPTION (SEO)</label>
+        <p class="text-xs text-muted-foreground mb-1.5">The snippet shown under your website in Google and social previews.</p>
+        <textarea id="s-meta-desc" bind:value={form.metaDescription} rows={2} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
+      </div>
+      <div>
+        <label for="s-desc" class="text-label block mb-1.5">ABOUT DESCRIPTION</label>
+        <p class="text-xs text-muted-foreground mb-1.5">The short paragraph shown in your website footer.</p>
         <textarea id="s-desc" bind:value={form.description} rows={2} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
       </div>
       <!-- Logo -->
@@ -58,6 +76,49 @@
             </div>
           {/if}
           <ImageUpload label="" value={form.logo || ''} onChange={(url) => (form.logo = url)} />
+        </div>
+      </div>
+    </div>
+
+    <!-- Color Palette -->
+    <div class="space-y-4 bg-card border border-border p-5">
+      <h3 class="text-label">COLOR PALETTE</h3>
+      <p class="text-xs text-muted-foreground mb-4">Customize the global colors of the website.</p>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div>
+          <label for="c-bg" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Background</label>
+          <div class="flex items-center gap-2 border border-border p-1 bg-background">
+            <input id="c-bg" type="color" bind:value={form.colors.background} class="w-8 h-8 cursor-pointer rounded-none border-0 p-0" />
+            <span class="text-xs font-mono">{form.colors.background}</span>
+          </div>
+        </div>
+        <div>
+          <label for="c-fg" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Foreground (Text)</label>
+          <div class="flex items-center gap-2 border border-border p-1 bg-background">
+            <input id="c-fg" type="color" bind:value={form.colors.foreground} class="w-8 h-8 cursor-pointer rounded-none border-0 p-0" />
+            <span class="text-xs font-mono">{form.colors.foreground}</span>
+          </div>
+        </div>
+        <div>
+          <label for="c-pr" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Primary Accents</label>
+          <div class="flex items-center gap-2 border border-border p-1 bg-background">
+            <input id="c-pr" type="color" bind:value={form.colors.primary} class="w-8 h-8 cursor-pointer rounded-none border-0 p-0" />
+            <span class="text-xs font-mono">{form.colors.primary}</span>
+          </div>
+        </div>
+        <div>
+          <label for="c-bo" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Borders</label>
+          <div class="flex items-center gap-2 border border-border p-1 bg-background">
+            <input id="c-bo" type="color" bind:value={form.colors.border} class="w-8 h-8 cursor-pointer rounded-none border-0 p-0" />
+            <span class="text-xs font-mono">{form.colors.border}</span>
+          </div>
+        </div>
+        <div>
+          <label for="c-ho" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Hover State</label>
+          <div class="flex items-center gap-2 border border-border p-1 bg-background">
+            <input id="c-ho" type="color" bind:value={form.colors.hover} class="w-8 h-8 cursor-pointer rounded-none border-0 p-0" />
+            <span class="text-xs font-mono">{form.colors.hover}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -233,12 +294,34 @@
     <!-- Socials -->
     <div class="space-y-4 bg-card border border-border p-5">
       <h3 class="text-label">SOCIAL LINKS</h3>
-      {#each [['instagram','Instagram'],['twitter','X / Twitter'],['tiktok','TikTok']] as [key, label]}
+      {#each [['instagram','Instagram'],['twitter','X / Twitter'],['tiktok','TikTok'],['youtube','YouTube']] as [key, label]}
         <div>
           <label for="social-{key}" class="text-label block mb-1.5">{label}</label>
           <input id="social-{key}" bind:value={form.socials[key]} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
         </div>
       {/each}
+    </div>
+
+    <!-- Footer Content -->
+    <div class="space-y-4 bg-card border border-border p-5">
+      <h3 class="text-label">FOOTER CONTENT</h3>
+      <div>
+        <label for="f-tagline" class="text-label block mb-1.5">FOOTER TAGLINE</label>
+        <input id="f-tagline" bind:value={form.footerTagline} placeholder="Sign up for drops, exclusives & community news." class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+      </div>
+      <div>
+        <p class="text-label block mb-1.5">FOOTER LOGO (optional)</p>
+        <p class="text-xs text-muted-foreground mb-2">Upload a specific logo for the footer area. Uses main site name if blank.</p>
+        <div class="flex items-start gap-4">
+          {#if form.footerLogo}
+            <div class="flex items-center gap-3">
+              <img src={form.footerLogo} alt="Footer Logo" class="h-10 w-auto max-w-[120px] object-contain bg-secondary p-1" />
+              <button onclick={() => (form.footerLogo = '')} class="text-xs text-destructive hover:underline">Remove</button>
+            </div>
+          {/if}
+          <ImageUpload label="" value={form.footerLogo || ''} onChange={(url) => (form.footerLogo = url)} />
+        </div>
+      </div>
     </div>
 
     <div class="flex gap-3">

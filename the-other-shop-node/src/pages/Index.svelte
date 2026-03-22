@@ -25,8 +25,8 @@
 </script>
 
 <svelte:head>
-  <title>{data ? data.site.name : 'Others.'}</title>
-  <meta name="description" content={data ? data.site.description : 'Streetwear rooted in culture, built for everyone else.'} />
+  <title>{data ? (data.site.metaTitle || data.site.name) : 'Others.'}</title>
+  <meta name="description" content={data ? (data.site.metaDescription || data.site.description || 'Streetwear rooted in culture, built for everyone else.') : 'Streetwear rooted in culture, built for everyone else.'} />
 </svelte:head>
 
 {#if loading || !data}

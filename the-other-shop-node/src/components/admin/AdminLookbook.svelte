@@ -21,7 +21,16 @@
     editing = null; isNew = false;
   }
 
-  function handleDelete(id) { onUpdate(lookbooks.filter(l => l.id !== id)); }
+  async function handleDelete(id) {
+    if (!confirm('Are you sure you want to delete this lookbook?')) return;
+    try {
+      const res = await fetch('/api/lookbooks/' + id, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete lookbook.');
+      onUpdate(lookbooks.filter(l => l.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  }
 
   // ── Item helpers ────────────────────────────────────────────────────────────
   function addItem(type) {

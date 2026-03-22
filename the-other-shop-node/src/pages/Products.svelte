@@ -21,8 +21,8 @@
 </script>
 
 <svelte:head>
-  <title>{data ? `Shop All — ${data.site.name}` : 'Shop'}</title>
-  <meta name="description" content="Browse the full Others. collection — hoodies, tees, cargo pants, jackets and accessories." />
+  <title>{data ? `Shop All — ${data.site.metaTitle || data.site.name}` : 'Shop'}</title>
+  <meta name="description" content={data?.site?.metaDescription || "Browse the full Others. collection — hoodies, tees, cargo pants, jackets and accessories."} />
 </svelte:head>
 
 {#if loading || !data}

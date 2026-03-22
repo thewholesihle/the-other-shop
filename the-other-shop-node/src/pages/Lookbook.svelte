@@ -3,6 +3,7 @@
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
+  import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
 
   let data = null;
   let loading = true;
@@ -19,8 +20,8 @@
 </script>
 
 <svelte:head>
-  <title>{data ? `Lookbook — ${data.site.name}` : 'Lookbook'}</title>
-  <meta name="description" content="Browse the Others. lookbook — editorial photography and campaign imagery from our latest collections." />
+  <title>{data ? `Lookbook — ${data.site.metaTitle || data.site.name}` : 'Lookbook'}</title>
+  <meta name="description" content={data?.site?.metaDescription || "Browse the Others. lookbook — editorial photography and campaign imagery from our latest collections."} />
 </svelte:head>
 
 {#if loading || !data}
@@ -51,7 +52,9 @@
               <div class="aspect-[3/4] overflow-hidden bg-secondary mb-4 relative">
                 {#if cover}
                   <img
-                    src={cover}
+                    src={getOptimizedUrl(cover, 800)}
+                    srcset={getSrcset(cover)}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     alt={lb.title}
                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     loading="lazy"

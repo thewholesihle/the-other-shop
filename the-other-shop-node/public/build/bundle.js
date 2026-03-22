@@ -7608,24 +7608,23 @@
 
 	var root_1$o = from_html(`<img class="h-7 w-auto object-contain"/>`);
 	var root_3$p = from_html(`<a class="text-foreground text-label hover:opacity-60 transition-opacity duration-200"> </a>`);
-	var root_4$h = from_html(`<span class="absolute -top-2 -right-2 bg-store-rust text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none tabular-nums"> </span>`);
+	var root_4$i = from_html(`<span class="absolute -top-2 -right-2 bg-accent text-accent-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none tabular-nums"> </span>`);
 	var root_5$j = from_svg(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>`);
 	var root_6$h = from_svg(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>`);
-	var root_8$b = from_html(`<a class="block text-foreground text-label py-3 border-b border-border"> </a>`);
+	var root_8$c = from_html(`<a class="block text-foreground text-label py-3 border-b border-border"> </a>`);
 	var root_7$c = from_html(`<div class="md:hidden bg-background border-t border-border px-5 pb-6 pt-3 animate-fade-in"><!> <a href="/cart" class="block text-foreground text-label py-3">CART <!></a></div>`);
 	var root$l = from_html(`<nav class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/40"><div class="flex items-center justify-between px-5 md:px-10 py-4 max-w-screen-2xl mx-auto"><a href="/" class="text-foreground font-display text-xl font-bold tracking-tight"><!></a> <div class="hidden md:flex items-center gap-8"></div> <div class="flex items-center gap-5"><a href="/cart" class="relative text-foreground hover:opacity-60 transition-opacity active:scale-95" aria-label="Cart"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg> <!></a> <button class="md:hidden text-foreground hover:opacity-60 transition-opacity active:scale-95" aria-label="Menu"><!></button></div></div> <!></nav>`);
 
 	function Navbar($$anchor, $$props) {
 		const $cartCount = () => store_get(cartCount, '$cartCount', $$stores);
 		const [$$stores, $$cleanup] = setup_stores();
-		let siteName = prop($$props, 'siteName', 8, 'Others.');
+		let siteName = prop($$props, 'siteName', 8, "Others.");
 		let logo = prop($$props, 'logo', 8, null);
 
 		const navLinks = [
-			{ label: 'SHOP', href: '/products' },
-			{ label: 'LOOKBOOK', href: '/lookbook' },
-			{ label: 'COMMUNITY', href: '/community' },
-			{ label: 'SS26', href: '/products' }
+			{ label: "SHOP", href: "/products" },
+			{ label: "LOOKBOOK", href: "/lookbook" },
+			{ label: "COMMUNITY", href: "/community" }
 		];
 
 		let mobileOpen = mutable_source(false);
@@ -7688,9 +7687,9 @@
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var span = root_4$h();
+				var span = root_4$i();
 				var text_2 = child(span);
-				template_effect(() => set_text(text_2, $cartCount() > 9 ? '9+' : $cartCount()));
+				template_effect(() => set_text(text_2, $cartCount() > 9 ? "9+" : $cartCount()));
 				append($$anchor, span);
 			};
 
@@ -7728,7 +7727,7 @@
 				var node_4 = child(div_3);
 
 				each(node_4, 1, () => navLinks, index, ($$anchor, link) => {
-					var a_3 = root_8$b();
+					var a_3 = root_8$c();
 					var text_3 = child(a_3);
 
 					template_effect(() => {
@@ -7755,7 +7754,7 @@
 						if ($cartCount() > 0) $$render(consequent_3);
 					});
 				}
-				delegated('click', a_4, (e) => nav(e, '/cart'));
+				delegated('click', a_4, (e) => nav(e, "/cart"));
 				append($$anchor, div_3);
 			};
 
@@ -7763,8 +7762,8 @@
 				if (get(mobileOpen)) $$render(consequent_4);
 			});
 		}
-		delegated('click', a, (e) => nav(e, '/'));
-		delegated('click', a_2, (e) => nav(e, '/cart'));
+		delegated('click', a, (e) => nav(e, "/"));
+		delegated('click', a_2, (e) => nav(e, "/cart"));
 		delegated('click', button, () => set(mobileOpen, !get(mobileOpen)));
 		append($$anchor, nav_1);
 		$$cleanup();
@@ -7807,7 +7806,7 @@
 	var root_1$n = from_html(`<img alt="" class="absolute inset-0 w-full h-full object-cover" aria-hidden="true" loading="eager"/>`);
 	var root_2$r = from_html(`<video class="absolute inset-0 w-full h-full object-cover" autoplay="" loop="" playsinline="" aria-hidden="true"><track kind="captions"/></video>`, 2);
 	var root_3$o = from_html(`<img alt="Others. collection editorial" class="absolute inset-0 w-full h-full object-cover" loading="eager"/>`);
-	var root_4$g = from_html(`<p class="text-label mb-3 opacity-0 animate-fade-up" style="animation-delay:0.3s;color:hsl(40,20%,97%)"> </p>`);
+	var root_4$h = from_html(`<p class="text-label mb-3 opacity-0 animate-fade-up" style="animation-delay:0.3s;color:hsl(40,20%,97%)"> </p>`);
 	var root_5$i = from_html(` <br/>`, 1);
 	var root_6$g = from_html(`<p class="text-sm md:text-base mb-6 opacity-0 animate-fade-up" style="animation-delay:0.6s;color:hsl(40,20%,97%);opacity:0.85"> </p>`);
 	var root_7$b = from_html(`<a class="inline-block border border-[hsl(40,20%,97%)] px-8 py-3 text-label tracking-[0.25em] hover:bg-[hsl(40,20%,97%)] hover:text-foreground transition-all duration-300 opacity-0 animate-fade-up active:scale-[0.97]" style="animation-delay:0.7s;color:hsl(40,20%,97%)"> </a>`);
@@ -7892,7 +7891,7 @@
 
 		{
 			var consequent_3 = ($$anchor) => {
-				var p = root_4$g();
+				var p = root_4$h();
 				var text = child(p);
 				template_effect(() => set_text(text, (deep_read_state(hero()), untrack(() => hero().label))));
 				append($$anchor, p);
@@ -7966,10 +7965,46 @@
 
 	delegate(['click']);
 
+	/**
+	 * Helper to generate responsive Cloudinary URLs and srcsets
+	 */
+
+	/**
+	 * Generates a specific max-width URL for a Cloudinary image
+	 * @param {string} url - Original URL
+	 * @param {number|'auto'} width - Target width or auto
+	 * @returns {string} The optimized URL
+	 */
+	function getOptimizedUrl(url, width = 'auto') {
+	  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
+	  
+	  const uploadIndex = url.indexOf('/upload/');
+	  if (uploadIndex === -1) return url;
+	  
+	  const basePrefix = url.substring(0, uploadIndex + 8); // keeps '/upload/'
+	  const remainder = url.substring(uploadIndex + 8);
+
+	  // Use c_scale for smooth resizing, limiting max size to 'width'
+	  const transformer = width === 'auto' ? 'q_auto,f_auto' : `c_limit,w_${width},q_auto,f_auto`;
+	  
+	  return `${basePrefix}${transformer}/${remainder}`;
+	}
+
+	/**
+	 * Generates an HTML5 srcset string with multiple resolution stops
+	 * @param {string} url - Original URL
+	 * @returns {string} Comma-separated srcset string
+	 */
+	function getSrcset(url) {
+	  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return '';
+	  const widths = [400, 800, 1200, 1600, 2000];
+	  return widths.map(w => `${getOptimizedUrl(url, w)} ${w}w`).join(', ');
+	}
+
 	var root_1$m = from_html(`<span class="absolute top-3 left-3 bg-store-rust text-accent-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">Sold Out</span>`);
 	var root_2$q = from_html(`<span class="absolute top-3 left-3 bg-foreground text-primary-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">New</span>`);
 	var root_3$n = from_html(`<p class="text-[11px] text-muted-foreground mt-0.5"> </p>`);
-	var root$i = from_html(`<div class="group relative cursor-pointer" role="button" tabindex="0"><div class="relative aspect-[3/4] overflow-hidden bg-secondary mb-3"><img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/> <!></div> <div><h3 class="text-sm font-medium leading-tight truncate"> </h3> <p class="text-sm text-muted-foreground mt-0.5 tabular-nums"> </p> <!></div></div>`);
+	var root$i = from_html(`<div class="group relative cursor-pointer" role="button" tabindex="0"><div class="relative aspect-[3/4] overflow-hidden bg-secondary mb-3"><img sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <!></div> <div><h3 class="text-sm font-medium leading-tight truncate"> </h3> <p class="text-sm text-muted-foreground mt-0.5 tabular-nums"> </p> <!></div></div>`);
 
 	function ProductCard($$anchor, $$props) {
 		push($$props, false);
@@ -8057,13 +8092,14 @@
 		}
 
 		template_effect(
-			($0) => {
+			($0, $1, $2) => {
 				set_attribute(div, 'aria-label', `View ${(
 				deep_read_state(product()),
 				untrack(() => product().name)
 			) ?? ''}`);
 
-				set_attribute(img, 'src', get(isHovered) ? get(hoverImage) : get(primaryImage));
+				set_attribute(img, 'src', $0);
+				set_attribute(img, 'srcset', $1);
 
 				set_attribute(img, 'alt', (
 					deep_read_state(product()),
@@ -8075,9 +8111,25 @@
 					untrack(() => product().name)
 				));
 
-				set_text(text_1, `${currency() ?? ''}${$0 ?? ''}`);
+				set_text(text_1, `${currency() ?? ''}${$2 ?? ''}`);
 			},
 			[
+				() => (
+					deep_read_state(getOptimizedUrl),
+					get(isHovered),
+					get(hoverImage),
+					get(primaryImage),
+					untrack(() => getOptimizedUrl(get(isHovered) ? get(hoverImage) : get(primaryImage), 600))
+				),
+
+				() => (
+					deep_read_state(getSrcset),
+					get(isHovered),
+					get(hoverImage),
+					get(primaryImage),
+					untrack(() => getSrcset(get(isHovered) ? get(hoverImage) : get(primaryImage)))
+				),
+
 				() => (
 					deep_read_state(product()),
 					untrack(() => product().price.toFixed(2))
@@ -8173,9 +8225,10 @@
 
 	delegate(['click']);
 
-	var root_1$k = from_html(`<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"><a style="animation-delay:0.15s"><img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent"><span class="text-label text-white group-hover:underline underline-offset-4">VIEW LOOKBOOK</span></div></a> <a style="animation-delay:0.25s"><img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent"><span class="text-label text-white group-hover:underline underline-offset-4">EXPLORE</span></div></a></div>`);
-	var root_3$m = from_html(`<a href="/lookbook"><img alt="Lookbook" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent"><span class="text-label text-white group-hover:underline underline-offset-4"></span></div></a>`);
-	var root_2$p = from_html(`<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"></div>`);
+	var root_2$p = from_html(`<a><img sizes="(max-width: 768px) 50vw, 25vw" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy"/> <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500"></div> <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"><span class="text-label text-white tracking-widest"></span></div></a>`);
+	var root_1$k = from_html(`<div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 md:auto-rows-[300px] lg:auto-rows-[360px]"></div>`);
+	var root_4$g = from_html(`<a href="/lookbook"><div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent"><span class="text-label text-white"></span></div></a>`);
+	var root_3$m = from_html(`<div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 md:auto-rows-[300px] lg:auto-rows-[360px]"></div>`);
 	var root$g = from_html(`<section class="px-6 md:px-10 pb-20 md:pb-32"><div><p class="text-label mb-2">Editorial</p> <h2 class="text-3xl md:text-4xl font-display font-bold leading-tight"> </h2></div> <!> <div style="animation-delay:0.35s"><a href="/lookbook" class="inline-block border border-foreground px-10 py-4 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300 active:scale-[0.97]">EXPLORE FULL LOOKBOOK</a></div></section>`);
 
 	function LookbookSection($$anchor, $$props) {
@@ -8183,8 +8236,7 @@
 
 		const lb = mutable_source();
 		const images = mutable_source();
-		const primary = mutable_source();
-		const secondary = mutable_source();
+		const showcase = mutable_source();
 		const lbPath = mutable_source();
 		let lookbook = prop($$props, 'lookbook', 8, null // single lookbook object from parent
 		);
@@ -8211,6 +8263,34 @@
 			if (window.__navigate) window.__navigate(path);
 		}
 
+		// Showcase up to 4 images
+		function getGridClass(total, index) {
+			let base = "relative overflow-hidden group w-full h-full ";
+
+			if (total === 1) {
+				return base + "col-span-2 md:col-span-4 md:row-span-2 aspect-[4/5] md:aspect-auto";
+			}
+
+			if (total === 2) {
+				return base + "col-span-2 md:col-span-2 md:row-span-2 aspect-square md:aspect-auto";
+			}
+
+			if (total === 3) {
+				if (index === 0) return base + "col-span-2 md:row-span-2 aspect-[4/5] md:aspect-auto";
+
+				return base + "col-span-2 md:row-span-1 aspect-square md:aspect-auto";
+			}
+
+			if (total === 4) {
+				if (index === 0) return base + "col-span-2 md:row-span-2 aspect-[4/5] md:aspect-auto";
+				if (index === 1) return base + "col-span-2 md:row-span-1 aspect-video md:aspect-auto";
+
+				return base + "col-span-1 md:row-span-1 aspect-square md:aspect-auto";
+			}
+
+			return base;
+		}
+
 		legacy_pre_effect(
 			() => (
 				deep_read_state(lookbook()),
@@ -8223,16 +8303,12 @@
 
 		legacy_pre_effect(() => (get(lb)), () => {
 			set(images, get(lb)
-				? get(lb).images || [get(lb).cover].filter(Boolean)
+				? get(lb).images?.length ? get(lb).images : [get(lb).cover].filter(Boolean)
 				: []);
 		});
 
 		legacy_pre_effect(() => (get(images)), () => {
-			set(primary, get(images)[0] || '');
-		});
-
-		legacy_pre_effect(() => (get(images)), () => {
-			set(secondary, get(images)[1] || get(images)[0] || '');
+			set(showcase, get(images).slice(0, 4));
 		});
 
 		legacy_pre_effect(() => (get(lb)), () => {
@@ -8252,60 +8328,82 @@
 		{
 			var consequent = ($$anchor) => {
 				var div_1 = root_1$k();
-				var a = child(div_1);
-				var img = child(a);
 
-				var a_1 = sibling(a, 2);
-				var img_1 = child(a_1);
+				each(div_1, 5, () => get(showcase), index, ($$anchor, img, i) => {
+					var a = root_2$p();
 
-				template_effect(() => {
-					set_attribute(a, 'href', get(lbPath));
-					set_class(a, 1, `relative aspect-square md:aspect-[3/4] overflow-hidden group ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
-					set_attribute(img, 'src', get(primary));
-					set_attribute(img, 'alt', (get(lb), untrack(() => get(lb).title)));
-					set_attribute(a_1, 'href', get(lbPath));
-					set_class(a_1, 1, `relative aspect-square md:aspect-[3/4] overflow-hidden group ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
-					set_attribute(img_1, 'src', get(secondary));
-					set_attribute(img_1, 'alt', `${(get(lb), untrack(() => get(lb).title)) ?? ''} — behind the scenes`);
+					set_style(a, `animation-delay:${0.1 + i * 0.15}s`);
+
+					var img_1 = child(a);
+					var div_2 = sibling(img_1, 4);
+					var span = child(div_2);
+
+					span.textContent = i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE';
+
+					template_effect(
+						($0, $1, $2) => {
+							set_attribute(a, 'href', get(lbPath));
+							set_class(a, 1, `${$0 ?? ''} ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
+							set_attribute(img_1, 'src', $1);
+							set_attribute(img_1, 'srcset', $2);
+							set_attribute(img_1, 'alt', (get(lb), untrack(() => get(lb).title)));
+						},
+						[
+							() => (
+								get(showcase),
+								untrack(() => getGridClass(get(showcase).length, i))
+							),
+
+							() => (
+								deep_read_state(getOptimizedUrl),
+								get(img),
+								untrack(() => getOptimizedUrl(get(img), 800))
+							),
+
+							() => (
+								deep_read_state(getSrcset),
+								get(img),
+								untrack(() => getSrcset(get(img)))
+							)
+						]
+					);
+
+					delegated('click', a, (e) => goTo(get(lbPath), e));
+					append($$anchor, a);
 				});
-
-				delegated('click', a, (e) => goTo(get(lbPath), e));
-				delegated('click', a_1, (e) => goTo(get(lbPath), e));
 				append($$anchor, div_1);
 			};
 
 			var alternate = ($$anchor) => {
-				var div_2 = root_2$p();
+				var div_3 = root_3$m();
 
-				each(div_2, 4, () => ['/images/lookbook-1.jpg', '/images/lookbook-2.jpg'], index, ($$anchor, src, i) => {
-					var a_2 = root_3$m();
+				each(div_3, 4, () => [1, 2, 3], index, ($$anchor, item, i) => {
+					var a_1 = root_4$g();
 
-					set_style(a_2, `animation-delay:${0.15 + i * 0.1}s`);
+					set_style(a_1, `animation-delay:${0.1 + i * 0.15}s`);
 
-					var img_2 = child(a_2);
-					var div_3 = sibling(img_2, 2);
-					var span = child(div_3);
+					var div_4 = child(a_1);
+					var span_1 = child(div_4);
 
-					span.textContent = i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE';
-
-					template_effect(() => {
-						set_class(a_2, 1, `relative aspect-square md:aspect-[3/4] overflow-hidden group ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
-						set_attribute(img_2, 'src', src);
-					});
-
-					delegated('click', a_2, (e) => goTo('/lookbook', e));
-					append($$anchor, a_2);
+					span_1.textContent = i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE';
+					template_effect(($0) => set_class(a_1, 1, `${$0 ?? ''} ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'} bg-secondary`), [() => (untrack(() => getGridClass(3, i)))]);
+					delegated('click', a_1, (e) => goTo('/lookbook', e));
+					append($$anchor, a_1);
 				});
-				append($$anchor, div_2);
+				append($$anchor, div_3);
 			};
 
 			if_block(node, ($$render) => {
-				if (get(lb) && (get(primary) || get(secondary))) $$render(consequent); else $$render(alternate, -1);
+				if ((
+					get(lb),
+					get(showcase),
+					untrack(() => get(lb) && get(showcase).length > 0)
+				)) $$render(consequent); else $$render(alternate, -1);
 			});
 		}
 
-		var div_4 = sibling(node, 2);
-		var a_3 = child(div_4);
+		var div_5 = sibling(node, 2);
+		var a_2 = child(div_5);
 		bind_this(section, ($$value) => set(ref, $$value), () => get(ref));
 
 		template_effect(() => {
@@ -8316,24 +8414,26 @@
 				untrack(() => get(lb) ? get(lb).title : 'Lookbook')
 			));
 
-			set_class(div_4, 1, `text-center mt-10 ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
+			set_class(div_5, 1, `text-center mt-10 ${get(visible) ? 'opacity-0 animate-fade-up' : 'opacity-0'}`);
 		});
 
-		delegated('click', a_3, (e) => goTo('/lookbook', e));
+		delegated('click', a_2, (e) => goTo('/lookbook', e));
 		append($$anchor, section);
 		pop();
 	}
 
 	delegate(['click']);
 
-	var root_2$o = from_html(`<li><a class="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors duration-200"> </a></li>`);
-	var root_1$j = from_html(`<div><p class="text-label text-primary-foreground/40 mb-4"> </p> <ul class="space-y-2.5"></ul></div>`);
-	var root_3$l = from_html(`<div class="flex items-center gap-2 text-sm text-primary-foreground/70"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> You're subscribed!</div>`);
-	var root_4$f = from_html(`<p class="text-sm text-primary-foreground/50">Already subscribed.</p>`);
-	var root_6$f = from_html(`<p class="text-xs text-red-400">Something went wrong. Try again.</p>`);
-	var root_5$h = from_html(`<div class="flex w-full md:w-auto flex-col gap-1"><div class="flex"><input type="email" placeholder="Email address" class="bg-transparent border border-primary-foreground/20 px-4 py-3 text-sm text-primary-foreground placeholder:text-primary-foreground/30 flex-1 md:w-64 focus:outline-none focus:border-primary-foreground/50 transition-colors"/> <button class="bg-primary-foreground text-foreground px-6 py-3 text-label tracking-[0.2em] hover:bg-primary-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60"> </button></div> <!></div>`);
-	var root_7$a = from_html(`<a target="_blank" rel="noopener noreferrer" class="text-xs text-primary-foreground/30 hover:text-primary-foreground/60 transition-colors capitalize"> </a>`);
-	var root$f = from_html(`<footer class="bg-foreground text-primary-foreground px-6 md:px-10 pt-16 pb-8"><div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16"><div class="col-span-2 md:col-span-1"><h3 class="font-display text-2xl font-bold mb-4"> </h3> <p class="text-sm text-primary-foreground/60 max-w-xs leading-relaxed"> </p></div> <!></div> <div class="border-t border-primary-foreground/10 pt-10 pb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div><p class="text-label text-primary-foreground/40 mb-2">NEWSLETTER</p> <p class="text-sm text-primary-foreground/60">Sign up for drops, exclusives &amp; community news.</p></div> <!></div> <div class="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4"><p class="text-xs text-primary-foreground/30"> </p> <div class="flex gap-6"></div></div></footer>`);
+	var root_1$j = from_html(`<img class="h-10 w-auto mb-4 object-contain !border-0 bg-transparent"/>`);
+	var root_2$o = from_html(`<h3 class="font-display text-2xl font-bold mb-4"> </h3>`);
+	var root_4$f = from_html(`<li><a class="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors duration-200"> </a></li>`);
+	var root_3$l = from_html(`<div><p class="text-label text-primary-foreground/40 mb-4"> </p> <ul class="space-y-2.5"></ul></div>`);
+	var root_5$h = from_html(`<div class="flex items-center gap-2 text-sm text-primary-foreground/70"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> You're subscribed!</div>`);
+	var root_6$f = from_html(`<p class="text-sm text-primary-foreground/50">Already subscribed.</p>`);
+	var root_8$b = from_html(`<p class="text-xs text-red-400">Something went wrong. Try again.</p>`);
+	var root_7$a = from_html(`<div class="flex w-full md:w-auto flex-col gap-1"><div class="flex"><input type="email" placeholder="Email address" class="bg-transparent border border-primary-foreground/20 px-4 py-3 text-sm text-primary-foreground placeholder:text-primary-foreground/30 flex-1 md:w-64 focus:outline-none focus:border-primary-foreground/50 transition-colors"/> <button class="bg-primary-foreground text-foreground px-6 py-3 text-label tracking-[0.2em] hover:bg-primary-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60"> </button></div> <!></div>`);
+	var root_9$9 = from_html(`<a target="_blank" rel="noopener noreferrer" class="text-xs text-primary-foreground/30 hover:text-primary-foreground/60 transition-colors capitalize"> </a>`);
+	var root$f = from_html(`<footer class="bg-foreground text-primary-foreground px-6 md:px-10 pt-16 pb-8"><div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16"><div class="col-span-2 md:col-span-1"><!> <p class="text-sm text-primary-foreground/60 max-w-xs leading-relaxed"> </p></div> <!></div> <div class="border-t border-primary-foreground/10 pt-10 pb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"><div><p class="text-label text-primary-foreground/40 mb-2">NEWSLETTER</p> <p class="text-sm text-primary-foreground/60">Sign up for drops, exclusives &amp; community news.</p></div> <!></div> <div class="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4"><p class="text-xs text-primary-foreground/30"> </p> <div class="flex gap-6"></div></div></footer>`);
 
 	function Footer($$anchor, $$props) {
 		push($$props, false);
@@ -8401,7 +8501,9 @@
 		}
 
 		legacy_pre_effect(() => (deep_read_state(site())), () => {
-			set(socials, site().socials ? Object.entries(site().socials) : []);
+			set(socials, site().socials
+				? Object.entries(site().socials).filter(([_, href]) => href && href.trim() !== '')
+				: []);
 		});
 
 		legacy_pre_effect_reset();
@@ -8410,26 +8512,56 @@
 		var footer = root$f();
 		var div = child(footer);
 		var div_1 = child(div);
-		var h3 = child(div_1);
-		var text = child(h3);
+		var node = child(div_1);
 
-		var p = sibling(h3, 2);
+		{
+			var consequent = ($$anchor) => {
+				var img = root_1$j();
+
+				template_effect(() => {
+					set_attribute(img, 'src', (
+						deep_read_state(site()),
+						untrack(() => site().footerLogo)
+					));
+
+					set_attribute(img, 'alt', (deep_read_state(site()), untrack(() => site().name)));
+				});
+
+				append($$anchor, img);
+			};
+
+			var alternate = ($$anchor) => {
+				var h3 = root_2$o();
+				var text = child(h3);
+				template_effect(() => set_text(text, (deep_read_state(site()), untrack(() => site().name))));
+				append($$anchor, h3);
+			};
+
+			if_block(node, ($$render) => {
+				if ((
+					deep_read_state(site()),
+					untrack(() => site().footerLogo)
+				)) $$render(consequent); else $$render(alternate, -1);
+			});
+		}
+
+		var p = sibling(node, 2);
 		var text_1 = child(p);
 
-		var node = sibling(div_1, 2);
+		var node_1 = sibling(div_1, 2);
 
-		each(node, 1, () => (untrack(() => Object.entries(footerLinks))), index, ($$anchor, $$item) => {
+		each(node_1, 1, () => (untrack(() => Object.entries(footerLinks))), index, ($$anchor, $$item) => {
 			var $$array = user_derived(() => to_array(get($$item), 2));
 			let title = () => get($$array)[0];
 			let links = () => get($$array)[1];
-			var div_2 = root_1$j();
+			var div_2 = root_3$l();
 			var p_1 = child(div_2);
 			var text_2 = child(p_1);
 
 			var ul = sibling(p_1, 2);
 
 			each(ul, 5, links, index, ($$anchor, link) => {
-				var li = root_2$o();
+				var li = root_4$f();
 				var a = child(li);
 				var text_3 = child(a);
 
@@ -8446,40 +8578,40 @@
 		});
 
 		var div_3 = sibling(div, 2);
-		var node_1 = sibling(child(div_3), 2);
+		var node_2 = sibling(child(div_3), 2);
 
 		{
-			var consequent = ($$anchor) => {
-				var div_4 = root_3$l();
+			var consequent_1 = ($$anchor) => {
+				var div_4 = root_5$h();
 
 				append($$anchor, div_4);
 			};
 
-			var consequent_1 = ($$anchor) => {
-				var p_2 = root_4$f();
+			var consequent_2 = ($$anchor) => {
+				var p_2 = root_6$f();
 
 				append($$anchor, p_2);
 			};
 
-			var alternate = ($$anchor) => {
-				var div_5 = root_5$h();
+			var alternate_1 = ($$anchor) => {
+				var div_5 = root_7$a();
 				var div_6 = child(div_5);
 				var input = child(div_6);
 
 				var button = sibling(input, 2);
 				var text_4 = child(button);
 
-				var node_2 = sibling(div_6, 2);
+				var node_3 = sibling(div_6, 2);
 
 				{
-					var consequent_2 = ($$anchor) => {
-						var p_3 = root_6$f();
+					var consequent_3 = ($$anchor) => {
+						var p_3 = root_8$b();
 
 						append($$anchor, p_3);
 					};
 
-					if_block(node_2, ($$render) => {
-						if (get(subState) === 'error') $$render(consequent_2);
+					if_block(node_3, ($$render) => {
+						if (get(subState) === 'error') $$render(consequent_3);
 					});
 				}
 
@@ -8494,8 +8626,8 @@
 				append($$anchor, div_5);
 			};
 
-			if_block(node_1, ($$render) => {
-				if (get(subState) === 'done') $$render(consequent); else if (get(subState) === 'exists') $$render(consequent_1, 1); else $$render(alternate, -1);
+			if_block(node_2, ($$render) => {
+				if (get(subState) === 'done') $$render(consequent_1); else if (get(subState) === 'exists') $$render(consequent_2, 1); else $$render(alternate_1, -1);
 			});
 		}
 
@@ -8509,7 +8641,7 @@
 			var $$array_1 = user_derived(() => to_array(get($$item), 2));
 			let name = () => get($$array_1)[0];
 			let href = () => get($$array_1)[1];
-			var a_1 = root_7$a();
+			var a_1 = root_9$9();
 			var text_6 = child(a_1);
 
 			template_effect(() => {
@@ -8521,11 +8653,9 @@
 		});
 
 		template_effect(() => {
-			set_text(text, (deep_read_state(site()), untrack(() => site().name)));
-
 			set_text(text_1, (
 				deep_read_state(site()),
-				untrack(() => site().description)
+				untrack(() => site().footerTagline || site().description)
 			));
 
 			set_text(text_5, `© 2026 ${(deep_read_state(site()), untrack(() => site().name)) ?? ''} All rights reserved.`);
@@ -8585,14 +8715,16 @@
 			template_effect(() => set_attribute(meta, 'content', (
 				get(data),
 				untrack(() => get(data)
-					? get(data).site.description
+					? get(data).site.metaDescription || get(data).site.description || 'Streetwear rooted in culture, built for everyone else.'
 					: 'Streetwear rooted in culture, built for everyone else.')
 			)));
 
 			deferred_template_effect(() => {
 				$document.title = (
 					get(data),
-					untrack(() => get(data) ? get(data).site.name : 'Others.')
+					untrack(() => get(data)
+						? get(data).site.metaTitle || get(data).site.name
+						: 'Others.')
 				) ?? '';
 			});
 
@@ -9494,7 +9626,7 @@
 	var root_8$a = from_html(`<img alt="" class="w-6 h-6 object-cover bg-secondary"/>`);
 	var root_7$8 = from_html(`<div class="flex items-center justify-between text-sm"><span class="text-muted-foreground flex items-center gap-2"><!> <span> <span class="text-xs"> </span></span></span> <span class="tabular-nums"> </span></div>`);
 	var root_3$h = from_html(`<div class="bg-card border border-border p-5 space-y-4 animate-fade-in relative"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><p class="font-medium tabular-nums text-foreground"> </p> <p class="text-sm text-muted-foreground"> </p></div> <div class="flex flex-wrap items-center gap-2"><span> </span> <!> <select class="bg-transparent border border-border px-2 py-1 text-[10px] uppercase font-medium tracking-[0.1em] focus:outline-none focus:border-foreground transition-colors cursor-pointer ml-auto"></select> <button class="text-[10px] uppercase text-muted-foreground hover:text-foreground border border-border px-2 py-1 transition-colors">PDF</button></div> <!></div> <div class="border-t border-border/50 pt-3 space-y-2"></div> <div class="text-xs text-muted-foreground flex flex-col sm:flex-row gap-4 sm:items-center border-t border-border/50 pt-3"><div><span class="text-label">ADDRESS:</span> </div> <div><span class="text-label">EMAIL:</span> </div> <div><span class="text-label">PHONE:</span> </div> <div class="sm:hidden mt-2"><button class="text-[10px] uppercase text-muted-foreground hover:text-foreground underline transition-colors">Download PDF</button></div></div></div>`);
-	var root_9$7 = from_html(`<div class="py-12 border border-dashed border-border text-center"><p class="text-muted-foreground text-sm">No orders found for this filter.</p></div>`);
+	var root_9$8 = from_html(`<div class="py-12 border border-dashed border-border text-center"><p class="text-muted-foreground text-sm">No orders found for this filter.</p></div>`);
 	var root$a = from_html(`<div class="space-y-6 max-w-4xl"><div class="flex items-center justify-between"><div><h2 class="text-2xl font-display font-bold mb-1">Orders</h2> <p class="text-sm text-muted-foreground"> </p></div> <select class="bg-transparent border border-border px-4 py-2 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer"><option>All Orders</option><!></select></div> <div class="space-y-4"><!> <!></div></div>`);
 
 	function AdminOrders($$anchor, $$props) {
@@ -9875,7 +10007,7 @@
 
 		{
 			var consequent_3 = ($$anchor) => {
-				var div_16 = root_9$7();
+				var div_16 = root_9$8();
 
 				append($$anchor, div_16);
 			};
@@ -9908,7 +10040,8 @@
 	var root_7$7 = from_html(`<option> </option>`);
 	var root_6$c = from_html(`<select class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer"><option>— Latest lookbook (default) —</option><!></select>`);
 	var root_8$9 = from_html(`<div><label class="text-label block mb-1.5"> </label> <input class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div>`);
-	var root$9 = from_html(`<div class="space-y-8 max-w-2xl"><div><h2 class="text-2xl font-display font-bold mb-1">Settings</h2> <p class="text-sm text-muted-foreground">Manage store settings, branding and content.</p></div> <div class="space-y-6"><div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">BRANDING</h3> <div><label for="s-name" class="text-label block mb-1.5">STORE NAME</label> <input id="s-name" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-tagline" class="text-label block mb-1.5">TAGLINE</label> <input id="s-tagline" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-desc" class="text-label block mb-1.5">DESCRIPTION</label> <textarea id="s-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div><p class="text-label block mb-1.5">LOGO IMAGE</p> <p class="text-xs text-muted-foreground mb-2">Upload a logo image. If none, the store name text is shown.</p> <div class="flex items-start gap-4"><!> <!></div></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">ANNOUNCEMENT BAR</h3> <div><label for="s-ann" class="text-label block mb-1.5">ANNOUNCEMENT TEXT</label> <input id="s-ann" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-cur" class="text-label block mb-1.5">CURRENCY SYMBOL</label> <input id="s-cur" class="w-full max-w-[80px] bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">SHIPPING</h3> <div class="grid grid-cols-2 gap-4"><div><label for="s-free-min" class="text-label block mb-1.5"> </label> <input id="s-free-min" type="number" min="0" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div> <div><label for="s-std-rate" class="text-label block mb-1.5"> </label> <input id="s-std-rate" type="number" min="0" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div></div> <p class="text-xs text-muted-foreground">Orders above the free shipping minimum qualify for free delivery. Checkout is restricted to South Africa only.</p></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">HERO SECTION</h3> <div><label for="h-label" class="text-label block mb-1.5">SEASON LABEL</label> <input id="h-label" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-heading" class="text-label block mb-1.5">HERO TITLE</label> <input id="h-heading" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-sub" class="text-label block mb-1.5">HERO SUBTITLE</label> <input id="h-sub" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-cta" class="text-label block mb-1.5">CTA BUTTON TEXT</label> <input id="h-cta" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-cta-link" class="text-label block mb-1.5">CTA BUTTON LINK</label> <input id="h-cta-link" placeholder="/products" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/> <p class="text-xs text-muted-foreground mt-1">Use a relative path (e.g. /products, /lookbook) or a full URL.</p></div> <div class="space-y-3"><p class="text-label">HERO BACKGROUND</p> <p class="text-xs text-muted-foreground">Upload an image <em>or</em> a video/GIF. If both are set, video takes priority.</p> <!> <div><p class="text-label block mb-1.5">VIDEO / GIF (MP4, WEBM, GIF)</p> <!> <label class="cursor-pointer inline-flex items-center gap-2 border border-border px-3 py-2 text-label hover:bg-muted transition-colors text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg> UPLOAD VIDEO/GIF <input type="file" accept="video/mp4,video/webm,image/gif" class="sr-only"/></label></div></div></div> <div><div class="flex items-start justify-between gap-4"><div><h3 class="text-label text-red-500">MAINTENANCE MODE</h3> <p class="text-xs text-muted-foreground mt-0.5">When enabled, visitors see a maintenance page. Admins can still access /admin.</p></div> <button role="switch" aria-label="Toggle maintenance mode"><span></span></button></div> <!></div> <div class="space-y-3 bg-card border border-border p-5"><h3 class="text-label">FEATURED LOOKBOOK</h3> <p class="text-xs text-muted-foreground">Choose which lookbook is shown on the homepage.</p> <!></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">SOCIAL LINKS</h3> <!></div> <div class="flex gap-3"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> </button> <button class="flex items-center gap-2 px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] text-destructive"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg> RESET ALL DATA</button></div></div></div>`);
+	var root_9$7 = from_html(`<div class="flex items-center gap-3"><img alt="Footer Logo" class="h-10 w-auto max-w-[120px] object-contain bg-secondary p-1"/> <button class="text-xs text-destructive hover:underline">Remove</button></div>`);
+	var root$9 = from_html(`<div class="space-y-8 max-w-2xl"><div><h2 class="text-2xl font-display font-bold mb-1">Settings</h2> <p class="text-sm text-muted-foreground">Manage store settings, branding and content.</p></div> <div class="space-y-6"><div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">BRANDING</h3> <div><label for="s-name" class="text-label block mb-1.5">STORE NAME</label> <input id="s-name" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-tagline" class="text-label block mb-1.5">TAGLINE</label> <input id="s-tagline" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-meta-title" class="text-label block mb-1.5">META TITLE (SEO)</label> <p class="text-xs text-muted-foreground mb-1.5">Overrides the title shown in browser tabs and search engines.</p> <input id="s-meta-title" placeholder="e.g. Others. — Official Store" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-meta-desc" class="text-label block mb-1.5">META DESCRIPTION (SEO)</label> <p class="text-xs text-muted-foreground mb-1.5">The snippet shown under your website in Google and social previews.</p> <textarea id="s-meta-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div><label for="s-desc" class="text-label block mb-1.5">ABOUT DESCRIPTION</label> <p class="text-xs text-muted-foreground mb-1.5">The short paragraph shown in your website footer.</p> <textarea id="s-desc" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea></div> <div><p class="text-label block mb-1.5">LOGO IMAGE</p> <p class="text-xs text-muted-foreground mb-2">Upload a logo image. If none, the store name text is shown.</p> <div class="flex items-start gap-4"><!> <!></div></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">COLOR PALETTE</h3> <p class="text-xs text-muted-foreground mb-4">Customize the global colors of the website.</p> <div class="grid grid-cols-2 md:grid-cols-5 gap-4"><div><label for="c-bg" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Background</label> <div class="flex items-center gap-2 border border-border p-1 bg-background"><input id="c-bg" type="color" class="w-8 h-8 cursor-pointer rounded-none border-0 p-0"/> <span class="text-xs font-mono"> </span></div></div> <div><label for="c-fg" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Foreground (Text)</label> <div class="flex items-center gap-2 border border-border p-1 bg-background"><input id="c-fg" type="color" class="w-8 h-8 cursor-pointer rounded-none border-0 p-0"/> <span class="text-xs font-mono"> </span></div></div> <div><label for="c-pr" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Primary Accents</label> <div class="flex items-center gap-2 border border-border p-1 bg-background"><input id="c-pr" type="color" class="w-8 h-8 cursor-pointer rounded-none border-0 p-0"/> <span class="text-xs font-mono"> </span></div></div> <div><label for="c-bo" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Borders</label> <div class="flex items-center gap-2 border border-border p-1 bg-background"><input id="c-bo" type="color" class="w-8 h-8 cursor-pointer rounded-none border-0 p-0"/> <span class="text-xs font-mono"> </span></div></div> <div><label for="c-ho" class="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Hover State</label> <div class="flex items-center gap-2 border border-border p-1 bg-background"><input id="c-ho" type="color" class="w-8 h-8 cursor-pointer rounded-none border-0 p-0"/> <span class="text-xs font-mono"> </span></div></div></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">ANNOUNCEMENT BAR</h3> <div><label for="s-ann" class="text-label block mb-1.5">ANNOUNCEMENT TEXT</label> <input id="s-ann" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="s-cur" class="text-label block mb-1.5">CURRENCY SYMBOL</label> <input id="s-cur" class="w-full max-w-[80px] bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">SHIPPING</h3> <div class="grid grid-cols-2 gap-4"><div><label for="s-free-min" class="text-label block mb-1.5"> </label> <input id="s-free-min" type="number" min="0" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div> <div><label for="s-std-rate" class="text-label block mb-1.5"> </label> <input id="s-std-rate" type="number" min="0" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums"/></div></div> <p class="text-xs text-muted-foreground">Orders above the free shipping minimum qualify for free delivery. Checkout is restricted to South Africa only.</p></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">HERO SECTION</h3> <div><label for="h-label" class="text-label block mb-1.5">SEASON LABEL</label> <input id="h-label" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-heading" class="text-label block mb-1.5">HERO TITLE</label> <input id="h-heading" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-sub" class="text-label block mb-1.5">HERO SUBTITLE</label> <input id="h-sub" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-cta" class="text-label block mb-1.5">CTA BUTTON TEXT</label> <input id="h-cta" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><label for="h-cta-link" class="text-label block mb-1.5">CTA BUTTON LINK</label> <input id="h-cta-link" placeholder="/products" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/> <p class="text-xs text-muted-foreground mt-1">Use a relative path (e.g. /products, /lookbook) or a full URL.</p></div> <div class="space-y-3"><p class="text-label">HERO BACKGROUND</p> <p class="text-xs text-muted-foreground">Upload an image <em>or</em> a video/GIF. If both are set, video takes priority.</p> <!> <div><p class="text-label block mb-1.5">VIDEO / GIF (MP4, WEBM, GIF)</p> <!> <label class="cursor-pointer inline-flex items-center gap-2 border border-border px-3 py-2 text-label hover:bg-muted transition-colors text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg> UPLOAD VIDEO/GIF <input type="file" accept="video/mp4,video/webm,image/gif" class="sr-only"/></label></div></div></div> <div><div class="flex items-start justify-between gap-4"><div><h3 class="text-label text-red-500">MAINTENANCE MODE</h3> <p class="text-xs text-muted-foreground mt-0.5">When enabled, visitors see a maintenance page. Admins can still access /admin.</p></div> <button role="switch" aria-label="Toggle maintenance mode"><span></span></button></div> <!></div> <div class="space-y-3 bg-card border border-border p-5"><h3 class="text-label">FEATURED LOOKBOOK</h3> <p class="text-xs text-muted-foreground">Choose which lookbook is shown on the homepage.</p> <!></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">SOCIAL LINKS</h3> <!></div> <div class="space-y-4 bg-card border border-border p-5"><h3 class="text-label">FOOTER CONTENT</h3> <div><label for="f-tagline" class="text-label block mb-1.5">FOOTER TAGLINE</label> <input id="f-tagline" placeholder="Sign up for drops, exclusives &amp; community news." class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"/></div> <div><p class="text-label block mb-1.5">FOOTER LOGO (optional)</p> <p class="text-xs text-muted-foreground mb-2">Upload a specific logo for the footer area. Uses main site name if blank.</p> <div class="flex items-start gap-4"><!> <!></div></div></div> <div class="flex gap-3"><button class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg> </button> <button class="flex items-center gap-2 px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] text-destructive"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg> RESET ALL DATA</button></div></div></div>`);
 
 	function AdminSettings($$anchor, $$props) {
 		push($$props, false);
@@ -9969,7 +10102,14 @@
 		);
 
 		if (!get(form).socials) (
-			mutate(form, get(form).socials = { instagram: '', twitter: '', tiktok: '' }),
+			mutate(form, get(form).socials = { instagram: '', twitter: '', tiktok: '', youtube: '' }),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).socials.youtube === undefined) (
+			mutate(form, get(form).socials.youtube = ''),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
@@ -9977,6 +10117,55 @@
 
 		if (get(form).featuredLookbook === undefined) (
 			mutate(form, get(form).featuredLookbook = ''),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (!get(form).colors) (
+			mutate(form, get(form).colors = {
+				background: '#f8f5f2',
+				foreground: '#211c1a',
+				primary: '#211c1a',
+				border: '#dbd8d4',
+				hover: '#ff4400'
+			}),
+
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).colors.hover === undefined) (
+			mutate(form, get(form).colors.hover = get(form).colors.primary || '#ff4400'),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).footerLogo === undefined) (
+			mutate(form, get(form).footerLogo = ''),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).footerTagline === undefined) (
+			mutate(form, get(form).footerTagline = ''),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).metaTitle === undefined) (
+			mutate(form, get(form).metaTitle = ''),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		);
+
+		if (get(form).metaDescription === undefined) (
+			mutate(form, get(form).metaDescription = ''),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
@@ -10002,17 +10191,24 @@
 		var input_1 = sibling(child(div_4), 2);
 
 		var div_5 = sibling(div_4, 2);
-		var textarea = sibling(child(div_5), 2);
-		set_attribute(textarea, 'rows', 2);
+		var input_2 = sibling(child(div_5), 4);
 
 		var div_6 = sibling(div_5, 2);
-		var div_7 = sibling(child(div_6), 4);
-		var node = child(div_7);
+		var textarea = sibling(child(div_6), 4);
+		set_attribute(textarea, 'rows', 2);
+
+		var div_7 = sibling(div_6, 2);
+		var textarea_1 = sibling(child(div_7), 4);
+		set_attribute(textarea_1, 'rows', 2);
+
+		var div_8 = sibling(div_7, 2);
+		var div_9 = sibling(child(div_8), 4);
+		var node = child(div_9);
 
 		{
 			var consequent = ($$anchor) => {
-				var div_8 = root_1$c();
-				var img = child(div_8);
+				var div_10 = root_1$c();
+				var img = child(div_10);
 				var button = sibling(img, 2);
 				template_effect(() => set_attribute(img, 'src', (get(form), untrack(() => get(form).logo))));
 
@@ -10023,7 +10219,7 @@
 					})
 				));
 
-				append($$anchor, div_8);
+				append($$anchor, div_10);
 			};
 
 			if_block(node, ($$render) => {
@@ -10051,45 +10247,82 @@
 			});
 		}
 
-		var div_9 = sibling(div_2, 2);
-		var div_10 = sibling(child(div_9), 2);
-		var input_2 = sibling(child(div_10), 2);
+		var div_11 = sibling(div_2, 2);
+		var div_12 = sibling(child(div_11), 4);
+		var div_13 = child(div_12);
+		var div_14 = sibling(child(div_13), 2);
+		var input_3 = child(div_14);
 
-		var div_11 = sibling(div_10, 2);
-		var input_3 = sibling(child(div_11), 2);
+		var span = sibling(input_3, 2);
+		var text = child(span);
 
-		var div_12 = sibling(div_9, 2);
-		var div_13 = sibling(child(div_12), 2);
-		var div_14 = child(div_13);
-		var label_1 = child(div_14);
-		var text = child(label_1);
+		var div_15 = sibling(div_13, 2);
+		var div_16 = sibling(child(div_15), 2);
+		var input_4 = child(div_16);
 
-		var input_4 = sibling(label_1, 2);
+		var span_1 = sibling(input_4, 2);
+		var text_1 = child(span_1);
 
-		var div_15 = sibling(div_14, 2);
-		var label_2 = child(div_15);
-		var text_1 = child(label_2);
+		var div_17 = sibling(div_15, 2);
+		var div_18 = sibling(child(div_17), 2);
+		var input_5 = child(div_18);
 
-		var input_5 = sibling(label_2, 2);
+		var span_2 = sibling(input_5, 2);
+		var text_2 = child(span_2);
 
-		var div_16 = sibling(div_12, 2);
-		var div_17 = sibling(child(div_16), 2);
-		var input_6 = sibling(child(div_17), 2);
+		var div_19 = sibling(div_17, 2);
+		var div_20 = sibling(child(div_19), 2);
+		var input_6 = child(div_20);
 
-		var div_18 = sibling(div_17, 2);
-		var input_7 = sibling(child(div_18), 2);
+		var span_3 = sibling(input_6, 2);
+		var text_3 = child(span_3);
 
-		var div_19 = sibling(div_18, 2);
-		var input_8 = sibling(child(div_19), 2);
+		var div_21 = sibling(div_19, 2);
+		var div_22 = sibling(child(div_21), 2);
+		var input_7 = child(div_22);
 
-		var div_20 = sibling(div_19, 2);
-		var input_9 = sibling(child(div_20), 2);
+		var span_4 = sibling(input_7, 2);
+		var text_4 = child(span_4);
 
-		var div_21 = sibling(div_20, 2);
-		var input_10 = sibling(child(div_21), 2);
+		var div_23 = sibling(div_11, 2);
+		var div_24 = sibling(child(div_23), 2);
+		var input_8 = sibling(child(div_24), 2);
 
-		var div_22 = sibling(div_21, 2);
-		var node_2 = sibling(child(div_22), 4);
+		var div_25 = sibling(div_24, 2);
+		var input_9 = sibling(child(div_25), 2);
+
+		var div_26 = sibling(div_23, 2);
+		var div_27 = sibling(child(div_26), 2);
+		var div_28 = child(div_27);
+		var label_1 = child(div_28);
+		var text_5 = child(label_1);
+
+		var input_10 = sibling(label_1, 2);
+
+		var div_29 = sibling(div_28, 2);
+		var label_2 = child(div_29);
+		var text_6 = child(label_2);
+
+		var input_11 = sibling(label_2, 2);
+
+		var div_30 = sibling(div_26, 2);
+		var div_31 = sibling(child(div_30), 2);
+		var input_12 = sibling(child(div_31), 2);
+
+		var div_32 = sibling(div_31, 2);
+		var input_13 = sibling(child(div_32), 2);
+
+		var div_33 = sibling(div_32, 2);
+		var input_14 = sibling(child(div_33), 2);
+
+		var div_34 = sibling(div_33, 2);
+		var input_15 = sibling(child(div_34), 2);
+
+		var div_35 = sibling(div_34, 2);
+		var input_16 = sibling(child(div_35), 2);
+
+		var div_36 = sibling(div_35, 2);
+		var node_2 = sibling(child(div_36), 4);
 
 		ImageUpload(node_2, {
 			label: 'IMAGE (JPG/PNG/WEBP)',
@@ -10105,17 +10338,17 @@
 			)
 		});
 
-		var div_23 = sibling(node_2, 2);
-		var node_3 = sibling(child(div_23), 2);
+		var div_37 = sibling(node_2, 2);
+		var node_3 = sibling(child(div_37), 2);
 
 		{
 			var consequent_1 = ($$anchor) => {
-				var div_24 = root_2$h();
-				var span = child(div_24);
-				var text_2 = child(span);
+				var div_38 = root_2$h();
+				var span_5 = child(div_38);
+				var text_7 = child(span_5);
 
-				var button_1 = sibling(span, 2);
-				template_effect(() => set_text(text_2, (get(form), untrack(() => get(form).hero.video))));
+				var button_1 = sibling(span_5, 2);
+				template_effect(() => set_text(text_7, (get(form), untrack(() => get(form).hero.video))));
 
 				delegated('click', button_1, () => (
 					mutate(form, get(form).hero.video = ''),
@@ -10124,7 +10357,7 @@
 					})
 				));
 
-				append($$anchor, div_24);
+				append($$anchor, div_38);
 			};
 
 			if_block(node_3, ($$render) => {
@@ -10133,37 +10366,37 @@
 		}
 
 		var label_3 = sibling(node_3, 2);
-		var input_11 = sibling(child(label_3), 2);
+		var input_17 = sibling(child(label_3), 2);
 
-		var div_25 = sibling(div_16, 2);
-		var div_26 = child(div_25);
-		var button_2 = sibling(child(div_26), 2);
-		var span_1 = child(button_2);
+		var div_39 = sibling(div_30, 2);
+		var div_40 = child(div_39);
+		var button_2 = sibling(child(div_40), 2);
+		var span_6 = child(button_2);
 
-		var node_4 = sibling(div_26, 2);
+		var node_4 = sibling(div_40, 2);
 
 		{
 			var consequent_3 = ($$anchor) => {
-				var div_27 = root_3$g();
-				var div_28 = sibling(child(div_27), 2);
-				var button_3 = sibling(child(div_28), 2);
-				var span_2 = child(button_3);
+				var div_41 = root_3$g();
+				var div_42 = sibling(child(div_41), 2);
+				var button_3 = sibling(child(div_42), 2);
+				var span_7 = child(button_3);
 
-				var div_29 = sibling(div_28, 2);
-				var input_12 = sibling(child(div_29), 2);
+				var div_43 = sibling(div_42, 2);
+				var input_18 = sibling(child(div_43), 2);
 
-				var div_30 = sibling(div_29, 2);
-				var textarea_1 = sibling(child(div_30), 2);
-				set_attribute(textarea_1, 'rows', 3);
+				var div_44 = sibling(div_43, 2);
+				var textarea_2 = sibling(child(div_44), 2);
+				set_attribute(textarea_2, 'rows', 3);
 
-				var div_31 = sibling(div_30, 2);
-				var div_32 = sibling(child(div_31), 4);
-				var node_5 = child(div_32);
+				var div_45 = sibling(div_44, 2);
+				var div_46 = sibling(child(div_45), 4);
+				var node_5 = child(div_46);
 
 				{
 					var consequent_2 = ($$anchor) => {
-						var div_33 = root_4$c();
-						var img_1 = child(div_33);
+						var div_47 = root_4$c();
+						var img_1 = child(div_47);
 						var button_4 = sibling(img_1, 2);
 
 						template_effect(() => set_attribute(img_1, 'src', (
@@ -10178,7 +10411,7 @@
 							})
 						));
 
-						append($$anchor, div_33);
+						append($$anchor, div_47);
 					};
 
 					if_block(node_5, ($$render) => {
@@ -10223,7 +10456,7 @@
 					untrack(() => get(form).maintenance.collectEmails ? 'bg-foreground' : 'bg-muted')
 				) ?? ''}`);
 
-					set_class(span_2, 1, `absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${(
+					set_class(span_7, 1, `absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${(
 					get(form),
 					untrack(() => get(form).maintenance.collectEmails ? 'translate-x-5' : 'translate-x-0')
 				) ?? ''}`);
@@ -10236,21 +10469,21 @@
 					})
 				));
 
-				bind_value(input_12, () => get(form).maintenance.title, ($$value) => (
+				bind_value(input_18, () => get(form).maintenance.title, ($$value) => (
 					mutate(form, get(form).maintenance.title = $$value),
 					invalidate_inner_signals(() => {
 						lookbooks();
 					})
 				));
 
-				bind_value(textarea_1, () => get(form).maintenance.message, ($$value) => (
+				bind_value(textarea_2, () => get(form).maintenance.message, ($$value) => (
 					mutate(form, get(form).maintenance.message = $$value),
 					invalidate_inner_signals(() => {
 						lookbooks();
 					})
 				));
 
-				append($$anchor, div_27);
+				append($$anchor, div_41);
 			};
 
 			if_block(node_4, ($$render) => {
@@ -10261,8 +10494,8 @@
 			});
 		}
 
-		var div_34 = sibling(div_25, 2);
-		var node_7 = sibling(child(div_34), 4);
+		var div_48 = sibling(div_39, 2);
+		var node_7 = sibling(child(div_48), 4);
 
 		{
 			var consequent_4 = ($$anchor) => {
@@ -10281,12 +10514,12 @@
 
 				each(node_8, 1, lookbooks, index, ($$anchor, lb) => {
 					var option_1 = root_7$7();
-					var text_3 = child(option_1);
+					var text_8 = child(option_1);
 
 					var option_1_value = {};
 
 					template_effect(() => {
-						set_text(text_3, (get(lb), untrack(() => get(lb).title)));
+						set_text(text_8, (get(lb), untrack(() => get(lb).title)));
 
 						if (option_1_value !== (option_1_value = (get(lb), untrack(() => get(lb).id)))) {
 							option_1.value = (option_1.__value = (get(lb), untrack(() => get(lb).id))) ?? '';
@@ -10314,8 +10547,8 @@
 			});
 		}
 
-		var div_35 = sibling(div_34, 2);
-		var node_9 = sibling(child(div_35), 2);
+		var div_49 = sibling(div_48, 2);
+		var node_9 = sibling(child(div_49), 2);
 
 		each(
 			node_9,
@@ -10323,47 +10556,103 @@
 			() => [
 				['instagram', 'Instagram'],
 				['twitter', 'X / Twitter'],
-				['tiktok', 'TikTok']
+				['tiktok', 'TikTok'],
+				['youtube', 'YouTube']
 			],
 			index,
 			($$anchor, $$item) => {
 				var $$array = user_derived(() => to_array($$item, 2));
 				let key = () => get($$array)[0];
 				let label = () => get($$array)[1];
-				var div_36 = root_8$9();
-				var label_4 = child(div_36);
-				var text_4 = child(label_4);
+				var div_50 = root_8$9();
+				var label_4 = child(div_50);
+				var text_9 = child(label_4);
 
-				var input_13 = sibling(label_4, 2);
+				var input_19 = sibling(label_4, 2);
 
 				template_effect(() => {
 					set_attribute(label_4, 'for', `social-${key() ?? ''}`);
-					set_text(text_4, label());
-					set_attribute(input_13, 'id', `social-${key() ?? ''}`);
+					set_text(text_9, label());
+					set_attribute(input_19, 'id', `social-${key() ?? ''}`);
 				});
 
-				bind_value(input_13, () => get(form).socials[key()], ($$value) => (
+				bind_value(input_19, () => get(form).socials[key()], ($$value) => (
 					mutate(form, get(form).socials[key()] = $$value),
 					invalidate_inner_signals(() => {
 						lookbooks();
 					})
 				));
 
-				append($$anchor, div_36);
+				append($$anchor, div_50);
 			}
 		);
 
-		var div_37 = sibling(div_35, 2);
-		var button_5 = child(div_37);
-		var text_5 = sibling(child(button_5));
+		var div_51 = sibling(div_49, 2);
+		var div_52 = sibling(child(div_51), 2);
+		var input_20 = sibling(child(div_52), 2);
 
-		var button_6 = sibling(button_5, 2);
+		var div_53 = sibling(div_52, 2);
+		var div_54 = sibling(child(div_53), 4);
+		var node_10 = child(div_54);
+
+		{
+			var consequent_5 = ($$anchor) => {
+				var div_55 = root_9$7();
+				var img_2 = child(div_55);
+				var button_5 = sibling(img_2, 2);
+				template_effect(() => set_attribute(img_2, 'src', (get(form), untrack(() => get(form).footerLogo))));
+
+				delegated('click', button_5, () => (
+					mutate(form, get(form).footerLogo = ''),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				));
+
+				append($$anchor, div_55);
+			};
+
+			if_block(node_10, ($$render) => {
+				if ((get(form), untrack(() => get(form).footerLogo))) $$render(consequent_5);
+			});
+		}
+
+		var node_11 = sibling(node_10, 2);
+
+		{
+			let $0 = derived_safe_equal(() => (get(form), untrack(() => get(form).footerLogo || '')));
+
+			ImageUpload(node_11, {
+				label: '',
+				get value() {
+					return get($0);
+				},
+
+				onChange: (url) => (
+					mutate(form, get(form).footerLogo = url),
+					invalidate_inner_signals(() => {
+						lookbooks();
+					})
+				)
+			});
+		}
+
+		var div_56 = sibling(div_51, 2);
+		var button_6 = child(div_56);
+		var text_10 = sibling(child(button_6));
+
+		var button_7 = sibling(button_6, 2);
 
 		template_effect(() => {
-			set_text(text, `FREE SHIPPING MINIMUM (${(get(form), untrack(() => get(form).currency)) ?? ''})`);
-			set_text(text_1, `STANDARD RATE (${(get(form), untrack(() => get(form).currency)) ?? ''})`);
+			set_text(text, (get(form), untrack(() => get(form).colors.background)));
+			set_text(text_1, (get(form), untrack(() => get(form).colors.foreground)));
+			set_text(text_2, (get(form), untrack(() => get(form).colors.primary)));
+			set_text(text_3, (get(form), untrack(() => get(form).colors.border)));
+			set_text(text_4, (get(form), untrack(() => get(form).colors.hover)));
+			set_text(text_5, `FREE SHIPPING MINIMUM (${(get(form), untrack(() => get(form).currency)) ?? ''})`);
+			set_text(text_6, `STANDARD RATE (${(get(form), untrack(() => get(form).currency)) ?? ''})`);
 
-			set_class(div_25, 1, `space-y-4 bg-card border ${(
+			set_class(div_39, 1, `space-y-4 bg-card border ${(
 			get(form),
 			untrack(() => get(form).maintenance.enabled ? 'border-red-400' : 'border-border')
 		) ?? ''} p-5`);
@@ -10378,12 +10667,12 @@
 			untrack(() => get(form).maintenance.enabled ? 'bg-red-500' : 'bg-muted')
 		) ?? ''}`);
 
-			set_class(span_1, 1, `absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${(
+			set_class(span_6, 1, `absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${(
 			get(form),
 			untrack(() => get(form).maintenance.enabled ? 'translate-x-6' : 'translate-x-0')
 		) ?? ''}`);
 
-			set_text(text_5, ` ${get(saved) ? 'SAVED!' : 'SAVE CHANGES'}`);
+			set_text(text_10, ` ${get(saved) ? 'SAVED!' : 'SAVE CHANGES'}`);
 		});
 
 		bind_value(input, () => get(form).name, ($$value) => (
@@ -10400,77 +10689,126 @@
 			})
 		));
 
-		bind_value(textarea, () => get(form).description, ($$value) => (
+		bind_value(input_2, () => get(form).metaTitle, ($$value) => (
+			mutate(form, get(form).metaTitle = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(textarea, () => get(form).metaDescription, ($$value) => (
+			mutate(form, get(form).metaDescription = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(textarea_1, () => get(form).description, ($$value) => (
 			mutate(form, get(form).description = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_2, () => get(form).announcement, ($$value) => (
+		bind_value(input_3, () => get(form).colors.background, ($$value) => (
+			mutate(form, get(form).colors.background = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_4, () => get(form).colors.foreground, ($$value) => (
+			mutate(form, get(form).colors.foreground = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_5, () => get(form).colors.primary, ($$value) => (
+			mutate(form, get(form).colors.primary = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_6, () => get(form).colors.border, ($$value) => (
+			mutate(form, get(form).colors.border = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_7, () => get(form).colors.hover, ($$value) => (
+			mutate(form, get(form).colors.hover = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
+
+		bind_value(input_8, () => get(form).announcement, ($$value) => (
 			mutate(form, get(form).announcement = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_3, () => get(form).currency, ($$value) => (
+		bind_value(input_9, () => get(form).currency, ($$value) => (
 			mutate(form, get(form).currency = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_4, () => get(form).shipping.freeMinimum, ($$value) => (
+		bind_value(input_10, () => get(form).shipping.freeMinimum, ($$value) => (
 			mutate(form, get(form).shipping.freeMinimum = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_5, () => get(form).shipping.standardRate, ($$value) => (
+		bind_value(input_11, () => get(form).shipping.standardRate, ($$value) => (
 			mutate(form, get(form).shipping.standardRate = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_6, () => get(form).hero.label, ($$value) => (
+		bind_value(input_12, () => get(form).hero.label, ($$value) => (
 			mutate(form, get(form).hero.label = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_7, () => get(form).hero.heading, ($$value) => (
+		bind_value(input_13, () => get(form).hero.heading, ($$value) => (
 			mutate(form, get(form).hero.heading = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_8, () => get(form).hero.subheading, ($$value) => (
+		bind_value(input_14, () => get(form).hero.subheading, ($$value) => (
 			mutate(form, get(form).hero.subheading = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_9, () => get(form).hero.cta, ($$value) => (
+		bind_value(input_15, () => get(form).hero.cta, ($$value) => (
 			mutate(form, get(form).hero.cta = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		bind_value(input_10, () => get(form).hero.ctaLink, ($$value) => (
+		bind_value(input_16, () => get(form).hero.ctaLink, ($$value) => (
 			mutate(form, get(form).hero.ctaLink = $$value),
 			invalidate_inner_signals(() => {
 				lookbooks();
 			})
 		));
 
-		delegated('change', input_11, async (e) => {
+		delegated('change', input_17, async (e) => {
 			const file = e.target.files[0];
 
 			if (!file) return;
@@ -10500,9 +10838,16 @@
 			})
 		));
 
-		delegated('click', button_5, handleSave);
+		bind_value(input_20, () => get(form).footerTagline, ($$value) => (
+			mutate(form, get(form).footerTagline = $$value),
+			invalidate_inner_signals(() => {
+				lookbooks();
+			})
+		));
 
-		delegated('click', button_6, function (...$$args) {
+		delegated('click', button_6, handleSave);
+
+		delegated('click', button_7, function (...$$args) {
 			onReset()?.apply(this, $$args);
 		});
 
@@ -10552,8 +10897,18 @@
 			set(isNew, false);
 		}
 
-		function handleDelete(id) {
-			onUpdate()(lookbooks().filter((l) => l.id !== id));
+		async function handleDelete(id) {
+			if (!confirm('Are you sure you want to delete this lookbook?')) return;
+
+			try {
+				const res = await fetch('/api/lookbooks/' + id, { method: 'DELETE' });
+
+				if (!res.ok) throw new Error('Failed to delete lookbook.');
+
+				onUpdate()(lookbooks().filter((l) => l.id !== id));
+			} catch(err) {
+				alert(err.message);
+			}
 		}
 
 		// ── Item helpers ────────────────────────────────────────────────────────────
@@ -11163,8 +11518,18 @@
 			set(isNew, false);
 		}
 
-		function handleDelete(id) {
-			onUpdate()(community().filter((p) => p.id !== id));
+		async function handleDelete(id) {
+			if (!confirm('Are you sure you want to delete this post?')) return;
+
+			try {
+				const res = await fetch('/api/community/' + id, { method: 'DELETE' });
+
+				if (!res.ok) throw new Error('Failed to delete post.');
+
+				onUpdate()(community().filter((p) => p.id !== id));
+			} catch(err) {
+				alert(err.message);
+			}
 		}
 
 		const CATEGORIES = [
@@ -12033,7 +12398,7 @@
 
 	delegate(['click']);
 
-	var root_1$6 = from_html(`<meta name="description" content="Browse the full Others. collection — hoodies, tees, cargo pants, jackets and accessories."/>`);
+	var root_1$6 = from_html(`<meta name="description"/>`);
 	var root_2$a = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
 	var root_5$9 = from_html(`<button> </button>`);
 	var root_6$8 = from_html(`<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"></div>`);
@@ -12072,10 +12437,17 @@
 		head('1dxun1a', ($$anchor) => {
 			var meta = root_1$6();
 
+			template_effect(() => set_attribute(meta, 'content', (
+				get(data),
+				untrack(() => get(data)?.site?.metaDescription || "Browse the full Others. collection — hoodies, tees, cargo pants, jackets and accessories.")
+			)));
+
 			deferred_template_effect(() => {
 				$document.title = (
 					get(data),
-					untrack(() => get(data) ? `Shop All — ${get(data).site.name}` : 'Shop')
+					untrack(() => get(data)
+						? `Shop All — ${get(data).site.metaTitle || get(data).site.name}`
+						: 'Shop')
 				) ?? '';
 			});
 
@@ -12220,15 +12592,15 @@
 	var root_2$9 = from_html(`<meta name="description"/>`);
 	var root_4$6 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
 	var root_5$8 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background flex-col gap-4"><p class="text-muted-foreground">Product not found.</p> <a href="/products" class="text-label border-b border-current">← Back to Shop</a></div>`);
-	var root_8$6 = from_html(`<button><img alt="" class="w-full h-full object-cover"/></button>`);
+	var root_8$6 = from_html(`<button><img sizes="64px" alt="" class="w-full h-full object-cover" loading="lazy"/></button>`);
 	var root_7$6 = from_html(`<div class="flex gap-2 flex-wrap"></div>`);
 	var root_9$6 = from_html(`<span class="inline-block text-[10px] tracking-[0.2em] uppercase bg-foreground text-primary-foreground px-2 py-0.5 mb-3">New</span>`);
 	var root_11$3 = from_html(`<span class="text-xs border border-border px-3 py-1.5"> </span>`);
 	var root_10$5 = from_html(`<div><p class="text-label mb-3"> </p> <div class="flex gap-2"></div></div>`);
-	var root_13$2 = from_html(`<button> </button>`);
+	var root_13$3 = from_html(`<button> </button>`);
 	var root_12$2 = from_html(`<div><p class="text-label mb-3">SIZE</p> <div class="flex flex-wrap gap-2"></div></div>`);
 	var root_14$2 = from_html(`<p class="text-xs text-store-rust font-medium"> </p>`);
-	var root_6$7 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-6xl mx-auto"><nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/products" class="hover:text-foreground transition-colors">Shop</a> <span>/</span> <span class="text-foreground"> </span></nav> <div class="grid md:grid-cols-2 gap-10 lg:gap-16"><div class="space-y-3"><div class="aspect-[4/5] bg-secondary overflow-hidden"><img class="w-full h-full object-cover transition-opacity duration-300"/></div> <!></div> <div class="space-y-6"><div><!> <h1 class="text-3xl md:text-4xl font-display font-bold leading-tight mb-2"> </h1> <p class="text-2xl font-medium tabular-nums"> </p></div> <p class="text-sm text-muted-foreground leading-relaxed"> </p> <!> <!> <div class="space-y-3 pt-2"><button> </button> <a href="/cart" class="block w-full py-3.5 text-label tracking-[0.25em] text-center border border-border hover:bg-muted transition-colors">VIEW CART</a></div> <!></div></div></div> <!></div>`);
+	var root_6$7 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-6xl mx-auto"><nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/products" class="hover:text-foreground transition-colors">Shop</a> <span>/</span> <span class="text-foreground"> </span></nav> <div class="grid md:grid-cols-2 gap-10 lg:gap-16"><div class="space-y-3"><div class="aspect-[4/5] bg-secondary overflow-hidden"><img sizes="(max-width: 768px) 100vw, 50vw" class="w-full h-full object-cover transition-opacity duration-300"/></div> <!></div> <div class="space-y-6"><div><!> <h1 class="text-3xl md:text-4xl font-display font-bold leading-tight mb-2"> </h1> <p class="text-2xl font-medium tabular-nums"> </p></div> <p class="text-sm text-muted-foreground leading-relaxed"> </p> <!> <!> <div class="space-y-3 pt-2"><button> </button> <a href="/cart" class="block w-full py-3.5 text-label tracking-[0.25em] text-center border border-border hover:bg-muted transition-colors">VIEW CART</a></div> <!></div></div></div> <!></div>`);
 
 	function Product($$anchor, $$props) {
 		push($$props, false);
@@ -12358,10 +12730,26 @@
 
 							var img_2 = child(button);
 
-							template_effect(() => {
-								set_class(button, 1, `w-16 h-16 border-2 transition-colors overflow-hidden flex-shrink-0 ${get(selectedImage) === i ? 'border-foreground' : 'border-transparent'}`);
-								set_attribute(img_2, 'src', get(img));
-							});
+							template_effect(
+								($0, $1) => {
+									set_class(button, 1, `w-16 h-16 border-2 transition-colors overflow-hidden flex-shrink-0 ${get(selectedImage) === i ? 'border-foreground' : 'border-transparent'}`);
+									set_attribute(img_2, 'src', $0);
+									set_attribute(img_2, 'srcset', $1);
+								},
+								[
+									() => (
+										deep_read_state(getOptimizedUrl),
+										get(img),
+										untrack(() => getOptimizedUrl(get(img), 200))
+									),
+
+									() => (
+										deep_read_state(getSrcset),
+										get(img),
+										untrack(() => getSrcset(get(img)))
+									)
+								]
+							);
 
 							delegated('click', button, () => set(selectedImage, i));
 							append($$anchor, button);
@@ -12435,7 +12823,7 @@
 						var div_13 = sibling(child(div_12), 2);
 
 						each(div_13, 5, () => (get(product), untrack(() => get(product).sizes)), index, ($$anchor, size) => {
-							var button_1 = root_13$2();
+							var button_1 = root_13$3();
 							var text_6 = child(button_1);
 
 							template_effect(() => {
@@ -12496,18 +12884,13 @@
 				});
 
 				template_effect(
-					($0) => {
+					($0, $1, $2) => {
 						set_text(text, (get(product), untrack(() => get(product).name)));
-
-						set_attribute(img_1, 'src', (
-							get(images),
-							get(selectedImage),
-							untrack(() => get(images)[get(selectedImage)])
-						));
-
+						set_attribute(img_1, 'src', $0);
+						set_attribute(img_1, 'srcset', $1);
 						set_attribute(img_1, 'alt', (get(product), untrack(() => get(product).name)));
 						set_text(text_1, (get(product), untrack(() => get(product).name)));
-						set_text(text_2, `${(get(data), untrack(() => get(data).site.currency)) ?? ''}${$0 ?? ''}`);
+						set_text(text_2, `${(get(data), untrack(() => get(data).site.currency)) ?? ''}${$2 ?? ''}`);
 						set_text(text_3, (get(product), untrack(() => get(product).description)));
 
 						button_2.disabled = (
@@ -12536,6 +12919,20 @@
 					},
 					[
 						() => (
+							deep_read_state(getOptimizedUrl),
+							get(images),
+							get(selectedImage),
+							untrack(() => getOptimizedUrl(get(images)[get(selectedImage)], 1200))
+						),
+
+						() => (
+							deep_read_state(getSrcset),
+							get(images),
+							get(selectedImage),
+							untrack(() => getSrcset(get(images)[get(selectedImage)]))
+						),
+
+						() => (
 							get(product),
 							untrack(() => get(product).price.toFixed(2))
 						)
@@ -12557,9 +12954,9 @@
 
 	delegate(['click']);
 
-	var root_1$5 = from_html(`<meta name="description" content="Browse the Others. lookbook — editorial photography and campaign imagery from our latest collections."/>`);
+	var root_1$5 = from_html(`<meta name="description"/>`);
 	var root_2$8 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_6$6 = from_html(`<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy"/>`);
+	var root_6$6 = from_html(`<img sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy"/>`);
 	var root_7$5 = from_html(`<div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No cover</div>`);
 	var root_8$5 = from_html(`<span class="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm text-foreground text-[10px] tracking-[0.15em] uppercase px-2 py-1"> </span>`);
 	var root_9$5 = from_html(`<p class="text-sm text-muted-foreground mt-1 line-clamp-2"> </p>`);
@@ -12593,8 +12990,12 @@
 		head('zcrx70', ($$anchor) => {
 			var meta = root_1$5();
 
+			template_effect(() => set_attribute(meta, 'content', get(data)?.site?.metaDescription || "Browse the Others. lookbook — editorial photography and campaign imagery from our latest collections."));
+
 			deferred_template_effect(() => {
-				$document.title = get(data) ? `Lookbook — ${get(data).site.name}` : 'Lookbook';
+				$document.title = get(data)
+					? `Lookbook — ${get(data).site.metaTitle || get(data).site.name}`
+					: 'Lookbook';
 			});
 
 			append($$anchor, meta);
@@ -12641,10 +13042,17 @@
 								var consequent_1 = ($$anchor) => {
 									var img = root_6$6();
 
-									template_effect(() => {
-										set_attribute(img, 'src', get(cover));
-										set_attribute(img, 'alt', get(lb).title);
-									});
+									template_effect(
+										($0, $1) => {
+											set_attribute(img, 'src', $0);
+											set_attribute(img, 'srcset', $1);
+											set_attribute(img, 'alt', get(lb).title);
+										},
+										[
+											() => getOptimizedUrl(get(cover), 800),
+											() => getSrcset(get(cover))
+										]
+									);
 
 									append($$anchor, img);
 								};
@@ -12746,15 +13154,15 @@
 	var root_5$6 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
 	var root_6$5 = from_html(`<div class="flex min-h-screen items-center justify-center flex-col gap-4"><p class="text-muted-foreground">Lookbook not found.</p> <a href="/lookbook" class="text-label border-b border-current">← Back to Lookbook</a></div>`);
 	var root_8$4 = from_html(`<p class="text-muted-foreground max-w-xl"> </p>`);
-	var root_10$3 = from_html(`<div class="relative w-full" style="padding-bottom:56.25%;height:0;"><iframe class="absolute inset-0 w-full h-full" frameborder="0" allowfullscreen=""></iframe></div>`);
-	var root_11$2 = from_html(`<video controls="" class="w-full h-auto object-cover" preload="metadata"><track kind="captions"/></video>`, 2);
-	var root_12$1 = from_html(`<button aria-label="View full image" class="group w-full overflow-hidden bg-secondary block"><img class="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="lazy"/></button>`);
-	var root_13$1 = from_html(`<p class="text-xs text-muted-foreground mt-2 italic"> </p>`);
-	var root_9$4 = from_html(`<div class="break-inside-avoid"><!> <!></div>`);
+	var root_10$3 = from_html(`<div class="relative w-full aspect-video bg-black"><iframe class="absolute inset-0 w-full h-full" frameborder="0" allowfullscreen=""></iframe></div>`);
+	var root_11$2 = from_html(`<video controls="" class="w-full aspect-[4/5] object-cover bg-secondary" preload="metadata"><track kind="captions"/></video>`, 2);
+	var root_12$1 = from_html(`<button aria-label="View full image" class="group w-full aspect-[4/5] overflow-hidden bg-secondary block"><img sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="lazy"/></button>`);
+	var root_13$2 = from_html(`<p class="text-xs text-muted-foreground mt-2 italic px-1"> </p>`);
+	var root_9$4 = from_html(`<div class="flex flex-col"><!> <!></div>`);
 	var root_14$1 = from_html(`<div class="text-center py-24 text-muted-foreground">No media in this lookbook yet.</div>`);
-	var root_7$4 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><nav class="mb-6 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/lookbook" class="hover:text-foreground transition-colors">Lookbook</a> <span>/</span> <span class="text-foreground"> </span></nav> <div class="mb-12"><p class="text-label text-muted-foreground mb-2"> </p> <h1 class="text-4xl md:text-5xl font-display font-bold mb-4"> </h1> <!></div> <div class="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4"></div> <!> <div class="mt-14 pt-8 border-t border-border"><a href="/lookbook" class="text-label hover:opacity-60 transition-opacity">← All Lookbooks</a></div></div> <!></div>`);
+	var root_7$4 = from_html(`<div class="min-h-screen"><!> <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto"><nav class="mb-6 text-xs text-muted-foreground flex items-center gap-2"><a href="/" class="hover:text-foreground transition-colors">Home</a> <span>/</span> <a href="/lookbook" class="hover:text-foreground transition-colors">Lookbook</a> <span>/</span> <span class="text-foreground"> </span></nav> <div class="mb-12"><p class="text-label text-muted-foreground mb-2"> </p> <h1 class="text-4xl md:text-5xl font-display font-bold mb-4"> </h1> <!></div> <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"></div> <!> <div class="mt-14 pt-8 border-t border-border"><a href="/lookbook" class="text-label hover:opacity-60 transition-opacity">← All Lookbooks</a></div></div> <!></div>`);
 	var root_16$1 = from_html(`<button aria-label="Previous" class="absolute left-4 text-primary-foreground/70 hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m15 18-6-6 6-6"></path></svg></button> <button aria-label="Next" class="absolute right-12 text-primary-foreground/70 hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m9 18 6-6-6-6"></path></svg></button>`, 1);
-	var root_15$1 = from_html(`<div class="fixed inset-0 z-50 bg-foreground/95 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Image lightbox"><button aria-label="Close" class="absolute top-4 right-4 z-10 text-primary-foreground/70 hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button> <img class="max-h-[90vh] max-w-full object-contain"/> <!></div>`);
+	var root_15$1 = from_html(`<div class="fixed inset-0 z-50 bg-foreground/95 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Image lightbox"><button aria-label="Close" class="absolute top-4 right-4 z-10 text-primary-foreground/70 hover:text-primary-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button> <img sizes="100vw" class="max-h-[90vh] max-w-full object-contain"/> <!></div>`);
 	var root$3 = from_html(`<!> <!>`, 1);
 
 	function LookbookDetail($$anchor, $$props) {
@@ -12950,15 +13358,31 @@
 							var button = root_12$1();
 							var img = child(button);
 
-							template_effect(() => {
-								set_attribute(img, 'src', (get(item), untrack(() => get(item).url)));
+							template_effect(
+								($0, $1) => {
+									set_attribute(img, 'src', $0);
+									set_attribute(img, 'srcset', $1);
 
-								set_attribute(img, 'alt', (
-									get(item),
-									get(lb),
-									untrack(() => get(item).caption || get(lb).title)
-								));
-							});
+									set_attribute(img, 'alt', (
+										get(item),
+										get(lb),
+										untrack(() => get(item).caption || get(lb).title)
+									));
+								},
+								[
+									() => (
+										deep_read_state(getOptimizedUrl),
+										get(item),
+										untrack(() => getOptimizedUrl(get(item).url, 800))
+									),
+
+									() => (
+										deep_read_state(getSrcset),
+										get(item),
+										untrack(() => getSrcset(get(item).url))
+									)
+								]
+							);
 
 							delegated('click', button, () => set(expanded, { items: get(items), index: i }));
 							append($$anchor, button);
@@ -12973,7 +13397,7 @@
 
 					{
 						var consequent_7 = ($$anchor) => {
-							var p_2 = root_13$1();
+							var p_2 = root_13$2();
 							var text_4 = child(p_2);
 							template_effect(() => set_text(text_4, (get(item), untrack(() => get(item).caption))));
 							append($$anchor, p_2);
@@ -13081,17 +13505,30 @@
 					});
 				}
 
-				template_effect(() => {
-					set_attribute(img_1, 'src', (
-						deep_read_state(get(cur)),
-						untrack(() => get(cur).url)
-					));
+				template_effect(
+					($0, $1) => {
+						set_attribute(img_1, 'src', $0);
+						set_attribute(img_1, 'srcset', $1);
 
-					set_attribute(img_1, 'alt', (
-						deep_read_state(get(cur)),
-						untrack(() => get(cur).caption || '')
-					));
-				});
+						set_attribute(img_1, 'alt', (
+							deep_read_state(get(cur)),
+							untrack(() => get(cur).caption || '')
+						));
+					},
+					[
+						() => (
+							deep_read_state(getOptimizedUrl),
+							deep_read_state(get(cur)),
+							untrack(() => getOptimizedUrl(get(cur).url, 2000))
+						),
+
+						() => (
+							deep_read_state(getSrcset),
+							deep_read_state(get(cur)),
+							untrack(() => getSrcset(get(cur).url))
+						)
+					]
+				);
 
 				delegated('click', button_1, () => set(expanded, null));
 				append($$anchor, div_10);
@@ -13108,7 +13545,7 @@
 
 	delegate(['click']);
 
-	var root_1$4 = from_html(`<meta name="description" content="Stories, news, and culture from the Others. community. Collections, collaborations and announcements."/> <meta property="og:type" content="website"/> <meta property="og:title" content="Community — Others."/> <meta property="og:description" content="Stories, news, and culture from the Others. community."/>`, 1);
+	var root_1$4 = from_html(`<meta name="description"/> <meta property="og:type" content="website"/> <meta property="og:title"/> <meta property="og:description"/>`, 1);
 	var root_2$6 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
 	var root_5$5 = from_html(`<button> </button>`);
 	var root_4$4 = from_html(`<div class="flex flex-wrap gap-2 mb-10 border-b border-border pb-6"><button>ALL</button> <!></div>`);
@@ -13161,11 +13598,33 @@
 
 		head('ge4z2p', ($$anchor) => {
 			var fragment = root_1$4();
+			var meta = first_child(fragment);
+			var meta_1 = sibling(meta, 4);
+			var meta_2 = sibling(meta_1, 2);
+
+			template_effect(() => {
+				set_attribute(meta, 'content', (
+					get(data),
+					untrack(() => get(data)?.site?.metaDescription || "Stories, news, and culture from the Others. community. Collections, collaborations and announcements.")
+				));
+
+				set_attribute(meta_1, 'content', `Community — ${(
+				get(data),
+				untrack(() => get(data)?.site?.name || 'Others.')
+			) ?? ''}`);
+
+				set_attribute(meta_2, 'content', (
+					get(data),
+					untrack(() => get(data)?.site?.metaDescription || "Stories, news, and culture from the Others. community.")
+				));
+			});
 
 			deferred_template_effect(() => {
 				$document.title = (
 					get(data),
-					untrack(() => get(data) ? `Community — ${get(data).site.name}` : 'Community')
+					untrack(() => get(data)
+						? `Community — ${get(data).site.metaTitle || get(data).site.name}`
+						: 'Community')
 				) ?? '';
 			});
 
@@ -13535,22 +13994,22 @@
 	}
 
 	var root_2$4 = from_html(`<div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>`);
-	var root_4$3 = from_html(`<div class="flex flex-col items-center justify-center py-32 gap-6"><div class="w-10 h-10 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div> <p class="text-sm text-muted-foreground">Redirecting to secure payment…</p></div>`);
+	var root_4$3 = from_html(`<div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm"><div class="bg-card p-10 shadow-2xl text-center border border-border border-b-4 border-b-foreground max-w-md mx-4 animate-fade-up"><div class="w-10 h-10 border-4 border-foreground/20 border-t-foreground rounded-full animate-spin mx-auto mb-6"></div> <h2 class="text-2xl font-bold font-display mb-3">Processing Payment</h2> <p class="text-sm text-muted-foreground leading-relaxed">Securely redirecting to PayFast.<br/>Please do not refresh or close this page.</p></div></div>`);
 	var root_5$3 = from_html(`<div class="text-center py-24"><div class="w-16 h-16 border-2 border-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"></path></svg></div> <h1 class="text-3xl font-display font-bold mb-3">Payment Successful</h1> <p class="text-muted-foreground mb-2">Your order has been confirmed and is being processed.</p> <p class="text-sm text-muted-foreground mb-10">A confirmation will be sent to your email address.</p> <a href="/products" class="inline-block bg-foreground text-primary-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground/90 transition-colors">CONTINUE SHOPPING</a></div>`);
 	var root_6$2 = from_html(`<div class="text-center py-24"><div class="w-16 h-16 border-2 border-muted-foreground rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></div> <h1 class="text-3xl font-display font-bold mb-3">Payment Cancelled</h1> <p class="text-muted-foreground mb-10">Your payment was not completed. Your cart has been saved.</p> <a href="/cart" class="inline-block border border-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">BACK TO CART</a></div>`);
 	var root_8$1 = from_html(`<div class="text-center py-24"><p class="text-muted-foreground mb-6">Your cart is empty.</p> <a href="/products" class="inline-block border border-foreground px-8 py-3 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">SHOP NOW</a></div>`);
-	var root_10$1 = from_html(`<div class="flex gap-4 border-b border-border pb-4"><img class="w-20 h-24 object-cover bg-secondary flex-shrink-0"/> <div class="flex-1 min-w-0"><p class="font-medium"> </p> <p class="text-xs text-muted-foreground mt-0.5"> </p> <p class="text-sm font-medium mt-1 tabular-nums"> </p> <div class="flex items-center gap-2 mt-2"><button aria-label="Decrease quantity" class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">−</button> <span class="w-6 text-center text-sm tabular-nums"> </span> <button aria-label="Increase quantity" class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">+</button> <button aria-label="Remove item" class="ml-2 text-xs text-muted-foreground hover:text-destructive transition-colors">Remove</button></div></div> <p class="font-medium tabular-nums flex-shrink-0"> </p></div>`);
+	var root_10$1 = from_html(`<div class="flex gap-4 border-b border-border pb-4"><img sizes="80px" class="w-20 h-24 object-cover bg-secondary flex-shrink-0" loading="lazy"/> <div class="flex-1 min-w-0"><p class="font-medium"> </p> <p class="text-xs text-muted-foreground mt-0.5"> </p> <p class="text-sm font-medium mt-1 tabular-nums"> </p> <div class="flex items-center gap-2 mt-2"><button aria-label="Decrease quantity" class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">−</button> <span class="w-6 text-center text-sm tabular-nums"> </span> <button aria-label="Increase quantity" class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">+</button> <button aria-label="Remove item" class="ml-2 text-xs text-muted-foreground hover:text-destructive transition-colors">Remove</button></div></div> <p class="font-medium tabular-nums flex-shrink-0"> </p></div>`);
 	var root_11$1 = from_html(`<span class="text-green-600">Free</span>`);
-	var root_13 = from_html(`<p class="text-xs text-muted-foreground"> </p>`);
+	var root_13$1 = from_html(`<p class="text-xs text-muted-foreground"> </p>`);
 	var root_9$1 = from_html(`<div class="grid md:grid-cols-[1fr_320px] gap-10"><div class="space-y-4"></div> <div class="bg-card border border-border p-6 h-fit space-y-4"><h2 class="font-display font-bold text-lg">Order Summary</h2> <div class="space-y-2 text-sm"><div class="flex justify-between"><span class="text-muted-foreground">Subtotal</span><span class="tabular-nums"> </span></div> <div class="flex justify-between"><span class="text-muted-foreground">Shipping</span> <span><!></span></div> <!> <div class="border-t border-border pt-2 flex justify-between font-medium"><span>Total</span> <span class="tabular-nums"> </span></div></div> <div class="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Secured by PayFast · SA only</div> <button class="w-full py-3.5 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">CHECKOUT</button></div></div>`);
 	var root_7$1 = from_html(`<div class="mb-8"><h1 class="text-3xl md:text-4xl font-display font-bold">Your Cart</h1> <p class="text-sm text-muted-foreground mt-1"> </p></div> <!>`, 1);
 	var root_15 = from_html(`<option> </option>`);
 	var root_17 = from_html(`<p class="text-xs text-destructive"> </p>`);
 	var root_16 = from_html(`<div class="border border-destructive bg-destructive/5 px-4 py-3 space-y-1"><p class="text-sm font-medium text-destructive">Cannot complete checkout:</p> <!> <p class="text-xs text-muted-foreground mt-1">Please update your cart and try again.</p></div>`);
-	var root_18 = from_html(`<p class="text-sm text-destructive"> </p>`);
+	var root_18 = from_html(`<div class="border border-destructive bg-destructive/5 px-4 py-3"><p class="text-sm font-medium text-destructive"> </p></div>`);
 	var root_19 = from_html(`<div class="flex gap-3 text-sm"><img class="w-12 h-12 object-cover bg-secondary flex-shrink-0"/> <div class="flex-1"><p class="font-medium"> </p> <p class="text-xs text-muted-foreground"> </p></div> <span class="tabular-nums"> </span></div>`);
-	var root_14 = from_html(`<div class="mb-8"><button class="text-xs text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"></path></svg> Back to cart</button> <h1 class="text-3xl md:text-4xl font-display font-bold">Delivery Details</h1> <p class="text-sm text-muted-foreground mt-1 flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg> South Africa delivery only</p></div> <div class="grid md:grid-cols-[1fr_320px] gap-10"><form class="space-y-6"><div class="space-y-4"><h2 class="text-label border-b border-border pb-3">CONTACT INFORMATION</h2> <div class="grid sm:grid-cols-2 gap-4"><div><label for="co-first" class="text-label block mb-1.5">FIRST NAME</label> <input id="co-first" required=""/></div> <div><label for="co-last" class="text-label block mb-1.5">LAST NAME</label> <input id="co-last" required=""/></div></div> <div class="grid sm:grid-cols-2 gap-4"><div><label for="co-email" class="text-label block mb-1.5">EMAIL</label> <input id="co-email" type="email" required=""/></div> <div><label for="co-phone" class="text-label block mb-1.5">PHONE</label> <input id="co-phone" type="tel" required=""/></div></div></div> <div class="space-y-4"><h2 class="text-label border-b border-border pb-3">DELIVERY ADDRESS</h2> <div><label for="co-addr" class="text-label block mb-1.5">STREET ADDRESS</label> <input id="co-addr" required=""/></div> <div class="grid sm:grid-cols-3 gap-4"><div class="sm:col-span-1"><label for="co-post" class="text-label block mb-1.5">POSTAL CODE</label> <input id="co-post" required=""/></div> <div class="sm:col-span-2"><label for="co-city" class="text-label block mb-1.5">CITY / SUBURB</label> <input id="co-city" required=""/></div></div> <div><label for="co-prov" class="text-label block mb-1.5">PROVINCE</label> <select id="co-prov" required="" class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"><option>Select province…</option><!></select></div> <div><p class="text-label block mb-1.5">COUNTRY</p> <div class="flex items-center gap-2 border border-border/50 bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">🇿🇦 South Africa <span class="ml-auto text-xs">(delivery locked to SA)</span></div></div></div> <!> <button type="submit" class="w-full py-4 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> </button> <p class="text-xs text-center text-muted-foreground">Powered by PayFast · Secured with 256-bit SSL</p></form> <div class="bg-card border border-border p-5 h-fit space-y-3"><h2 class="text-label">ORDER SUMMARY</h2> <!> <div class="border-t border-border pt-3 text-sm space-y-1"><div class="flex justify-between"><span class="text-muted-foreground">Shipping</span><span> </span></div> <div class="flex justify-between font-medium"><span>Total</span><span> </span></div></div></div></div>`, 1);
-	var root_3$4 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-5xl mx-auto"><!></div> <!></div>`);
+	var root_14 = from_html(`<div class="mb-8"><button class="text-xs text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"></path></svg> Back to cart</button> <h1 class="text-3xl md:text-4xl font-display font-bold">Delivery Details</h1> <p class="text-sm text-muted-foreground mt-1 flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg> South Africa delivery only</p></div> <div class="grid md:grid-cols-[1fr_320px] gap-10"><form class="space-y-6"><div class="space-y-4"><h2 class="text-label border-b border-border pb-3">CONTACT INFORMATION</h2> <div class="grid sm:grid-cols-2 gap-4"><div><label for="co-first" class="text-label block mb-1.5">FIRST NAME</label> <input id="co-first" required=""/></div> <div><label for="co-last" class="text-label block mb-1.5">LAST NAME</label> <input id="co-last" required=""/></div></div> <div class="grid sm:grid-cols-2 gap-4"><div><label for="co-email" class="text-label block mb-1.5">EMAIL</label> <input id="co-email" type="email" required=""/></div> <div><label for="co-phone" class="text-label block mb-1.5">PHONE</label> <input id="co-phone" type="tel" required=""/></div></div></div> <div class="space-y-4"><h2 class="text-label border-b border-border pb-3">DELIVERY ADDRESS</h2> <div><label for="co-addr" class="text-label block mb-1.5">STREET ADDRESS</label> <input id="co-addr" required=""/></div> <div class="grid sm:grid-cols-3 gap-4"><div class="sm:col-span-1"><label for="co-post" class="text-label block mb-1.5">POSTAL CODE</label> <input id="co-post" required=""/></div> <div class="sm:col-span-2"><label for="co-city" class="text-label block mb-1.5">CITY / SUBURB</label> <input id="co-city" required=""/></div></div> <div><label for="co-prov" class="text-label block mb-1.5">PROVINCE</label> <select id="co-prov" required="" class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors"><option>Select province…</option><!></select></div> <div><p class="text-label block mb-1.5">COUNTRY</p> <div class="flex items-center gap-2 border border-border/50 bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">🇿🇦 South Africa <span class="ml-auto text-xs">(delivery locked to SA)</span></div></div></div> <div id="checkout-errors" class="scroll-mt-32"><!></div> <button type="submit" class="w-full py-4 bg-foreground text-primary-foreground text-label tracking-[0.2em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> </button> <p class="text-xs text-center text-muted-foreground">Powered by PayFast · Secured with 256-bit SSL</p></form> <div class="bg-card border border-border p-5 h-fit space-y-3"><h2 class="text-label">ORDER SUMMARY</h2> <!> <div class="border-t border-border pt-3 text-sm space-y-1"><div class="flex justify-between"><span class="text-muted-foreground">Shipping</span><span> </span></div> <div class="flex justify-between font-medium"><span>Total</span><span> </span></div></div></div></div>`, 1);
+	var root_3$4 = from_html(`<div class="min-h-screen"><!> <div class="pt-24 pb-20 px-6 md:px-10 max-w-5xl mx-auto"><!> <!></div> <!></div>`);
 
 	function Cart($$anchor, $$props) {
 		push($$props, false);
@@ -13570,6 +14029,7 @@
 		let orderId = '';
 		let stockErrors = mutable_source([]);
 		let checkoutError = mutable_source('');
+		let processingPayment = mutable_source(false);
 
 		let form = mutable_source({
 			firstName: '',
@@ -13600,7 +14060,7 @@
 			set(submitting, true);
 			set(stockErrors, []);
 			set(checkoutError, '');
-			set(step, 'processing');
+			set(processingPayment, true);
 
 			try {
 				const res = await fetch('/api/checkout', {
@@ -13622,9 +14082,18 @@
 					const body = await res.json();
 
 					set(stockErrors, body.stockErrors || []);
-					set(checkoutError, body.error || 'Something went wrong.');
-					set(step, 'checkout');
+					set(checkoutError, body.error || 'Payment initialization failed. Please try again.');
+					set(processingPayment, false);
 					set(submitting, false);
+
+					setTimeout(
+						() => {
+							const errEl = document.getElementById('checkout-errors');
+
+							if (errEl) errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						},
+						50
+					);
 
 					return;
 				}
@@ -13653,8 +14122,17 @@
 			} catch(e) {
 				console.error(e);
 				set(checkoutError, 'Connection error. Please try again.');
-				set(step, 'checkout');
+				set(processingPayment, false);
 				set(submitting, false);
+
+				setTimeout(
+					() => {
+						const errEl = document.getElementById('checkout-errors');
+
+						if (errEl) errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					},
+					50
+				);
 			}
 		}
 
@@ -13737,6 +14215,14 @@
 						append($$anchor, div_3);
 					};
 
+					if_block(node_2, ($$render) => {
+						if (get(processingPayment)) $$render(consequent_1);
+					});
+				}
+
+				var node_3 = sibling(node_2, 2);
+
+				{
 					var consequent_2 = ($$anchor) => {
 						var div_4 = root_5$3();
 						var a = sibling(child(div_4), 8);
@@ -13767,7 +14253,7 @@
 						var p_1 = sibling(child(div_6), 2);
 						var text$1 = child(p_1);
 
-						var node_3 = sibling(div_6, 2);
+						var node_4 = sibling(div_6, 2);
 
 						{
 							var consequent_4 = ($$anchor) => {
@@ -13811,16 +14297,28 @@
 									var text_5 = child(p_5);
 
 									template_effect(
-										($0, $1) => {
-											set_attribute(img, 'src', (get(item), untrack(() => get(item).image)));
+										($0, $1, $2, $3) => {
+											set_attribute(img, 'src', $0);
+											set_attribute(img, 'srcset', $1);
 											set_attribute(img, 'alt', (get(item), untrack(() => get(item).name)));
 											set_text(text_1, (get(item), untrack(() => get(item).name)));
 											set_text(text_2, `Size: ${(get(item), untrack(() => get(item).size)) ?? ''}`);
-											set_text(text_3, `${get(currency) ?? ''}${$0 ?? ''}`);
+											set_text(text_3, `${get(currency) ?? ''}${$2 ?? ''}`);
 											set_text(text_4, (get(item), untrack(() => get(item).quantity)));
-											set_text(text_5, `${get(currency) ?? ''}${$1 ?? ''}`);
+											set_text(text_5, `${get(currency) ?? ''}${$3 ?? ''}`);
 										},
 										[
+											() => (
+												deep_read_state(getOptimizedUrl),
+												get(item),
+												untrack(() => getOptimizedUrl(get(item).image, 200))
+											),
+
+											() => (
+												deep_read_state(getSrcset),
+												get(item),
+												untrack(() => getSrcset(get(item).image))
+											),
 											() => (get(item), untrack(() => get(item).price.toFixed(2))),
 											() => (
 												get(item),
@@ -13843,7 +14341,7 @@
 
 								var div_16 = sibling(div_15, 2);
 								var span_2 = sibling(child(div_16), 2);
-								var node_4 = child(span_2);
+								var node_5 = child(span_2);
 
 								{
 									var consequent_5 = ($$anchor) => {
@@ -13865,16 +14363,16 @@
 										append($$anchor, text_7);
 									};
 
-									if_block(node_4, ($$render) => {
+									if_block(node_5, ($$render) => {
 										if (get(shippingCost) === 0) $$render(consequent_5); else $$render(alternate, -1);
 									});
 								}
 
-								var node_5 = sibling(div_16, 2);
+								var node_6 = sibling(div_16, 2);
 
 								{
 									var consequent_6 = ($$anchor) => {
-										var p_6 = root_13();
+										var p_6 = root_13$1();
 										var text_8 = child(p_6);
 
 										template_effect(($0) => set_text(text_8, `Spend ${get(currency) ?? ''}${$0 ?? ''} more for free shipping`), [
@@ -13888,12 +14386,12 @@
 										append($$anchor, p_6);
 									};
 
-									if_block(node_5, ($$render) => {
+									if_block(node_6, ($$render) => {
 										if (get(shippingCost) > 0) $$render(consequent_6);
 									});
 								}
 
-								var div_17 = sibling(node_5, 2);
+								var div_17 = sibling(node_6, 2);
 								var span_4 = sibling(child(div_17), 2);
 								var text_9 = child(span_4);
 
@@ -13917,7 +14415,7 @@
 								append($$anchor, div_8);
 							};
 
-							if_block(node_3, ($$render) => {
+							if_block(node_4, ($$render) => {
 								if (($cart(), untrack(() => $cart().length === 0))) $$render(consequent_4); else $$render(alternate_1, -1);
 							});
 						}
@@ -13965,9 +14463,9 @@
 
 						option.value = option.__value = '';
 
-						var node_6 = sibling(option);
+						var node_7 = sibling(option);
 
-						each(node_6, 1, () => SA_PROVINCES, index, ($$anchor, p) => {
+						each(node_7, 1, () => SA_PROVINCES, index, ($$anchor, p) => {
 							var option_1 = root_15();
 							var text_10 = child(option_1);
 
@@ -13984,30 +14482,32 @@
 							append($$anchor, option_1);
 						});
 
-						var node_7 = sibling(div_27, 2);
+						var div_33 = sibling(div_27, 2);
+						var node_8 = child(div_33);
 
 						{
 							var consequent_8 = ($$anchor) => {
-								var div_33 = root_16();
-								var node_8 = sibling(child(div_33), 2);
+								var div_34 = root_16();
+								var node_9 = sibling(child(div_34), 2);
 
-								each(node_8, 1, () => get(stockErrors), index, ($$anchor, err) => {
+								each(node_9, 1, () => get(stockErrors), index, ($$anchor, err) => {
 									var p_7 = root_17();
 									var text_11 = child(p_7);
 									template_effect(() => set_text(text_11, get(err)));
 									append($$anchor, p_7);
 								});
-								append($$anchor, div_33);
+								append($$anchor, div_34);
 							};
 
 							var consequent_9 = ($$anchor) => {
-								var p_8 = root_18();
+								var div_35 = root_18();
+								var p_8 = child(div_35);
 								var text_12 = child(p_8);
 								template_effect(() => set_text(text_12, get(checkoutError)));
-								append($$anchor, p_8);
+								append($$anchor, div_35);
 							};
 
-							if_block(node_7, ($$render) => {
+							if_block(node_8, ($$render) => {
 								if ((
 									get(stockErrors),
 									untrack(() => get(stockErrors).length > 0)
@@ -14015,23 +14515,23 @@
 							});
 						}
 
-						var button_5 = sibling(node_7, 2);
+						var button_5 = sibling(div_33, 2);
 						var text_13 = sibling(child(button_5));
 
-						var div_34 = sibling(form_1, 2);
-						var node_9 = sibling(child(div_34), 2);
+						var div_36 = sibling(form_1, 2);
+						var node_10 = sibling(child(div_36), 2);
 
-						each(node_9, 1, $cart, index, ($$anchor, item) => {
-							var div_35 = root_19();
-							var img_1 = child(div_35);
-							var div_36 = sibling(img_1, 2);
-							var p_9 = child(div_36);
+						each(node_10, 1, $cart, index, ($$anchor, item) => {
+							var div_37 = root_19();
+							var img_1 = child(div_37);
+							var div_38 = sibling(img_1, 2);
+							var p_9 = child(div_38);
 							var text_14 = child(p_9);
 
 							var p_10 = sibling(p_9, 2);
 							var text_15 = child(p_10);
 
-							var span_5 = sibling(div_36, 2);
+							var span_5 = sibling(div_38, 2);
 							var text_16 = child(span_5);
 
 							template_effect(
@@ -14050,16 +14550,16 @@
 								]
 							);
 
-							append($$anchor, div_35);
+							append($$anchor, div_37);
 						});
 
-						var div_37 = sibling(node_9, 2);
-						var div_38 = child(div_37);
-						var span_6 = sibling(child(div_38));
+						var div_39 = sibling(node_10, 2);
+						var div_40 = child(div_39);
+						var span_6 = sibling(child(div_40));
 						var text_17 = child(span_6);
 
-						var div_39 = sibling(div_38, 2);
-						var span_7 = sibling(child(div_39));
+						var div_41 = sibling(div_40, 2);
+						var span_7 = sibling(child(div_41));
 						var text_18 = child(span_7);
 
 						template_effect(
@@ -14162,14 +14662,14 @@
 						append($$anchor, fragment_3);
 					};
 
-					if_block(node_2, ($$render) => {
-						if (get(step) === 'processing') $$render(consequent_1); else if (get(step) === 'success') $$render(consequent_2, 1); else if (get(step) === 'cancel') $$render(consequent_3, 2); else if (get(step) === 'cart') $$render(consequent_7, 3); else if (get(step) === 'checkout') $$render(consequent_10, 4);
+					if_block(node_3, ($$render) => {
+						if (get(step) === 'success') $$render(consequent_2); else if (get(step) === 'cancel') $$render(consequent_3, 1); else if (get(step) === 'cart') $$render(consequent_7, 2); else if (get(step) === 'checkout') $$render(consequent_10, 3);
 					});
 				}
 
-				var node_10 = sibling(div_2, 2);
+				var node_11 = sibling(div_2, 2);
 
-				Footer(node_10, {
+				Footer(node_11, {
 					get site() {
 						return (get(data), untrack(() => get(data).site));
 					}
@@ -14586,23 +15086,24 @@
 	var root_10 = from_html(`<a target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="Instagram"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>`);
 	var root_11 = from_html(`<a target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="X (Twitter)"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a>`);
 	var root_12 = from_html(`<a target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="TikTok"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg></a>`);
-	var root_9 = from_html(`<div class="flex items-center justify-center gap-6 mt-10"><!> <!> <!></div>`);
-	var root$1 = from_html(`<div class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-background"><!> <div><!> <div><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"></path></svg></div> <h1 class="font-display text-3xl md:text-4xl font-bold mb-5 leading-tight"> </h1> <p class="text-sm leading-relaxed opacity-75 max-w-sm mx-auto"> </p> <!> <div></div> <p class="text-xs mt-4 opacity-40 tracking-widest uppercase">Back Soon</p> <!></div></div>`);
+	var root_13 = from_html(`<a target="_blank" rel="noopener noreferrer" class="opacity-60 hover:opacity-100 transition-opacity" aria-label="YouTube"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"></path></svg></a>`);
+	var root_9 = from_html(`<div class="flex items-center justify-center gap-6 mt-10"><!> <!> <!> <!></div>`);
+	var root$1 = from_html(`<div class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-background"><!> <div><!> <h1 class="font-display text-3xl md:text-4xl font-bold mb-5 leading-tight"> </h1> <p class="text-sm leading-relaxed opacity-75 max-w-sm mx-auto"> </p> <!> <div></div> <p class="text-xs mt-4 opacity-40 tracking-widest uppercase">Back Soon</p> <!></div></div>`);
 
 	function Maintenance($$anchor, $$props) {
 		push($$props, false);
 
 		let title = prop($$props, 'title', 8, "We'll be back soon.");
 		let message = prop($$props, 'message', 8, "Our store is currently undergoing scheduled maintenance. Please check back shortly.");
-		let background = prop($$props, 'background', 8, '');
-		let siteName = prop($$props, 'siteName', 8, 'Others.');
-		let logo = prop($$props, 'logo', 8, '');
+		let background = prop($$props, 'background', 8, "");
+		let siteName = prop($$props, 'siteName', 8, "Others.");
+		let logo = prop($$props, 'logo', 8, "");
 		let socials = prop($$props, 'socials', 24, () => ({}));
 		let collectEmails = prop($$props, 'collectEmails', 8, false);
-		let email = mutable_source('');
+		let email = mutable_source("");
 		let submitted = mutable_source(false);
 		let submitting = mutable_source(false);
-		let submitError = mutable_source('');
+		let submitError = mutable_source("");
 
 		async function handleSubmit(e) {
 			e.preventDefault();
@@ -14610,18 +15111,18 @@
 			if (!get(email) || get(submitting)) return;
 
 			set(submitting, true);
-			set(submitError, '');
+			set(submitError, "");
 
 			try {
-				const res = await fetch('/api/newsletter', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
+				const res = await fetch("/api/newsletter", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ email: get(email) })
 				});
 
 				const body = await res.json();
 
-				if (!res.ok) throw new Error(body.error || 'Something went wrong.');
+				if (!res.ok) throw new Error(body.error || "Something went wrong.");
 
 				set(submitted, true);
 			} catch(err) {
@@ -14686,8 +15187,7 @@
 			});
 		}
 
-		var div_3 = sibling(node_1, 2);
-		var h1 = sibling(div_3, 2);
+		var h1 = sibling(node_1, 2);
 		var text_1 = child(h1);
 
 		var p_1 = sibling(h1, 2);
@@ -14697,15 +15197,15 @@
 
 		{
 			var consequent_4 = ($$anchor) => {
-				var div_4 = root_5();
-				var node_3 = child(div_4);
+				var div_3 = root_5();
+				var node_3 = child(div_3);
 
 				{
 					var consequent_2 = ($$anchor) => {
-						var div_5 = root_6();
+						var div_4 = root_6();
 
-						template_effect(() => set_class(div_5, 1, `flex items-center justify-center gap-2 text-sm ${background() ? 'text-white' : 'text-foreground'} opacity-80`));
-						append($$anchor, div_5);
+						template_effect(() => set_class(div_4, 1, `flex items-center justify-center gap-2 text-sm ${background() ? 'text-white' : 'text-foreground'} opacity-80`));
+						append($$anchor, div_4);
 					};
 
 					var alternate_1 = ($$anchor) => {
@@ -14744,7 +15244,7 @@
 							? 'bg-white text-black hover:bg-white/90'
 							: 'bg-foreground text-primary-foreground hover:bg-foreground/90'}`);
 
-							set_text(text_3, get(submitting) ? '…' : 'NOTIFY');
+							set_text(text_3, get(submitting) ? "…" : "NOTIFY");
 						});
 
 						event('submit', form, handleSubmit);
@@ -14756,7 +15256,7 @@
 						if (get(submitted)) $$render(consequent_2); else $$render(alternate_1, -1);
 					});
 				}
-				append($$anchor, div_4);
+				append($$anchor, div_3);
 			};
 
 			if_block(node_2, ($$render) => {
@@ -14764,13 +15264,13 @@
 			});
 		}
 
-		var div_6 = sibling(node_2, 2);
-		var node_5 = sibling(div_6, 4);
+		var div_5 = sibling(node_2, 2);
+		var node_5 = sibling(div_5, 4);
 
 		{
-			var consequent_8 = ($$anchor) => {
-				var div_7 = root_9();
-				var node_6 = child(div_7);
+			var consequent_9 = ($$anchor) => {
+				var div_6 = root_9();
+				var node_6 = child(div_6);
 
 				{
 					var consequent_5 = ($$anchor) => {
@@ -14847,29 +15347,54 @@
 						if (get(d_2)) $$render(consequent_7);
 					});
 				}
-				append($$anchor, div_7);
+
+				var node_9 = sibling(node_8, 2);
+
+				{
+					var consequent_8 = ($$anchor) => {
+						var a_3 = root_13();
+
+						template_effect(($0) => set_attribute(a_3, 'href', $0), [
+							() => (
+								deep_read_state(socials()),
+								untrack(() => socials().youtube.trim())
+							)
+						]);
+
+						append($$anchor, a_3);
+					};
+
+					var d_3 = user_derived(() => (
+						deep_read_state(socials()),
+						untrack(() => socials().youtube?.trim())
+					));
+
+					if_block(node_9, ($$render) => {
+						if (get(d_3)) $$render(consequent_8);
+					});
+				}
+				append($$anchor, div_6);
 			};
 
-			var d_3 = user_derived(() => (
+			var d_4 = user_derived(() => (
 				deep_read_state(socials()),
-				untrack(() => socials() && (socials().instagram?.trim() || socials().twitter?.trim() || socials().tiktok?.trim()))
+				untrack(() => socials() && (socials().instagram?.trim() || socials().twitter?.trim() || socials().tiktok?.trim() || socials().youtube?.trim()))
 			));
 
 			if_block(node_5, ($$render) => {
-				if (get(d_3)) $$render(consequent_8);
+				if (get(d_4)) $$render(consequent_9);
 			});
 		}
 
 		template_effect(() => {
 			set_style(div, background()
 				? `background-image: url('${background()}'); background-size: cover; background-position: center;`
-				: '');
+				: "");
 
 			set_class(div_2, 1, `relative z-10 text-center max-w-lg px-8 py-16 ${background() ? 'text-white' : ''}`);
-			set_class(div_3, 1, `w-16 h-16 mx-auto mb-8 rounded-full flex items-center justify-center border ${background() ? 'border-white/30' : 'border-border'}`);
 			set_text(text_1, title());
 			set_text(text_2, message());
-			set_class(div_6, 1, `w-12 h-px mx-auto mt-12 ${background() ? 'bg-white/30' : 'bg-border'}`);
+			set_class(div_5, 1, `w-12 h-px mx-auto mt-12 ${background() ? 'bg-white/30' : 'bg-border'}`);
 		});
 
 		append($$anchor, div);
@@ -14935,6 +15460,71 @@
 			return { page: 'notfound' };
 		}
 
+		function hexToHsl(hex) {
+			if (!hex) return '';
+
+			hex = hex.replace('#', '');
+
+			if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+
+			let r = parseInt(hex.substring(0, 2), 16) / 255;
+			let g = parseInt(hex.substring(2, 4), 16) / 255;
+			let b = parseInt(hex.substring(4, 6), 16) / 255;
+
+			let max = Math.max(r, g, b),
+				min = Math.min(r, g, b);
+
+			let h, s, l = (max + min) / 2;
+
+			if (max === min) {
+				h = s = 0;
+			} else {
+				let d = max - min;
+
+				s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+				switch (max) {
+					case r:
+						h = (g - b) / d + (g < b ? 6 : 0);
+						break;
+
+					case g:
+						h = (b - r) / d + 2;
+						break;
+
+					case b:
+						h = (r - g) / d + 4;
+						break;
+				}
+
+				h /= 6;
+			}
+
+			return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+		}
+
+		function mixHex(hex1, hex2, weight) {
+			if (!hex1 || !hex2) return hex1 || hex2 || '#000000';
+
+			hex1 = hex1.replace('#', '');
+			hex2 = hex2.replace('#', '');
+
+			if (hex1.length === 3) hex1 = hex1.split('').map((c) => c + c).join('');
+			if (hex2.length === 3) hex2 = hex2.split('').map((c) => c + c).join('');
+
+			let color = "#";
+
+			for (let i = 0; i < 3; i++) {
+				let v1 = parseInt(hex1.substring(i * 2, i * 2 + 2), 16);
+				let v2 = parseInt(hex2.substring(i * 2, i * 2 + 2), 16);
+				let val = Math.floor(v2 + (v1 - v2) * weight).toString(16).padStart(2, '0');
+
+				color += val;
+			}
+
+			return color;
+		}
+
 		legacy_pre_effect(() => (get(path)), () => {
 			set(route, resolveRoute(get(path)));
 		});
@@ -14942,15 +15532,85 @@
 		legacy_pre_effect_reset();
 		init();
 
-		var fragment = root();
-		var node = first_child(fragment);
+		var fragment_2 = root();
 
-		GeoBlock(node, {});
+		head('1n46o8q', ($$anchor) => {
+			var fragment = comment();
+			var node = first_child(fragment);
 
-		var node_1 = sibling(node, 2);
+			{
+				var consequent = ($$anchor) => {
+					var fragment_1 = comment();
+					var node_1 = first_child(fragment_1);
+
+					html(node_1, () => (
+						get(site),
+						untrack(() => `
+      <style>
+        :root {
+          --background: ${hexToHsl(get(site).colors.background)};
+          --foreground: ${hexToHsl(get(site).colors.foreground)};
+          --primary: ${hexToHsl(get(site).colors.primary)};
+          --primary-foreground: ${hexToHsl(get(site).colors.background)};
+          --border: ${hexToHsl(get(site).colors.border)};
+          --hover: ${hexToHsl(get(site).colors.hover)};
+          
+          /* Derived Theme Variables */
+          --card: ${hexToHsl(get(site).colors.background)};
+          --card-foreground: ${hexToHsl(get(site).colors.foreground)};
+          --popover: ${hexToHsl(get(site).colors.background)};
+          --popover-foreground: ${hexToHsl(get(site).colors.foreground)};
+          --secondary: ${hexToHsl(get(site).colors.border)};
+          --secondary-foreground: ${hexToHsl(get(site).colors.foreground)};
+          --muted: ${hexToHsl(mixHex(get(site).colors.background, get(site).colors.border, 0.5))};
+          --muted-foreground: ${hexToHsl(mixHex(get(site).colors.background, get(site).colors.foreground, 0.45))};
+          --accent: ${hexToHsl(get(site).colors.hover)};
+          --accent-foreground: ${hexToHsl(get(site).colors.background)};
+          --input: ${hexToHsl(get(site).colors.border)};
+          --ring: ${hexToHsl(get(site).colors.primary)};
+        }
+
+        /* Safely target interactive elements to apply the global hover color */
+        @media (hover: hover) {
+          a:not(.bg-foreground):hover, 
+          button:not(.bg-foreground):hover {
+            color: hsl(var(--hover)) !important;
+          }
+
+          a.bg-foreground:hover,
+          button.bg-foreground:hover {
+            background-color: hsl(var(--hover)) !important;
+            border-color: hsl(var(--hover)) !important;
+            color: hsl(var(--background)) !important;
+          }
+        }
+      </style>
+    `)
+					));
+
+					append($$anchor, fragment_1);
+				};
+
+				if_block(node, ($$render) => {
+					if ((
+						get(site),
+						get(route),
+						untrack(() => get(site)?.colors && get(route).page !== 'admin')
+					)) $$render(consequent);
+				});
+			}
+
+			append($$anchor, fragment);
+		});
+
+		var node_2 = first_child(fragment_2);
+
+		GeoBlock(node_2, {});
+
+		var node_3 = sibling(node_2, 2);
 
 		{
-			var consequent = ($$anchor) => {
+			var consequent_1 = ($$anchor) => {
 				{
 					let $0 = derived_safe_equal(() => (get(site), untrack(() => get(site)?.logo)));
 					let $1 = derived_safe_equal(() => (get(site), untrack(() => get(site)?.socials)));
@@ -14995,19 +15655,19 @@
 				}
 			};
 
-			var consequent_1 = ($$anchor) => {
+			var consequent_2 = ($$anchor) => {
 				Index($$anchor, {});
 			};
 
-			var consequent_2 = ($$anchor) => {
+			var consequent_3 = ($$anchor) => {
 				Admin($$anchor, {});
 			};
 
-			var consequent_3 = ($$anchor) => {
+			var consequent_4 = ($$anchor) => {
 				Products($$anchor, {});
 			};
 
-			var consequent_4 = ($$anchor) => {
+			var consequent_5 = ($$anchor) => {
 				Product($$anchor, {
 					get productId() {
 						return (get(route), untrack(() => get(route).id));
@@ -15015,11 +15675,11 @@
 				});
 			};
 
-			var consequent_5 = ($$anchor) => {
+			var consequent_6 = ($$anchor) => {
 				Lookbook($$anchor, {});
 			};
 
-			var consequent_6 = ($$anchor) => {
+			var consequent_7 = ($$anchor) => {
 				LookbookDetail($$anchor, {
 					get lookbookId() {
 						return (get(route), untrack(() => get(route).id));
@@ -15027,11 +15687,11 @@
 				});
 			};
 
-			var consequent_7 = ($$anchor) => {
+			var consequent_8 = ($$anchor) => {
 				Community($$anchor, {});
 			};
 
-			var consequent_8 = ($$anchor) => {
+			var consequent_9 = ($$anchor) => {
 				Article($$anchor, {
 					get slug() {
 						return (get(route), untrack(() => get(route).slug));
@@ -15039,19 +15699,19 @@
 				});
 			};
 
-			var consequent_9 = ($$anchor) => {
+			var consequent_10 = ($$anchor) => {
 				Cart($$anchor, {});
 			};
 
-			var consequent_10 = ($$anchor) => {
+			var consequent_11 = ($$anchor) => {
 				Shipping($$anchor, {});
 			};
 
-			var consequent_11 = ($$anchor) => {
+			var consequent_12 = ($$anchor) => {
 				FAQ($$anchor, {});
 			};
 
-			var consequent_12 = ($$anchor) => {
+			var consequent_13 = ($$anchor) => {
 				Contact($$anchor, {});
 			};
 
@@ -15059,40 +15719,40 @@
 				NotFound($$anchor);
 			};
 
-			if_block(node_1, ($$render) => {
+			if_block(node_3, ($$render) => {
 				if ((
 					get(maintenance),
 					get(route),
 					untrack(() => get(maintenance) !== null && get(maintenance) !== false && get(route).page !== 'admin')
-				)) $$render(consequent); else if ((get(route), untrack(() => get(route).page === 'index'))) $$render(consequent_1, 1); else if ((get(route), untrack(() => get(route).page === 'admin'))) $$render(consequent_2, 2); else if ((
+				)) $$render(consequent_1); else if ((get(route), untrack(() => get(route).page === 'index'))) $$render(consequent_2, 1); else if ((get(route), untrack(() => get(route).page === 'admin'))) $$render(consequent_3, 2); else if ((
 					get(route),
 					untrack(() => get(route).page === 'products')
-				)) $$render(consequent_3, 3); else if ((
+				)) $$render(consequent_4, 3); else if ((
 					get(route),
 					untrack(() => get(route).page === 'product')
-				)) $$render(consequent_4, 4); else if ((
+				)) $$render(consequent_5, 4); else if ((
 					get(route),
 					untrack(() => get(route).page === 'lookbook')
-				)) $$render(consequent_5, 5); else if ((
+				)) $$render(consequent_6, 5); else if ((
 					get(route),
 					untrack(() => get(route).page === 'lookbook-detail')
-				)) $$render(consequent_6, 6); else if ((
+				)) $$render(consequent_7, 6); else if ((
 					get(route),
 					untrack(() => get(route).page === 'community')
-				)) $$render(consequent_7, 7); else if ((
+				)) $$render(consequent_8, 7); else if ((
 					get(route),
 					untrack(() => get(route).page === 'article')
-				)) $$render(consequent_8, 8); else if ((get(route), untrack(() => get(route).page === 'cart'))) $$render(consequent_9, 9); else if ((
+				)) $$render(consequent_9, 8); else if ((get(route), untrack(() => get(route).page === 'cart'))) $$render(consequent_10, 9); else if ((
 					get(route),
 					untrack(() => get(route).page === 'shipping')
-				)) $$render(consequent_10, 10); else if ((get(route), untrack(() => get(route).page === 'faq'))) $$render(consequent_11, 11); else if ((
+				)) $$render(consequent_11, 10); else if ((get(route), untrack(() => get(route).page === 'faq'))) $$render(consequent_12, 11); else if ((
 					get(route),
 					untrack(() => get(route).page === 'contact')
-				)) $$render(consequent_12, 12); else $$render(alternate, -1);
+				)) $$render(consequent_13, 12); else $$render(alternate, -1);
 			});
 		}
 
-		append($$anchor, fragment);
+		append($$anchor, fragment_2);
 		pop();
 	}
 
