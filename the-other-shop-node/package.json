@@ -29,6 +29,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.10",
     "autoprefixer": "^10.4.27",
     "nodemon": "^3.1.14",
     "postcss": "^8.5.8",
