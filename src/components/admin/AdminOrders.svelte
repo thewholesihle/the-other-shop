@@ -43,6 +43,17 @@
     rejectReason = '';
   }
 
+  async function handleDelete(orderId) {
+    if (!confirm('Are you sure you want to permanently delete this pending order?')) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error((await res.json()).error);
+      onUpdate(orders.filter(o => o.id !== orderId));
+    } catch (e) {
+      alert(`Failed to delete order: ${e.message}`);
+    }
+  }
+
   function exportPDF(order) {
     if (!window.jspdf) return alert('PDF library loading, try again in a moment...');
     const { jsPDF } = window.jspdf;
@@ -119,6 +130,16 @@
                order.status === 'pending_payment'? 'bg-yellow-100 text-yellow-700' :
                                                    'bg-muted text-muted-foreground'}"
             >{order.status.replace('_', ' ')}</span>
+
+            <!-- Delete pending order button -->
+            {#if order.status.includes('pending')}
+              <button onclick={() => handleDelete(order.id)}
+                class="text-[10px] uppercase font-medium tracking-wider px-2 py-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors active:scale-95 ml-2"
+                title="Delete Pending Order"
+              >
+                ✕ DELETE
+              </button>
+            {/if}
 
             <!-- Accept/Reject (shown for paid orders awaiting fulfillment decision) -->
             {#if order.status === 'paid'}

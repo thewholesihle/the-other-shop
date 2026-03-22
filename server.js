@@ -371,6 +371,36 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
   }
 });
 
+// ─── API: Delete Order ──────────────────────────────────────────────────────────
+app.delete('/api/orders/:id', basicAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findOne({ id }).lean();
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+    
+    // Restore product stock if it hasn't been cancelled
+    if (order.status !== 'cancelled') {
+      const orderItems = Array.isArray(order.items) ? order.items : [];
+      let restorationCount = 0;
+      for (const item of orderItems) {
+        if (!item.quantity) continue;
+        const pId = item.productId || item.id;
+        let query = { id: pId };
+        if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
+        const result = await Product.updateOne(query, { $inc: { stock: item.quantity } });
+        if (result.modifiedCount > 0) restorationCount++;
+      }
+      console.log(`[Order API] Restored stock for ${restorationCount} items from deleted order ${id}`);
+    }
+
+    await Order.deleteOne({ id });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/orders/:id', err);
+    res.status(500).json({ error: 'Could not delete order.' });
+  }
+});
+
 // ─── API: Upload ──────────────────────────────────────────────────────────────
 app.post('/api/upload', basicAuth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
