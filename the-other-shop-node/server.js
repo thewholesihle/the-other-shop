@@ -8,12 +8,17 @@ const multer   = require('multer');
 const md5      = require('md5');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const { connect } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber } = require('./src/db/models');
 
 const app  = express();
 const port = process.env.PORT || 3000;
+
+// Trust the edge proxy (Fly.io, Heroku, etc) so req.protocol properly detects HTTPS
+app.set('trust proxy', 1);
 
 // ─── Admin Auth ───────────────────────────────────────────────────────────────
 const ADMIN_USER = process.env.ADMIN_USER;
@@ -95,17 +100,25 @@ async function sendOrderNotification(order) {
   }
 }
 
-// ─── Image / Video Upload (multer) ────────────────────────────────────────────
-const uploadDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-  },
+// ─── Cloudinary Upload (━ replaces multer diskStorage) ────────────────────────────
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (_req, file) => ({
+    folder:         'others-store',
+    resource_type:  file.mimetype.startsWith('video/') ? 'video' : 'image',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm'],
+    transformation: file.mimetype.startsWith('image/')
+      ? [{ quality: 'auto', fetch_format: 'auto' }]
+      : undefined,
+  }),
+});
+
 const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
