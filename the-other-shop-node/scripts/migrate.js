@@ -90,7 +90,7 @@ async function run() {
     { _id: 'main' },
     { $set: {
         shipping: pages.shipping ?? { content: '' },
-        faq:      pages.faq      ?? { items: [] },
+        faq:      { items: Array.isArray(pages.faq) ? pages.faq : (pages.faq?.items || []) },
         contact:  pages.contact  ?? { address: '', details: [] },
     }},
     { upsert: true, setDefaultsOnInsert: true }

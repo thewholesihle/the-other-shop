@@ -7,6 +7,7 @@ const fs       = require('fs');
 const multer   = require('multer');
 const md5      = require('md5');
 const mongoose = require('mongoose');
+const nodemailer = require('nodemailer');
 
 const { connect } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber } = require('./src/db/models');
@@ -45,14 +46,54 @@ if (!process.env.PAYFAST_MERCHANT_ID || !process.env.PAYFAST_MERCHANT_KEY) {
 }
 
 const PF = {
-  merchantId:  process.env.PAYFAST_MERCHANT_ID,
-  merchantKey: process.env.PAYFAST_MERCHANT_KEY,
-  passphrase:  process.env.PAYFAST_PASSPHRASE || '',
+  merchantId:  (process.env.PAYFAST_MERCHANT_ID || '').trim(),
+  merchantKey: (process.env.PAYFAST_MERCHANT_KEY || '').trim(),
+  passphrase:  (process.env.PAYFAST_PASSPHRASE || '').trim(),
   sandbox:     isSandbox,
 };
 const PF_HOST = PF.sandbox
   ? 'https://sandbox.payfast.co.za/eng/process'
   : 'https://www.payfast.co.za/eng/process';
+
+// ─── Email Notifier ──────────────────────────────────────────────────────────
+async function sendOrderNotification(order) {
+  if (!process.env.SMTP_HOST || !process.env.ADMIN_EMAIL) return;
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for 587
+    });
+
+    const itemsHtml = (order.items || []).map(i => `<li>${i.quantity}x ${i.name} (${i.size || '-'}) - R${(i.price * i.quantity).toFixed(2)}</li>`).join('');
+    
+    await transporter.sendMail({
+      from: `"Others. Store" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
+      to: process.env.ADMIN_EMAIL,
+      subject: `New Order Paid: #${order.id}`,
+      html: `
+        <div style="font-family: sans-serif; color: #111;">
+          <h2>New Order Paid!</h2>
+          <p><strong>Order:</strong> ${order.id}</p>
+          <p><strong>Customer:</strong> ${order.customer} (${order.email})</p>
+          <p><strong>Address:</strong> ${order.address}</p>
+          <p><strong>Total:</strong> R${order.total.toFixed(2)}</p>
+          <hr />
+          <h3>Items Details</h3>
+          <ul>${itemsHtml}</ul>
+          <p style="margin-top: 20px; font-size: 12px; color: #666;">View full details in the Admin Panel.</p>
+        </div>
+      `
+    });
+    console.log(`[Email] Notification sent for order ${order.id}`);
+  } catch (err) {
+    console.error('[Email] Failed to send invoice email:', err.message);
+  }
+}
 
 // ─── Image / Video Upload (multer) ────────────────────────────────────────────
 const uploadDir = path.join(__dirname, 'public', 'uploads');
@@ -222,20 +263,28 @@ app.post('/api/newsletter', async (req, res) => {
 
 // ─── PayFast Helpers ─────────────────────────────────────────────────────────
 /**
- * Build signature string per PayFast custom-integration spec:
- * - Fields in DOCUMENT ORDER (not alphabetical)
- * - Only include non-empty values
- * - URL-encode each value
- * - Join with '&', then append passphrase
- * - MD5 the result
+ * PHP-equivalent urlencode:
+ * JS encodeURIComponent leaves !'()*~ unescaped and encodes spaces as %20.
+ * PayFast (PHP backend) requires spaces as + and escapes those characters.
  */
+function pfUrlEncode(str) {
+  return encodeURIComponent(String(str).trim())
+    .replace(/!/g, '%21')
+    .replace(/'/g, '%27')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29')
+    .replace(/\*/g, '%2A')
+    .replace(/~/g, '%7E')
+    .replace(/%20/g, '+');
+}
+
 function pfSignature(params) {
-  const str = Object.entries(params)
-    .filter(([k, v]) => k !== 'signature' && v !== '' && v !== null && v !== undefined)
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v).trim())}`)
+  const str = Object.keys(params)
+    .filter(k => k !== 'signature' && params[k] !== '' && params[k] !== null && params[k] !== undefined)
+    .map(k => `${k}=${pfUrlEncode(params[k])}`)
     .join('&');
   const withPassphrase = PF.passphrase
-    ? `${str}&passphrase=${encodeURIComponent(PF.passphrase.trim())}`
+    ? `${str}&passphrase=${pfUrlEncode(PF.passphrase)}`
     : str;
   return md5(withPassphrase);
 }
@@ -373,10 +422,12 @@ app.post('/api/payfast/itn', async (req, res) => {
 
     // Step 6 — All checks passed, update order status
     if (payment_status === 'COMPLETE') {
-      await Order.findOneAndUpdate(
+      const updated = await Order.findOneAndUpdate(
         { id: orderId },
-        { $set: { status: 'paid', payfastId: pf_payment_id || '' } }
+        { $set: { status: 'paid', payfastId: pf_payment_id || '' } },
+        { returnDocument: 'after' }
       );
+      if (updated) sendOrderNotification(updated).catch(e => console.error(e));
       console.log(`✓ ITN: order ${orderId} marked PAID (PayFast ID: ${pf_payment_id})`);
     } else {
       await Order.findOneAndUpdate(

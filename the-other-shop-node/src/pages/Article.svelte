@@ -13,8 +13,7 @@
   onMount(async () => {
     try {
       data = await loadStoreData();
-      const community = ov?.community ?? base.community ?? [];
-      post = community.find(p => p.slug === slug && p.published) ?? null;
+      post = data?.community?.find(p => p.slug === slug && p.published) ?? null;
     } finally { loading = false; }
   });
 </script>

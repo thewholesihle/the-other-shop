@@ -7,11 +7,8 @@
   let data = null;
   let loading = true;
   onMount(async () => {
-    try {
-      const base = await (await fetch('/data/store.json')).json();
-      const ov = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; } })();
-      data = { site: ov?.site ?? base.site, pages: ov?.pages ?? base.pages ?? {} };
-    } finally { loading = false; }
+    try { data = await loadStoreData(); }
+    finally { loading = false; }
   });
 </script>
 

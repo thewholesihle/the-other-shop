@@ -4,12 +4,12 @@
 
   let section = 'shipping';
   let shipping = pages.shipping?.content ?? '';
-  let faq = pages.faq ? JSON.parse(JSON.stringify(pages.faq)) : [];
+  let faq = Array.isArray(pages.faq) ? JSON.parse(JSON.stringify(pages.faq)) : (pages.faq?.items ? JSON.parse(JSON.stringify(pages.faq.items)) : []);
   let contact = pages.contact ? JSON.parse(JSON.stringify(pages.contact)) : { address: '', details: [] };
   let saved = false;
 
   function save() {
-    onUpdate({ shipping: { content: shipping }, faq, contact });
+    onUpdate({ shipping: { content: shipping }, faq: { items: faq }, contact });
     saved = true;
     setTimeout(() => (saved = false), 2000);
   }

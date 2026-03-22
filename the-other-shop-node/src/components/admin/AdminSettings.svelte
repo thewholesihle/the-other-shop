@@ -6,8 +6,10 @@
   export let onReset = () => {};
 
   let form = JSON.parse(JSON.stringify(site));
-  // Ensure shipping object exists
   if (!form.shipping) form.shipping = { freeMinimum: 500, standardRate: 99, country: 'South Africa' };
+  if (!form.hero) form.hero = {};
+  if (form.hero.ctaLink === undefined) form.hero.ctaLink = '/products';
+  if (form.hero.video === undefined) form.hero.video = '';
   let saved = false;
 
   function handleSave() {
@@ -103,7 +105,43 @@
         <label for="h-cta" class="text-label block mb-1.5">CTA BUTTON TEXT</label>
         <input id="h-cta" bind:value={form.hero.cta} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
       </div>
-      <ImageUpload label="HERO BACKGROUND IMAGE" value={form.hero.image} onChange={(url) => (form.hero.image = url)} />
+      <div>
+        <label for="h-cta-link" class="text-label block mb-1.5">CTA BUTTON LINK</label>
+        <input id="h-cta-link" bind:value={form.hero.ctaLink} placeholder="/products" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+        <p class="text-xs text-muted-foreground mt-1">Use a relative path (e.g. /products, /lookbook) or a full URL.</p>
+      </div>
+      <!-- Hero background: image OR video/gif -->
+      <div class="space-y-3">
+        <p class="text-label">HERO BACKGROUND</p>
+        <p class="text-xs text-muted-foreground">Upload an image <em>or</em> a video/GIF. If both are set, video takes priority.</p>
+        <ImageUpload label="IMAGE (JPG/PNG/WEBP)" value={form.hero.image} onChange={(url) => (form.hero.image = url)} />
+        <div>
+          <p class="text-label block mb-1.5">VIDEO / GIF (MP4, WEBM, GIF)</p>
+          {#if form.hero.video}
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs text-muted-foreground truncate max-w-[200px]">{form.hero.video}</span>
+              <button onclick={() => (form.hero.video = '')} class="text-xs text-destructive hover:underline">Remove</button>
+            </div>
+          {/if}
+          <label class="cursor-pointer inline-flex items-center gap-2 border border-border px-3 py-2 text-label hover:bg-muted transition-colors text-xs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            UPLOAD VIDEO/GIF
+            <input
+              type="file"
+              accept="video/mp4,video/webm,image/gif"
+              class="sr-only"
+              onchange={async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const fd = new FormData();
+                fd.append('image', file);
+                const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' });
+                if (res.ok) { const { url } = await res.json(); form.hero.video = url; }
+              }}
+            />
+          </label>
+        </div>
+      </div>
     </div>
 
     <!-- Socials -->

@@ -4,10 +4,10 @@
   "description": "",
   "main": "build/bundle.js",
   "scripts": {
-    "build":   "rollup -c",
-    "start":   "nodemon server.js",
+    "build": "rollup -c",
+    "start": "nodemon server.js",
     "migrate": "node scripts/migrate.js",
-    "test":    "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +21,7 @@
     "md5": "^2.3.0",
     "mongoose": "^9.3.1",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.3",
     "rollup": "^4.59.1",
     "rollup-plugin-svelte": "^7.2.3",
     "svelte": "^5.54.1",

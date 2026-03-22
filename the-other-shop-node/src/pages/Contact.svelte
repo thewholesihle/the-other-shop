@@ -7,15 +7,11 @@
   let data = null;
   let loading = true;
   onMount(async () => {
-    try {
-      const base = await (await fetch('/data/store.json')).json();
-      const ov = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; } })();
-      data = {
-        site:    ov?.site ?? base.site,
-        contact: ov?.pages?.contact ?? base.pages?.contact ?? { address: '', details: [] },
-      };
-    } finally { loading = false; }
+    try { data = await loadStoreData(); }
+    finally { loading = false; }
   });
+
+  $: contact = data?.pages?.contact ?? { address: '', details: [] };
 </script>
 
 <svelte:head>
@@ -34,7 +30,7 @@
       <div class="grid md:grid-cols-2 gap-12">
         <!-- Contact details -->
         <div class="space-y-6">
-          {#each data.contact.details as detail}
+          {#each contact.details as detail}
             <div>
               <p class="text-label mb-1">{detail.label.toUpperCase()}</p>
               <a href={detail.value.includes('@') ? `mailto:${detail.value}` : `tel:${detail.value}`}
@@ -44,10 +40,10 @@
         </div>
 
         <!-- Address -->
-        {#if data.contact.address}
+        {#if contact.address}
           <div>
             <p class="text-label mb-1">FIND US</p>
-            <address class="text-sm not-italic text-muted-foreground leading-relaxed">{data.contact.address}</address>
+            <address class="text-sm not-italic text-muted-foreground leading-relaxed">{contact.address}</address>
           </div>
         {/if}
       </div>

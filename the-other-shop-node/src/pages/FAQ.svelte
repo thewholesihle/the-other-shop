@@ -8,10 +8,11 @@
   let loading = true;
   let open = null;
   onMount(async () => {
-    try {
-      data = await loadStoreData();
-      } finally { loading = false; }
+    try { data = await loadStoreData(); }
+    finally { loading = false; }
   });
+
+  $: faqItems = Array.isArray(data?.pages?.faq) ? data.pages.faq : (data?.pages?.faq?.items ?? []);
 </script>
 
 <svelte:head>
@@ -27,7 +28,7 @@
     <div class="pt-28 pb-20 px-6 md:px-10 max-w-3xl mx-auto">
       <h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Frequently Asked Questions</h1>
       <div class="space-y-0 divide-y divide-border">
-        {#each data.faq as item}
+        {#each faqItems as item}
           <div>
             <button
               onclick={() => (open = open === item.id ? null : item.id)}
@@ -40,7 +41,7 @@
             {/if}
           </div>
         {/each}
-        {#if !data.faq.length}
+        {#if !faqItems.length}
           <p class="py-8 text-muted-foreground text-sm">No FAQs yet.</p>
         {/if}
       </div>

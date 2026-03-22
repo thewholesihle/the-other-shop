@@ -79,7 +79,7 @@
               <td class="p-3">
                 <span class="inline-block text-[10px] tracking-[0.15em] uppercase px-2 py-0.5 font-medium {statusClass(order.status)}">{order.status}</span>
               </td>
-              <td class="p-3 text-right tabular-nums">€{order.total.toFixed(2).replace('.', ',')}</td>
+              <td class="p-3 text-right tabular-nums">R{order.total.toFixed(2).replace('.', ',')}</td>
             </tr>
           {/each}
         </tbody>
