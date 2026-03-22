@@ -105,6 +105,10 @@
 </script>
 
 <svelte:head>
+  {#if site?.logo}
+    <link rel="icon" href={site.logo} />
+    <meta property="og:image" content={site.logo} />
+  {/if}
   {#if site?.colors && route.page !== 'admin'}
     {@html `
       <style>

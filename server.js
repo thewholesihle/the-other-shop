@@ -550,6 +550,13 @@ app.post('/api/checkout', async (req, res) => {
   params.item_name     = `Others. Order ${orderId}`.slice(0, 100);
   params.item_description = `${order.items?.length || 1} item(s)`.slice(0, 255);
 
+  // Clean the params object of any empty properties so they don't get piped to the form
+  Object.keys(params).forEach(k => {
+    if (params[k] === '' || params[k] === null || params[k] === undefined) {
+      delete params[k];
+    }
+  });
+
   // Generate signature (passphrase appended inside pfSignature)
   params.signature = pfSignature(params);
 
