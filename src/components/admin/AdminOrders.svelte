@@ -4,7 +4,7 @@
   export let onUpdate = () => {};
 
   let filter = 'all';
-  const statusOptions = ['all', 'pending', 'pending_payment', 'paid', 'processing', 'shipped', 'cancelled'];
+  const statusOptions = ['all', 'pending_payment', 'paid', 'shipped', 'delivered', 'cancelled'];
   
   let rejectingId = null;
   let rejectReason = '';
@@ -29,7 +29,7 @@
   }
 
   function handleAccept(orderId) {
-    patchStatus(orderId, 'processing');
+    patchStatus(orderId, 'shipped');
   }
 
   function handleReject(orderId) {
@@ -113,8 +113,8 @@
             <!-- Status badge -->
             <span class="text-[10px] uppercase font-medium tracking-[0.1em] px-2 py-1 rounded
               {order.status === 'paid'           ? 'bg-green-100 text-green-700' :
-               order.status === 'processing'     ? 'bg-blue-100 text-blue-700' :
                order.status === 'shipped'        ? 'bg-purple-100 text-purple-700' :
+               order.status === 'delivered'      ? 'bg-blue-100 text-blue-700' :
                order.status === 'cancelled'      ? 'bg-red-100 text-red-700' :
                order.status === 'pending_payment'? 'bg-yellow-100 text-yellow-700' :
                                                    'bg-muted text-muted-foreground'}"
@@ -124,11 +124,11 @@
             {#if order.status === 'paid'}
               <button onclick={() => handleAccept(order.id)}
                 class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-green-600 text-white hover:bg-green-700 transition-colors active:scale-95">
-                ✓ ACCEPT
+                ✓ MARK SHIPPED
               </button>
               <button onclick={() => handleReject(order.id)}
                 class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95">
-                ✕ REJECT
+                ✕ CANCEL
               </button>
             {/if}
 
@@ -138,7 +138,7 @@
               onchange={(e) => patchStatus(order.id, e.target.value)}
               class="bg-transparent border border-border px-2 py-1 text-[10px] uppercase font-medium tracking-[0.1em] focus:outline-none focus:border-foreground transition-colors cursor-pointer ml-auto"
             >
-              {#each ['pending', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] as s}
+              {#each ['pending_payment', 'paid', 'shipped', 'delivered', 'cancelled'] as s}
                 <option value={s}>{s.replace('_', ' ')}</option>
               {/each}
             </select>

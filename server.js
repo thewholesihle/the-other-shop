@@ -78,23 +78,33 @@ async function sendOrderNotification(order) {
       secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for 587
     });
 
-    const itemsHtml = (order.items || []).map(i => `<li>${i.quantity}x ${i.name} (${i.size || '-'}) - R${(i.price * i.quantity).toFixed(2)}</li>`).join('');
+    const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${i.size || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
     
     await transporter.sendMail({
       from: `"Others. Store" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
       to: process.env.ADMIN_EMAIL,
       subject: `New Order Paid: #${order.id}`,
       html: `
-        <div style="font-family: sans-serif; color: #111;">
-          <h2>New Order Paid!</h2>
-          <p><strong>Order:</strong> ${order.id}</p>
-          <p><strong>Customer:</strong> ${order.customer} (${order.email})</p>
-          <p><strong>Address:</strong> ${order.address}</p>
-          <p><strong>Total:</strong> R${order.total.toFixed(2)}</p>
-          <hr />
-          <h3>Items Details</h3>
-          <ul>${itemsHtml}</ul>
-          <p style="margin-top: 20px; font-size: 12px; color: #666;">View full details in the Admin Panel.</p>
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
+          <div style="text-align: center; margin-bottom: 40px;">
+            <h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">OTHERS.</h1>
+          </div>
+          <div style="background-color: #f9f9f9; padding: 30px; border-radius: 4px;">
+            <h2 style="font-size: 18px; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #eaeaea; padding-bottom: 10px;">New Order Paid</h2>
+            <p style="margin: 0 0 10px; font-size: 15px;"><strong>Order ID:</strong> #${order.id}</p>
+            <p style="margin: 0 0 10px; font-size: 15px;"><strong>Customer:</strong> ${order.customer} <span style="color: #666;">(${order.email})</span></p>
+            <p style="margin: 0 0 20px; font-size: 15px;"><strong>Address:</strong> ${order.address}</p>
+            
+            <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 30px; border-bottom: 1px solid #eaeaea; padding-bottom: 10px;">Order Summary</h3>
+            <ul style="list-style: none; padding: 0; margin: 0 0 20px; font-size: 15px;">
+              ${itemsHtml}
+            </ul>
+            <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 1px solid #111; padding-top: 15px; margin-top: 15px; font-size: 16px;">
+              <span>Total Paid:</span>
+              <span>R${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+          <p style="text-align: center; margin-top: 40px; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.1em;">Log into the Admin Panel to fulfill this order.</p>
         </div>
       `
     });
@@ -261,13 +271,75 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
   }
 });
 
+// ─── Email Notifier Helper for Customers ──────────────────────────────────────
+async function sendCustomerStatusEmail(order) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !order.email) return;
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      secure: Number(process.env.SMTP_PORT) === 465,
+    });
+
+    const statuses = {
+      shipped: 'has formally shipped',
+      delivered: 'has been delivered',
+      cancelled: 'has been cancelled',
+      paid: 'has been paid'
+    };
+    const friendlyStatus = statuses[order.status] || `status is now: ${order.status}`;
+    const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${i.size || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
+
+    await transporter.sendMail({
+      from: `"Others. Store" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
+      to: order.email,
+      subject: `Order Update: #${order.id} ${friendlyStatus}`,
+      html: `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
+          <div style="text-align: center; margin-bottom: 40px;">
+            <h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">OTHERS.</h1>
+          </div>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">Hi ${order.customer.split(' ')[0]},</p>
+          <p style="font-size: 16px; margin-bottom: 30px;">This is an update regarding your recent purchase. Your order <strong>#${order.id}</strong> ${friendlyStatus}.</p>
+          
+          ${order.adminNote ? `
+          <div style="background-color: #f9f9f9; padding: 20px; border-left: 3px solid #111; margin-bottom: 30px;">
+            <p style="margin: 0; font-size: 15px; font-style: italic; color: #333;">"${order.adminNote}"</p>
+          </div>
+          ` : ''}
+          
+          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #eaeaea; padding-bottom: 10px; margin-bottom: 15px;">Order Details</h3>
+          <ul style="list-style: none; padding: 0; margin: 0 0 30px; font-size: 15px;">
+            ${itemsHtml}
+          </ul>
+          
+          <p style="font-size: 16px; margin-top: 45px; margin-bottom: 5px;">Thank you for shopping with us.</p>
+          <p style="font-size: 15px; color: #555; margin-top: 0;">&mdash; The Others. Team</p>
+          
+          <div style="text-align: center; margin-top: 50px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.1em;">
+            <p>&copy; ${new Date().getFullYear()} Others. All rights reserved.</p>
+          </div>
+        </div>
+      `
+    });
+    console.log(`[Email] Customer status update sent for order ${order.id}`);
+  } catch (err) {
+    console.error('[Email] Failed to send customer email:', err.message);
+  }
+}
+
 // ─── API: Update Order Status (accept / reject) ─────────────────────────────────
 app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
-  const allowed = ['processing', 'shipped', 'delivered', 'cancelled', 'paid', 'pending'];
+  const allowed = ['shipped', 'delivered', 'cancelled', 'paid', 'pending_payment'];
   const { status, reason } = req.body;
   if (!allowed.includes(status))
     return res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` });
   try {
+    const oldOrder = await Order.findOne({ id: req.params.id }).lean();
+    if (!oldOrder) return res.status(404).json({ error: 'Order not found.' });
+
     const update = { status };
     if (reason) update.adminNote = reason;
     const order = await Order.findOneAndUpdate(
@@ -275,7 +347,23 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
       { $set: update },
       { returnDocument: 'after' }
     );
-    if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+    // If cancelled manually, restore stock mapped into MongoDB
+    if (status === 'cancelled' && oldOrder.status !== 'cancelled') {
+        const orderItems = Array.isArray(order.items) ? order.items : [];
+        for (const item of orderItems) {
+          const pId = item.productId || item.id;
+          let query = { id: pId };
+          if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
+          await Product.updateOne(query, { $inc: { stock: item.quantity } });
+        }
+    }
+
+    // Email customer if status explicitly changed
+    if (status !== oldOrder.status) {
+        sendCustomerStatusEmail(order).catch(console.error);
+    }
+
     res.json({ ok: true, order });
   } catch (err) {
     console.error('PATCH /api/orders/:id/status', err);
@@ -395,14 +483,12 @@ app.post('/api/checkout', async (req, res) => {
   // ── Stock validation ──────────────────────────────────────────────────────
   const orderItems = Array.isArray(order.items) ? order.items : [];
   const stockErrors = [];
+  const itemsToDeduct = [];
+  
   for (const item of orderItems) {
     const pId = item.productId || item.id;
-    
-    // Only query _id if pId is a valid MongoDB ObjectId to prevent CastError crashes
     let query = { id: pId };
-    if (mongoose.Types.ObjectId.isValid(pId)) {
-      query = { $or: [{ id: pId }, { _id: pId }] };
-    }
+    if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
     
     const product = await Product.findOne(query).lean();
     if (!product) {
@@ -413,10 +499,17 @@ app.post('/api/checkout', async (req, res) => {
           ? `"${item.name}" is sold out.`
           : `"${item.name}" only has ${product.stock} unit${product.stock !== 1 ? 's' : ''} left (you requested ${item.quantity}).`
       );
+    } else {
+      itemsToDeduct.push({ query, quantity: item.quantity });
     }
   }
   if (stockErrors.length > 0) {
     return res.status(400).json({ error: 'Some items are out of stock.', stockErrors });
+  }
+
+  // Deduct stock safely now that we validated everything
+  for (const { query, quantity } of itemsToDeduct) {
+    await Product.updateOne(query, { $inc: { stock: -quantity } });
   }
 
   try {
@@ -538,10 +631,21 @@ app.post('/api/payfast/itn', async (req, res) => {
       if (updated) sendOrderNotification(updated).catch(e => console.error(e));
       console.log(`✓ ITN: order ${orderId} marked PAID (PayFast ID: ${pf_payment_id})`);
     } else {
-      await Order.findOneAndUpdate(
+      const updated = await Order.findOneAndUpdate(
         { id: orderId },
-        { $set: { status: 'cancelled' } }
+        { $set: { status: 'cancelled' } },
+        { returnDocument: 'before' }
       );
+      // Only selectively restore stock if the order wasn't ALREADY cancelled.
+      if (updated && updated.status !== 'cancelled') {
+        const orderItems = Array.isArray(updated.items) ? updated.items : [];
+        for (const item of orderItems) {
+          const pId = item.productId || item.id;
+          let query = { id: pId };
+          if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
+          await Product.updateOne(query, { $inc: { stock: item.quantity } });
+        }
+      }
       console.log(`ITN: order ${orderId} — payment_status=${payment_status}`);
     }
   } catch (err) {

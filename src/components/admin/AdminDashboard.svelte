@@ -1,18 +1,17 @@
 <script>
   export let data = { site: {}, products: [], orders: [] };
 
-  $: totalRevenue = data.orders.reduce((sum, o) => sum + o.total, 0);
+  $: totalRevenue = data.orders.filter(o => ['paid', 'shipped', 'delivered'].includes(o.status)).reduce((sum, o) => sum + o.total, 0);
   $: totalProducts = data.products.length;
   $: totalOrders = data.orders.length;
   $: lowStock = data.products.filter(p => p.stock > 0 && p.stock <= 10).length;
   $: outOfStock = data.products.filter(p => p.stock === 0).length;
-  $: pendingOrders = data.orders.filter(o => o.status === 'pending').length;
+  $: pendingOrders = data.orders.filter(o => o.status === 'pending_payment').length;
   $: recentOrders = data.orders.slice(0, 5);
   $: stockAlerts = data.products.filter(p => p.stock <= 10);
 
   function statusClass(status) {
-    if (status === 'shipped' || status === 'delivered') return 'bg-green-100 text-green-700';
-    if (status === 'processing') return 'bg-yellow-100 text-yellow-700';
+    if (status === 'shipped' || status === 'delivered' || status === 'paid') return 'bg-green-100 text-green-700';
     if (status === 'cancelled') return 'bg-red-100 text-red-700';
     return 'bg-orange-100 text-orange-700';
   }

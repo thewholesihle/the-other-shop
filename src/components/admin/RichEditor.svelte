@@ -25,6 +25,20 @@
     onChange(editor.innerHTML);
   }
 
+  function handleDoubleClick(e) {
+    const el = e.target;
+    if (el.tagName === 'IMG' || el.tagName === 'VIDEO' || el.tagName === 'IFRAME') {
+      if (confirm('Delete this media?')) {
+        if (el.tagName === 'IFRAME' && el.parentElement?.tagName === 'DIV') {
+          el.parentElement.remove();
+        } else {
+          el.remove();
+        }
+        emit();
+      }
+    }
+  }
+
   async function insertImage() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -138,6 +152,7 @@
   <div
     bind:this={editor}
     contenteditable="true"
+    ondblclick={handleDoubleClick}
     class="min-h-[280px] p-4 text-sm focus:outline-none prose prose-sm max-w-none [&_h2]:font-display [&_h2]:font-bold [&_h2]:text-xl [&_h2]:my-3 [&_h3]:font-display [&_h3]:font-semibold [&_h3]:text-lg [&_h3]:my-2 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_a]:underline [&_a]:text-foreground [&_img]:max-w-full [&_img]:rounded [&_video]:max-w-full"
     oninput={emit}
   ></div>

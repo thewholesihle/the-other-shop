@@ -22,7 +22,7 @@
   }
 
   $: lb = lookbook || allLookbooks[0] || null;
-  $: images = lb ? (lb.images?.length ? lb.images : [lb.cover].filter(Boolean)) : [];
+  $: images = lb ? (lb.items?.length ? lb.items.filter(i => i.type !== 'video').map(i => i.url || i).filter(Boolean) : (lb.images?.length ? lb.images : [lb.coverImage || lb.cover].filter(Boolean))) : [];
   
   // Showcase up to 4 images
   $: showcase = images.slice(0, 4);
