@@ -1,0 +1,516 @@
+{
+  "site": {
+    "_id": "main",
+    "announcement": "FREE SHIPPING ON ORDERS ABOVE R500",
+    "currency": "R",
+    "description": "Streetwear rooted in culture, built for everyone else.",
+    "hero": {
+      "label": "Spring",
+      "heading": "Others S25 Lookbook",
+      "cta": "SHOP NOW",
+      "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774166134/others-store/x4uwioxhz9devxbhgvel.jpg",
+      "subheading": "Lookbook Out Now",
+      "ctaLink": "/lookbook/lb-1774156502713",
+      "video": ""
+    },
+    "logo": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774262817/others-store/gruclv9yfegj4pxdgbnl.png",
+    "name": "Others.",
+    "shipping": {
+      "freeMinimum": 800,
+      "standardRate": 60,
+      "country": "South Africa"
+    },
+    "socials": {
+      "instagram": "https://instagram.com/others.worldwide",
+      "twitter": "",
+      "tiktok": "",
+      "youtube": "https://www.youtube.com/@others.worldwide"
+    },
+    "tagline": "It's Not About You, It's about Others.",
+    "maintenance": {
+      "enabled": false,
+      "title": "SORRY, WE'RE BUSY",
+      "message": "Shhhhhh... OTHERS IS AT WORK, CHECK BACK LATER.",
+      "background": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774165284/others-store/fvsyoyyxqv0y1iracugf.jpg",
+      "collectEmails": true
+    },
+    "featuredLookbook": "lb-1774156502713",
+    "colors": {
+      "background": "#ffffff",
+      "foreground": "#000000",
+      "primary": "#ff0000",
+      "border": "#000000",
+      "hover": "#ff0000"
+    },
+    "footerLogo": "",
+    "footerTagline": "It's not about you It's about Others.",
+    "metaDescription": "It's not about you, it's about others.",
+    "metaTitle": "Others Worldwide",
+    "featuredEditorialType": "lookbook",
+    "featuredEditorialCta": "Watch Video Part",
+    "emailTemplates": {
+      "paid": "Your payment for order {orderId} has been confirmed. We are now preparing your items for dispatch.",
+      "shipped": "Great news! Your order {orderId} has been shipped and is on its way to you.",
+      "delivered": "Your order {orderId} has been delivered. We hope you enjoy your new pieces!",
+      "cancelled": "Your order {orderId} has been cancelled. If you have any questions, please contact our support team."
+    },
+    "favicon": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774262791/others-store/t5uapzoq4hh2murnvzuf.png",
+    "navLogoSize": 56,
+    "adminNotificationEmails": "othersworldwidemedia@gmail.com, siphesihlebomela@gmail.com"
+  },
+  "categories": [
+    {
+      "_id": "69bf58e2dd2f30aa703dae8f",
+      "id": "hoodies",
+      "name": "Hoodies",
+      "slug": "hoodies"
+    },
+    {
+      "_id": "69bf58e2dd2f30aa703dae90",
+      "id": "tees",
+      "name": "T-Shirts",
+      "slug": "t-shirts"
+    },
+    {
+      "_id": "69bf58e2dd2f30aa703dae91",
+      "id": "pants",
+      "name": "Pants",
+      "slug": "pants"
+    },
+    {
+      "_id": "69bf58e2dd2f30aa703dae92",
+      "id": "jackets",
+      "name": "Jackets",
+      "slug": "jackets"
+    },
+    {
+      "_id": "69bf58e2dd2f30aa703dae93",
+      "id": "sweats",
+      "name": "Sweatshirts",
+      "slug": "sweatshirts"
+    },
+    {
+      "_id": "69bf58e2dd2f30aa703dae94",
+      "id": "accessories",
+      "name": "Accessories",
+      "slug": "accessories"
+    }
+  ],
+  "products": [
+    {
+      "_id": "69c0acdcdd2f30aa703db71b",
+      "id": "prod-1774234833304",
+      "category": "tees",
+      "colors": [
+        "White"
+      ],
+      "description": "Blueprint of the Airmax 95",
+      "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234798/others-store/uzplkm0kdzetnaaezngc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234798/others-store/uzplkm0kdzetnaaezngc.jpg",
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234819/others-store/quluuxgjzp9rfnzys8zt.jpg"
+      ],
+      "isFeatured": true,
+      "isNew": true,
+      "name": "The Airmax 95 Blueprint Graphic Tee",
+      "price": 450,
+      "sizes": [
+        "M",
+        "L"
+      ],
+      "stock": 0
+    },
+    {
+      "_id": "69c0ad80dd2f30aa703db71c",
+      "id": "prod-1774234996870",
+      "category": "tees",
+      "colors": [
+        "White"
+      ],
+      "description": "Step in to the culture with a Airmax 95 Type Silhouette Graphic Tee, Available in limited quantity.",
+      "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234857/others-store/kncaunekpepb10ipcmxh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234857/others-store/kncaunekpepb10ipcmxh.jpg",
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234862/others-store/t5jotjejluqk3jzcqkwb.jpg"
+      ],
+      "isFeatured": true,
+      "isNew": false,
+      "name": "Airmax Day Footstep Graphic Tee",
+      "price": 450,
+      "sizes": [
+        "S",
+        "M",
+        "L"
+      ],
+      "stock": 0
+    },
+    {
+      "_id": "69c0b079dd2f30aa703db71d",
+      "id": "prod-1774235757984",
+      "category": "tees",
+      "colors": [
+        "Black"
+      ],
+      "description": "For the originals. Forever.",
+      "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774235687/others-store/tn1lqdku9vt5txsb1m4a.jpg",
+      "images": [
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774235687/others-store/tn1lqdku9vt5txsb1m4a.jpg",
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774235734/others-store/rkxgqtbecvepi1nvdccn.jpg"
+      ],
+      "isFeatured": false,
+      "isNew": true,
+      "name": "Others Staple Tee",
+      "price": 150,
+      "sizes": [
+        "S",
+        "M",
+        "L"
+      ],
+      "stock": 7
+    },
+    {
+      "_id": "69c0b628dd2f30aa703db71e",
+      "id": "prod-1774237212714",
+      "category": "hoodies",
+      "colors": [
+        "Black"
+      ],
+      "description": "For when you need to keep warm in style.",
+      "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774237184/others-store/geyk7hulno49hp5ytgrq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774237184/others-store/geyk7hulno49hp5ytgrq.jpg",
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774237184/others-store/i9n5hv6e0fx7nycwphgf.jpg"
+      ],
+      "isFeatured": true,
+      "isNew": false,
+      "name": "Others Staple Hoodie",
+      "price": 400,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stock": 5
+    },
+    {
+      "_id": "69c11d2ddd2f30aa703db74c",
+      "id": "prod-1774263586155",
+      "category": "tees",
+      "colors": [
+        "Black",
+        "White"
+      ],
+      "description": "",
+      "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774263552/others-store/tjsphhb941edyh7ae0mk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774263552/others-store/tjsphhb941edyh7ae0mk.jpg",
+        "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774263562/others-store/uwwjzgawhmqaqq9jn0ma.jpg"
+      ],
+      "isFeatured": true,
+      "isNew": true,
+      "name": "AirMax Day Balloon Graphic Tee",
+      "price": 450,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stock": 6
+    }
+  ],
+  "orders": [
+    {
+      "_id": "69c1448b9edc7330ee9fc660",
+      "id": "ORD-1774273675150",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, Limpopo, South Africa",
+      "items": [
+        {
+          "name": "AirMax Day Balloon Graphic Tee",
+          "price": 450,
+          "quantity": 1,
+          "size": "L",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774263552/others-store/tjsphhb941edyh7ae0mk.jpg"
+        }
+      ],
+      "total": 510,
+      "shippingCost": 60,
+      "status": "processing",
+      "payfastId": "3069012",
+      "createdAt": "2026-03-23T13:47:55.715Z"
+    },
+    {
+      "_id": "69c140bcb9ccf0996588b278",
+      "id": "ORD-1774272700166",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, North West, South Africa",
+      "items": [
+        {
+          "name": "Others Staple Hoodie",
+          "price": 400,
+          "quantity": 1,
+          "size": "L",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774237184/others-store/geyk7hulno49hp5ytgrq.jpg"
+        }
+      ],
+      "total": 460,
+      "shippingCost": 60,
+      "status": "processing",
+      "payfastId": "3068966",
+      "createdAt": "2026-03-23T13:31:40.714Z"
+    },
+    {
+      "_id": "69c13e0a305247e5d86d954c",
+      "id": "ORD-1774272009968",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, Free State, South Africa",
+      "items": [
+        {
+          "name": "Others Staple Tee",
+          "price": 150,
+          "quantity": 1,
+          "size": "L",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774235687/others-store/tn1lqdku9vt5txsb1m4a.jpg"
+        }
+      ],
+      "total": 210,
+      "shippingCost": 60,
+      "status": "pending_payment",
+      "payfastId": "",
+      "createdAt": "2026-03-23T13:20:10.179Z"
+    },
+    {
+      "_id": "69c13d22a197e1015b2c0d9d",
+      "id": "ORD-1774271777728",
+      "customer": "Sfundo Zulu",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0659922484",
+      "address": "590 Matsobane Street, Soweto 1801, Eastern Cape, South Africa",
+      "items": [
+        {
+          "name": "Others Staple Tee",
+          "price": 150,
+          "quantity": 4,
+          "size": "L",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774235687/others-store/tn1lqdku9vt5txsb1m4a.jpg"
+        }
+      ],
+      "total": 660,
+      "shippingCost": 60,
+      "status": "shipped",
+      "payfastId": "3068944",
+      "createdAt": "2026-03-23T13:16:18.275Z"
+    },
+    {
+      "_id": "69c13bca1cce35f1842e0ec9",
+      "id": "ORD-1774271433709",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, KwaZulu-Natal, South Africa",
+      "items": [
+        {
+          "name": "Others Staple Tee",
+          "price": 150,
+          "quantity": 1,
+          "size": "L",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774235687/others-store/tn1lqdku9vt5txsb1m4a.jpg"
+        }
+      ],
+      "total": 210,
+      "shippingCost": 60,
+      "status": "cancelled",
+      "payfastId": "3068934",
+      "createdAt": "2026-03-23T13:10:34.260Z"
+    },
+    {
+      "_id": "69c13957c1ff3ff545286ec9",
+      "id": "ORD-1774270806544",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, Eastern Cape, South Africa",
+      "items": [
+        {
+          "name": "Others Staple Tee",
+          "price": 150,
+          "quantity": 1,
+          "size": "M",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774235687/others-store/tn1lqdku9vt5txsb1m4a.jpg"
+        }
+      ],
+      "total": 210,
+      "shippingCost": 60,
+      "status": "cancelled",
+      "payfastId": "3068914",
+      "createdAt": "2026-03-23T13:00:07.101Z"
+    },
+    {
+      "_id": "69c137223947afa307944a92",
+      "id": "ORD-1774270241918",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, Western Cape, South Africa",
+      "items": [
+        {
+          "name": "The Airmax 95 Blueprint Graphic Tee",
+          "price": 450,
+          "quantity": 2,
+          "size": "M",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234798/others-store/uzplkm0kdzetnaaezngc.jpg"
+        }
+      ],
+      "total": 900,
+      "shippingCost": 0,
+      "status": "shipped",
+      "payfastId": "3068887",
+      "createdAt": "2026-03-23T12:50:42.465Z"
+    },
+    {
+      "_id": "69c1336e518be833dda82cd3",
+      "id": "ORD-1774269294113",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, Gauteng, South Africa",
+      "items": [
+        {
+          "name": "Airmax Day Footstep Graphic Tee",
+          "price": 450,
+          "quantity": 1,
+          "size": "L",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234857/others-store/kncaunekpepb10ipcmxh.jpg"
+        }
+      ],
+      "total": 510,
+      "shippingCost": 60,
+      "status": "cancelled",
+      "payfastId": "3068855",
+      "createdAt": "2026-03-23T12:34:54.670Z"
+    },
+    {
+      "_id": "69c132f2518be833dda82c7a",
+      "id": "ORD-1774269169827",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, Gauteng, South Africa",
+      "items": [
+        {
+          "name": "The Airmax 95 Blueprint Graphic Tee",
+          "price": 450,
+          "quantity": 2,
+          "size": "L",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774234798/others-store/uzplkm0kdzetnaaezngc.jpg"
+        }
+      ],
+      "total": 900,
+      "shippingCost": 0,
+      "status": "cancelled",
+      "payfastId": "3068851",
+      "createdAt": "2026-03-23T12:32:50.399Z"
+    }
+  ],
+  "lookbooks": [
+    {
+      "_id": "69bf7ad1dd2f30aa703daea9",
+      "id": "lb-1774156502713",
+      "coverImage": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774156852/others-store/qybpaqpow9vc9f9h5l4b.jpg",
+      "date": "2026-03-22",
+      "description": "",
+      "items": [
+        {
+          "type": "image",
+          "url": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774156881/others-store/pn1cmmx5wydiinh2hmwz.jpg",
+          "caption": ""
+        },
+        {
+          "type": "image",
+          "url": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774156891/others-store/etidrdxfxmu6ybbwvg0p.jpg",
+          "caption": ""
+        },
+        {
+          "type": "image",
+          "url": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774156899/others-store/tjvrqwyxs9itervsmkd8.jpg",
+          "caption": ""
+        },
+        {
+          "type": "image",
+          "url": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774156917/others-store/oubt3ihuynbblinq267t.jpg",
+          "caption": ""
+        }
+      ],
+      "title": "Others S25 Collection"
+    }
+  ],
+  "community": [
+    {
+      "_id": "69bfa489dd2f30aa703daeb1",
+      "id": "post-1774167183240",
+      "author": "Others.",
+      "category": "News",
+      "content": "<div _ngcontent-ng-c25865369=\"\" inline-copy-host=\"\" class=\"markdown markdown-main-panel stronger enable-updated-hr-color\" id=\"model-response-message-contentr_f9de5b55f2785ead\" aria-live=\"polite\" aria-busy=\"false\" dir=\"ltr\" style=\"--animation-duration: 400ms; --fade-animation-function: linear; animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; color: rgb(31, 31, 31); columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; margin-top: 0px !important; font-family: &quot;Google Sans Text&quot;, sans-serif !important; line-height: 1.15 !important;\"><p data-path-to-node=\"0\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\">Others Skateboarding Launches Campaign to Rebuild Skatepark</p><p data-path-to-node=\"0\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\"><img src=\"https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774167168/others-store/dpqznlyfva2lawqr0pss.jpg\" alt=\"\" style=\"margin: 1rem 0px;\"></p><p data-path-to-node=\"1\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\">Grassroots collective &lt;strong&gt;Others Skateboarding&lt;/strong&gt; is on a mission to revitalize the historic Dube Mehlomakulu space in Soweto. They have officially launched a fundraising campaign to transform the currently dilapidated skatepark into a world-class, multi-functional hub for local youth.&lt;/p&gt;</p><p data-path-to-node=\"2\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\">The planned rebuild goes far beyond pouring new concrete. The vision includes modern obstacles for all skill levels, shaded community seating, a dedicated workshop space for mentorship and art programs, and improved safety lighting to ensure the park is a welcoming environment day and night.&lt;/p&gt;</p><h2 style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\">How You Can Get Involved</h2><p data-path-to-node=\"4\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\">To make this vision a reality, Others Skateboarding is calling on the community, local businesses, and corporate sponsors for support through several channels:</p><p data-path-to-node=\"5\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\"><b>Direct Donations:</b>&nbsp;Every contribution helps fund the ground-breaking stage. [Insert Link to Donation Platform]</p><p data-path-to-node=\"5\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\"><b>Sponsorships &amp;&nbsp;Collaborations</b>: They are actively seeking brands, construction firms, artists, and local businesses to partner on the project by providing funding, materials, or hands-on expertise</p><p data-path-to-node=\"5\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\"><b>Fundraising Events</b>:&lt;/strong&gt; Keep an eye out for upcoming skate jams, benefit concerts, and art exhibitions designed to celebrate skate culture and raise funds for the build.&lt;/li&gt;</p><p data-path-to-node=\"6\" style=\"animation: auto ease 0s 1 normal none running none; appearance: none; background: none 0% 0% / auto repeat scroll padding-box border-box rgba(0, 0, 0, 0); border-style: none; border-color: rgb(31, 31, 31); inset: auto; clear: none; clip: auto; columns: auto; contain: none; container: none; content: normal; cursor: auto; cx: 0px; cy: 0px; d: none; direction: ltr; fill: rgb(0, 0, 0); filter: none; flex: 0 1 auto; float: none; gap: normal; hyphens: manual; interactivity: auto; isolation: auto; margin-bottom: 16px; marker: none; mask: none; offset: normal; opacity: 1; order: 0; outline: rgb(31, 31, 31) none 0px; overlay: none; padding: 0px; page: auto; perspective: none; position: static; quotes: auto; r: 0px; resize: none; rotate: none; rx: auto; ry: auto; scale: none; speak: normal; stroke: none; transform: none; transition: all; translate: none; visibility: visible; x: 0px; y: 0px; zoom: 1; line-height: 1.15 !important;\">To donate, propose a sponsorship, or offer your skills, connect with the team on Instagram at <b>@others.skateboarding</b>&nbsp;or via email at <b>othersworldwidemedia@gmail.com</b></p></div>",
+      "date": "2026-03-22",
+      "excerpt": "",
+      "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774167152/others-store/n9tpb87c1nsg1orjn3vg.jpg",
+      "published": true,
+      "slug": "others-skateboarding-launches-campaign-to-rebuild",
+      "title": "Others Skateboarding Launches Campaign to Rebuild"
+    },
+    {
+      "_id": "69bfc5a8dd2f30aa703daeb7",
+      "id": "post-1774175655309",
+      "author": "Others.",
+      "category": "Collaboration",
+      "content": "<div style=\"position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:1rem 0;\"><iframe src=\"https://www.youtube.com/embed/YuXsY6nmBOs\" style=\"position:absolute;top:0;left:0;width:100%;height:100%;\" frameborder=\"0\" allowfullscreen=\"\"></iframe></div>",
+      "date": "2023-12-28",
+      "excerpt": "",
+      "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774175748/others-store/blhevg1nvrcs5bivtk7y.jpg",
+      "published": true,
+      "slug": "others-x-skating-is-risky",
+      "title": "Others. x Skating Is Risky Collab"
+    }
+  ],
+  "pages": {
+    "_id": "main",
+    "contact": {
+      "address": "139 Mehlomakulu Ave",
+      "details": [
+        {
+          "id": "c-1",
+          "label": "General Enquiries",
+          "value": "othersworldwidemedia@gmail.com"
+        }
+      ]
+    },
+    "faq": {
+      "items": []
+    },
+    "shipping": {
+      "content": "<h2>Shipping</h2><p>We offer free standard shipping on all orders over R800. Standard delivery takes 3–5 business days.</p>"
+    }
+  },
+  "subscribers": [
+    {
+      "_id": "69bfa1c556f8d37894f0c591",
+      "id": "s-1774166469600",
+      "email": "others.kagisog@gmsil.com",
+      "date": "2026-03-22"
+    },
+    {
+      "_id": "69bf58e3dd2f30aa703daea2",
+      "email": "siphesihlebomela@gmail.com",
+      "date": "2026-03-21",
+      "id": "s-1774134058916"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ export async function loadStoreData(fresh = false) {
   if (!fresh && _cache) return _cache;
   if (!fresh && _promise) return _promise;
 
-  _promise = fetch('/api/data')
+  _promise = fetch('/store.json')
     .then(r => {
       if (!r.ok) throw new Error(`Could not load store data: ${r.status}`);
       return r.json();

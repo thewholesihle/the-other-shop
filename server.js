@@ -298,7 +298,20 @@ async function readData() {
   };
 }
 
-/** Persist a full data blob (from admin save) back to MongoDB */
+/** Persist a full data blob (from admin save) back to MongoDB then sync to static store. */
+async function syncStaticStore() {
+  try {
+    const data = await readData();
+    const filePath = path.join(__dirname, 'public', 'store.json');
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    console.log(`[Static Sync] public/store.json updated.`);
+    return true;
+  } catch (err) {
+    console.error(`[Static Sync] Failed to update public/store.json:`, err.message);
+    return false;
+  }
+}
+
 async function writeData(blob) {
   const ops = [];
 
@@ -351,6 +364,7 @@ async function writeData(blob) {
   }
 
   await Promise.all(ops);
+  await syncStaticStore();
 }
 
 // ─── API: Delete Product ─────────────────────────────────────────────────────
@@ -367,6 +381,7 @@ app.delete('/api/products/:id', basicAuth, async (req, res) => {
     }
     
     await Product.deleteOne({ id });
+    await syncStaticStore();
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/products/:id', err);
@@ -385,6 +400,7 @@ app.delete('/api/community/:id', basicAuth, async (req, res) => {
     if (target.image) await deleteCloudinaryAsset(target.image);
 
     await Article.deleteOne({ id });
+    await syncStaticStore();
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/community/:id', err);
@@ -407,6 +423,7 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
     }
 
     await Lookbook.deleteOne({ id });
+    await syncStaticStore();
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/lookbooks/:id', err);
@@ -544,6 +561,7 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
         sendCustomerStatusEmail(order).catch(console.error);
     }
 
+    await syncStaticStore();
     res.json({ ok: true, order });
   } catch (err) {
     console.error('PATCH /api/orders/:id/status', err);
@@ -574,6 +592,7 @@ app.delete('/api/orders/:id', basicAuth, async (req, res) => {
     }
 
     await Order.deleteOne({ id });
+    await syncStaticStore();
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/orders/:id', err);
@@ -908,6 +927,7 @@ app.post('/api/checkout', async (req, res) => {
       shippingCost,
       status: 'pending_payment',
     });
+    await syncStaticStore();
   } catch (err) {
     console.error('Order save error:', err.message);
     return res.status(500).json({ error: 'Could not create order.' });
@@ -973,6 +993,7 @@ app.post('/api/payfast/cancel', async (req, res) => {
       console.log(`[PayFast] Order ${orderId} cancelled by user. Stock restored.`);
     }
 
+    await syncStaticStore();
     res.json({ ok: true });
   } catch (err) {
     console.error('Cancel payment error:', err);
@@ -1141,6 +1162,7 @@ app.post('/api/payfast/itn', async (req, res) => {
 
       console.log(`ITN: order ${orderId} — payment_status=${payment_status}`);
     }
+    await syncStaticStore();
   } catch (err) {
     console.error('ITN processing error:', err.message);
   }
@@ -1148,7 +1170,24 @@ app.post('/api/payfast/itn', async (req, res) => {
 // ─── Individual Product SEO (Dynamic OG Tags) ─────────────────────────────────
 app.get('/shop/:id', async (req, res) => {
   try {
-    const product = await Product.findOne({ id: req.params.id });
+    let product = null;
+    const storePath = path.resolve(__dirname, 'public', 'store.json');
+
+    // Try DB if connected
+    if (mongoose.connection.readyState === 1) {
+      product = await Product.findOne({ id: req.params.id }).lean();
+    }
+
+    // Fallback to static store.json if DB is offline or product not found yet
+    if (!product && fs.existsSync(storePath)) {
+      try {
+        const storeData = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+        product = (storeData.products || []).find(p => p.id === req.params.id);
+      } catch (e) {
+        console.error('Failed to parse store.json for metadata:', e.message);
+      }
+    }
+
     const indexPath = path.resolve(__dirname, 'public', 'index.html');
     let html = fs.readFileSync(indexPath, 'utf-8');
 
@@ -1203,6 +1242,7 @@ app.listen(port, () => {
   console.log(`PayFast mode   → ${PF.sandbox ? 'SANDBOX' : 'LIVE'}`);
   console.log(`Admin          → http://localhost:${port}/admin  [${ADMIN_USER}]`);
   console.log(`MongoDB        → ${getIsConnected() ? 'connected' : 'OFFLINE (failsafe active)'}\n`);
+  syncStaticStore();
 });
 
 // ─── Database Alerts ─────────────────────────────────────────────────────────
