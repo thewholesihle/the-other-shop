@@ -149,22 +149,24 @@ const PF_HOST = PF.sandbox
 
 // ─── Email Notifier ──────────────────────────────────────────────────────────
 async function sendOrderNotification(order) {
-  let recipients = ['othersworldwide@gmail.com'];
-  try {
-    const site = await Settings.findOne({ _id: 'main' }).lean();
-    if (site?.adminNotificationEmails) {
-      recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
-    } else if (process.env.ADMIN_EMAIL) {
-      recipients = [process.env.ADMIN_EMAIL];
+  let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
+  
+  // Try to get custom emails from DB if connected
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
+      if (site?.adminNotificationEmails) {
+        recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      
+      await Log.create({
+        id: `log-${Date.now()}-adm-mail`,
+        type: 'info', message: `Order notification: Sending to ${recipients.join(', ')}`,
+        context: 'EMAIL', data: { orderId: order.id, recipients }
+      }).catch(() => {});
+    } catch (e) {
+      console.error('Failed to fetch admin emails from DB (using defaults):', e.message);
     }
-    
-    await Log.create({
-      id: `log-${Date.now()}-adm-mail`,
-      type: 'info', message: `Order notification: Sending to ${recipients.join(', ')}`,
-      context: 'EMAIL', data: { orderId: order.id, recipients }
-    }).catch(() => {});
-  } catch (e) {
-    console.error('Failed to fetch admin emails for notification:', e);
   }
 
   if (recipients.length === 0 || !process.env.SMTP_HOST) return;
@@ -414,15 +416,25 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
 async function sendCustomerStatusEmail(order) {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !order.email) return;
   
-  await Log.create({
-    id: `log-${Date.now()}-cus-mail`,
-    type: 'info', message: `Customer update: Sending "${order.status}" email to ${order.email}`,
-    context: 'EMAIL', data: { orderId: order.id, status: order.status, email: order.email }
-  }).catch(() => {});
+  if (mongoose.connection.readyState === 1) {
+    await Log.create({
+      id: `log-${Date.now()}-cus-mail`,
+      type: 'info', message: `Customer update: Sending "${order.status}" email to ${order.email}`,
+      context: 'EMAIL', data: { orderId: order.id, status: order.status, email: order.email }
+    }).catch(() => {});
+  }
+
   try {
-    const site = await Settings.findOne({ _id: 'main' }).lean();
-    const siteName = site?.name || 'Others.';
-    const templates = site?.emailTemplates || {};
+    let siteName = 'Others.';
+    let templates = {};
+
+    if (mongoose.connection.readyState === 1) {
+      const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
+      if (site) {
+        siteName = site.name || 'Others.';
+        templates = site.emailTemplates || {};
+      }
+    }
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -920,14 +932,14 @@ app.post('/api/checkout', async (req, res) => {
   params.item_name     = `Others. Order ${orderId}`.slice(0, 100);
   params.item_description = `${order.items?.length || 1} item(s)`.slice(0, 255);
 
-  // Clean the params object of any empty properties so they don't get piped to the form
+  // Clean the params object of any empty properties
   Object.keys(params).forEach(k => {
     if (params[k] === '' || params[k] === null || params[k] === undefined) {
       delete params[k];
     }
   });
 
-  // Generate signature (passphrase appended inside pfSignature)
+  // Generate signature
   params.signature = pfSignature(params);
 
   res.json({ paymentUrl: PF_HOST, params, orderId });
@@ -965,8 +977,6 @@ app.post('/api/payfast/cancel', async (req, res) => {
     res.status(500).json({ error: 'Failed to process cancellation.' });
   }
 });
-
-// ─── API: PayFast ITN ─────────────────────────────────────────────────────────
 app.post('/api/payfast/itn', async (req, res) => {
   // Step 1 — Respond 200 immediately so PayFast does not retry
   res.status(200).send('OK');
@@ -1006,22 +1016,21 @@ app.post('/api/payfast/itn', async (req, res) => {
       return;
     }
 
-    const dbOrder = await Order.findOne({ id: orderId }).lean();
-    if (!dbOrder) {
-      await Log.create({
-        id: `log-${Date.now()}-itn-orphan`,
-        type: 'error', message: `ITN: received for unknown order ${orderId}`,
-        context: 'PAYFAST_ITN', data: { itnData }
-      });
-      return;
-    }
-    if (Math.abs(parseFloat(amount_gross) - dbOrder.total) > 0.05) {
-      await Log.create({
-        id: `log-${Date.now()}-itn-amt`,
-        type: 'error', message: `ITN: amount mismatch for #${orderId}`,
-        context: 'PAYFAST_ITN', data: { orderId, itnAmount: amount_gross, dbTotal: dbOrder.total }
-      });
-      return;
+    // Step 4 — Amount check (if DB is up)
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const dbOrder = await Order.findOne({ id: orderId }).maxTimeMS(2000).lean();
+        if (dbOrder && Math.abs(parseFloat(amount_gross) - dbOrder.total) > 0.05) {
+          await Log.create({
+            id: `log-${Date.now()}-itn-amt`,
+            type: 'error', message: `ITN: amount mismatch for #${orderId}`,
+            context: 'PAYFAST_ITN', data: { orderId, itnAmount: amount_gross, dbTotal: dbOrder.total }
+          });
+          return;
+        }
+      } catch (e) {
+        console.warn('ITN: could not verify amount (DB busy/offline)');
+      }
     }
 
     // Step 5 — Server-to-server data validation with PayFast
@@ -1054,11 +1063,19 @@ app.post('/api/payfast/itn', async (req, res) => {
 
     // Step 6 — All checks passed, update order status
     if (payment_status === 'COMPLETE') {
-      const updated = await Order.findOneAndUpdate(
-        { id: orderId },
-        { $set: { status: 'paid', payfastId: pf_payment_id || '' } },
-        { returnDocument: 'after' }
-      );
+      let updated = null;
+      if (mongoose.connection.readyState === 1) {
+        try {
+          updated = await Order.findOneAndUpdate(
+            { id: orderId },
+            { $set: { status: 'paid', payfastId: pf_payment_id || '' } },
+            { returnDocument: 'after', maxTimeMS: 2000 }
+          );
+        } catch (e) {
+          console.error(`ITN: DB status update failed for ${orderId}:`, e.message);
+        }
+      }
+
       if (updated) {
         await Log.create({
           id: `log-${Date.now()}-pay-ok`,
@@ -1071,14 +1088,34 @@ app.post('/api/payfast/itn', async (req, res) => {
         
         // Also send customer success email
         sendCustomerStatusEmail(updated).catch(e => console.error('Error sending ITN customer email:', e));
+      } else {
+        // DB is offline or findOneAndUpdate failed/timed out
+        console.warn(`ITN: Payment COMPLETE for ${orderId} but DB is OFFLINE. Sending emergency email.`);
+        const emergencyOrder = {
+          id: orderId,
+          total: Number(itnData.amount_gross) || 0,
+          customer: `${itnData.name_first || ''} ${itnData.name_last || ''}`.trim() || 'Unknown Customer',
+          email: itnData.email_address || 'unknown@email.com',
+          address: 'Check PayFast dashboard for details (DB is currently offline)',
+          items: []
+        };
+        sendOrderNotification(emergencyOrder).catch(e => console.error('Error sending ITN emergency admin notification:', e));
       }
       console.log(`✓ ITN: order ${orderId} marked PAID (PayFast ID: ${pf_payment_id})`);
     } else {
-      const updated = await Order.findOneAndUpdate(
-        { id: orderId },
-        { $set: { status: 'cancelled' } },
-        { returnDocument: 'before' }
-      );
+      let updated = null;
+      if (mongoose.connection.readyState === 1) {
+        try {
+          updated = await Order.findOneAndUpdate(
+            { id: orderId },
+            { $set: { status: 'cancelled' } },
+            { returnDocument: 'before', maxTimeMS: 2000 }
+          );
+        } catch (e) {
+          console.error(`ITN: DB status cancel failed for ${orderId}:`, e.message);
+        }
+      }
+      
       // Only selectively restore stock if the order wasn't ALREADY cancelled.
       if (updated && updated.status !== 'cancelled') {
         const orderItems = Array.isArray(updated.items) ? updated.items : [];
@@ -1089,11 +1126,14 @@ app.post('/api/payfast/itn', async (req, res) => {
           await Product.updateOne(query, { $inc: { stock: item.quantity } });
         }
       }
-      await Log.create({
-        id: `log-${Date.now()}-pay-fail`,
-        type: 'warn', message: `Payment failure/cancel: status=${payment_status} for order ${orderId}`,
-        context: 'PAYMENT', data: { orderId, status: payment_status }
-      }).catch(() => {});
+
+      if (mongoose.connection.readyState === 1) {
+        await Log.create({
+          id: `log-${Date.now()}-pay-fail`,
+          type: 'warn', message: `Payment failure/cancel: status=${payment_status} for order ${orderId}`,
+          context: 'PAYMENT', data: { orderId, status: payment_status }
+        }).catch(() => {});
+      }
 
       console.log(`ITN: order ${orderId} — payment_status=${payment_status}`);
     }
@@ -1101,7 +1141,6 @@ app.post('/api/payfast/itn', async (req, res) => {
     console.error('ITN processing error:', err.message);
   }
 });
-
 // ─── Individual Product SEO (Dynamic OG Tags) ─────────────────────────────────
 app.get('/shop/:id', async (req, res) => {
   try {
@@ -1192,10 +1231,19 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
       secure: Number(process.env.SMTP_PORT) === 465,
     });
 
-    const site = await Settings.findOne({ _id: 'main' }).lean();
-    let recipients = site?.adminNotificationEmails 
-      ? site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean)
-      : (process.env.ADMIN_EMAIL ? [process.env.ADMIN_EMAIL] : ['othersworldwide@gmail.com']);
+    const isConnected = mongoose.connection.readyState === 1;
+    let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
+
+    if (isConnected) {
+      try {
+        const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
+        if (site?.adminNotificationEmails) {
+          recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      } catch (e) {
+        console.error('Failsafe: error fetching settings for alert:', e.message);
+      }
+    }
 
     if (recipients.length === 0) return;
 
