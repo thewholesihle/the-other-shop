@@ -11,6 +11,8 @@ const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const { connect } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber } = require('./src/db/models');
@@ -23,6 +25,31 @@ app.use(morgan('dev'));
 
 // Trust the edge proxy (Fly.io, Heroku, etc) so req.protocol properly detects HTTPS
 app.set('trust proxy', 1);
+
+// ─── Security Middleware ──────────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled to avoid breaking Cloudinary/External fonts for now
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // 300 requests per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+  skip: (req) => req.path.startsWith('/admin') // Don't limit admin if same IP
+});
+
+const checkoutLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // 20 checkouts per hour per IP
+  message: { error: 'Too many checkouts. Please wait an hour.' }
+});
+
+app.use('/api/checkout', checkoutLimiter);
+app.use('/api/', apiLimiter);
 
 // ─── Admin Auth ───────────────────────────────────────────────────────────────
 const ADMIN_USER = process.env.ADMIN_USER;
@@ -899,5 +926,20 @@ connect().then(() => {
     console.log(`PayFast mode   → ${PF.sandbox ? 'SANDBOX' : 'LIVE'}`);
     console.log(`Admin          → http://localhost:${port}/admin  [${ADMIN_USER}]`);
     console.log(`MongoDB        → connected\n`);
+  });
+}).catch(err => {
+  console.error('CRITICAL: DB Connection failed', err);
+  process.exit(1);
+});
+
+// ─── Global Error Handler ─────────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error(`[Server Error] ${req.method} ${req.url}`, err);
+  
+  // Don't leak stack traces in production
+  const status = err.status || 500;
+  res.status(status).json({
+    error: status === 500 ? 'Internal Server Error' : err.message,
+    ok: false
   });
 });
