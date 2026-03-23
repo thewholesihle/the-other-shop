@@ -4,7 +4,7 @@
   export let currency = 'R';
 
   function goToProduct() {
-    if (window.__navigate) window.__navigate(`/products/${product.id}`);
+    if (window.__navigate) window.__navigate(`/shop/${product.id}`);
   }
 
   $: primaryImage = product.images?.[0] || product.image || '';

@@ -2,6 +2,7 @@
   import ImageUpload from './ImageUpload.svelte';
 
   export let products = [];
+  export let categories = [];
   export let currency = '€';
   export let onUpdate = () => {};
 
@@ -140,7 +141,12 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="edit-category" class="text-label block mb-1.5">CATEGORY</label>
-              <input id="edit-category" bind:value={editing.category} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+              <select id="edit-category" bind:value={editing.category} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer bg-background">
+                <option value="">— Select Category —</option>
+                {#each categories as cat}
+                  <option value={cat.id}>{cat.name}</option>
+                {/each}
+              </select>
             </div>
             <div>
               <label for="edit-price" class="text-label block mb-1.5">PRICE ({currency})</label>

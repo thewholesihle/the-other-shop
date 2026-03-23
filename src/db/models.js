@@ -17,7 +17,7 @@ const SettingsSchema = new mongoose.Schema({
     heading:    { type: String, default: '' },
     subheading: { type: String, default: '' },
     cta:        { type: String, default: '' },
-    ctaLink:    { type: String, default: '/products' },
+    ctaLink:    { type: String, default: '/shop' },
     image:      { type: String, default: '' },
     video:      { type: String, default: '' },
   },

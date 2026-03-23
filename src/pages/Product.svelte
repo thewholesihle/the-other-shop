@@ -59,7 +59,7 @@
 {:else if !product}
   <div class="flex min-h-screen items-center justify-center bg-background flex-col gap-4">
     <p class="text-muted-foreground">Product not found.</p>
-    <a href="/products" class="text-label border-b border-current">← Back to Shop</a>
+    <a href="/shop" class="text-label border-b border-current">← Back to Shop</a>
   </div>
 {:else}
   <div class="min-h-screen">
@@ -70,7 +70,7 @@
       <nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2">
         <a href="/" class="hover:text-foreground transition-colors">Home</a>
         <span>/</span>
-        <a href="/products" class="hover:text-foreground transition-colors">Shop</a>
+        <a href="/shop" class="hover:text-foreground transition-colors">Shop</a>
         <span>/</span>
         <span class="text-foreground">{product.name}</span>
       </nav>

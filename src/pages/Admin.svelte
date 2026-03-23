@@ -11,6 +11,7 @@
   import AdminSubscribers from '../components/admin/AdminSubscribers.svelte';
   import AdminNewsletter from '../components/admin/AdminNewsletter.svelte';
   import AdminStatus from '../components/admin/AdminStatus.svelte';
+  import AdminCategories from '../components/admin/AdminCategories.svelte';
   import Loader from '../components/Loader.svelte';
 
   let data = null;
@@ -71,6 +72,7 @@
   function updateCommunity(community)   { updateSection('community',   community);    }
   function updatePages(pages)           { updateSection('pages',       pages);        }
   function updateSubscribers(subs)      { updateSection('subscribers', subs);         }
+  function updateCategories(cats)       { updateSection('categories',  cats);         }
 
   async function resetData() {
     if (!confirm('Reset ALL store data? This cannot be undone.')) return;
@@ -106,7 +108,9 @@
     {#if activeSection === 'dashboard'}
       <AdminDashboard {data} />
     {:else if activeSection === 'products'}
-      <AdminProducts products={data.products} currency={data.site.currency} onUpdate={updateProducts} />
+      <AdminProducts products={data.products} categories={data.categories} currency={data.site.currency} onUpdate={updateProducts} />
+    {:else if activeSection === 'categories'}
+      <AdminCategories categories={data.categories} onUpdate={updateCategories} />
     {:else if activeSection === 'orders'}
       <AdminOrders orders={data.orders} currency={data.site.currency} onUpdate={updateOrders} />
     {:else if activeSection === 'lookbook'}

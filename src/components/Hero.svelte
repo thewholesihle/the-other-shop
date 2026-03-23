@@ -1,11 +1,11 @@
 <script>
-  export let hero = { label: '', heading: '', subheading: '', cta: '', ctaLink: '/products', image: '', video: '' };
+  export let hero = { label: '', heading: '', subheading: '', cta: '', ctaLink: '/shop', image: '', video: '' };
 
   $: words = hero.heading ? hero.heading.split(' ') : [];
   $: isVideo = hero.video && (hero.video.endsWith('.mp4') || hero.video.endsWith('.webm') || hero.video.endsWith('.gif'));
 
   function nav(e) {
-    const href = hero.ctaLink || '/products';
+    const href = hero.ctaLink || '/shop';
     if (href.startsWith('/') && window.__navigate) {
       e.preventDefault();
       window.__navigate(href);
@@ -52,7 +52,7 @@
       {/if}
       {#if hero.cta}
         <a
-          href={hero.ctaLink || '/products'}
+          href={hero.ctaLink || '/shop'}
           onclick={nav}
           class="inline-block border border-[hsl(40,20%,97%)] px-8 py-3 text-label tracking-[0.25em] hover:bg-[hsl(40,20%,97%)] hover:text-foreground transition-all duration-300 opacity-0 animate-fade-up active:scale-[0.97]"
           style="animation-delay:0.7s;color:hsl(40,20%,97%)"

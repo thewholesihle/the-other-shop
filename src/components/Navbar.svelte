@@ -6,7 +6,7 @@
   export let logoHeight = 28;
 
   const navLinks = [
-    { label: "SHOP", href: "/products" },
+    { label: "SHOP", href: "/shop" },
     { label: "LOOKBOOK", href: "/lookbook" },
     { label: "COMMUNITY", href: "/community" },
   ];

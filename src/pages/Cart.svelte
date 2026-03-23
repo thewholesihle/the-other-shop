@@ -150,7 +150,7 @@
           <h1 class="text-3xl font-display font-bold mb-3">Payment Successful</h1>
           <p class="text-muted-foreground mb-2">Your order has been confirmed and is being processed.</p>
           <p class="text-sm text-muted-foreground mb-10">A confirmation will be sent to your email address.</p>
-          <a href="/products" onclick={(e) => { e.preventDefault(); window.__navigate('/products'); }} class="inline-block bg-foreground text-primary-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground/90 transition-colors">CONTINUE SHOPPING</a>
+          <a href="/shop" onclick={(e) => { e.preventDefault(); window.__navigate('/shop'); }} class="inline-block bg-foreground text-primary-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground/90 transition-colors">CONTINUE SHOPPING</a>
         </div>
 
       {:else if step === 'cancel'}
@@ -172,7 +172,7 @@
         {#if $cart.length === 0}
           <div class="text-center py-24">
             <p class="text-muted-foreground mb-6">Your cart is empty.</p>
-            <a href="/products" onclick={(e) => { e.preventDefault(); window.__navigate('/products'); }} class="inline-block border border-foreground px-8 py-3 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">SHOP NOW</a>
+            <a href="/shop" onclick={(e) => { e.preventDefault(); window.__navigate('/shop'); }} class="inline-block border border-foreground px-8 py-3 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">SHOP NOW</a>
           </div>
         {:else}
           <div class="grid md:grid-cols-[1fr_320px] gap-10">

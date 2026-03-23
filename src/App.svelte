@@ -8,7 +8,7 @@
   // ── Pages ──────────────────────────────────────────────────────────────────
   import Index        from './pages/Index.svelte';
   import Admin        from './pages/Admin.svelte';
-  import Products     from './pages/Products.svelte';
+  import Shop         from './pages/Shop.svelte';
   import Product      from './pages/Product.svelte';
   import Lookbook     from './pages/Lookbook.svelte';
   import LookbookDetail from './pages/LookbookDetail.svelte';
@@ -50,8 +50,8 @@
   function resolveRoute(p) {
     if (p === '/')                           return { page: 'index' };
     if (p.startsWith('/admin'))              return { page: 'admin' };
-    if (p === '/products')                   return { page: 'products' };
-    if (p.startsWith('/products/'))          return { page: 'product', id: p.slice('/products/'.length) };
+    if (p === '/shop')                       return { page: 'products' };
+    if (p.startsWith('/shop/'))              return { page: 'product', id: p.slice('/shop/'.length) };
     if (p === '/lookbook')                   return { page: 'lookbook' };
     if (p.startsWith('/lookbook/'))          return { page: 'lookbook-detail', id: p.slice('/lookbook/'.length) };
     if (p === '/community')                  return { page: 'community' };
@@ -181,7 +181,7 @@
 {:else if route.page === 'admin'}
   <Admin />
 {:else if route.page === 'products'}
-  <Products />
+  <Shop />
 {:else if route.page === 'product'}
   <Product productId={route.id} />
 {:else if route.page === 'lookbook'}

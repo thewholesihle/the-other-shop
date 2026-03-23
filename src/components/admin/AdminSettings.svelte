@@ -10,7 +10,7 @@
   let form = JSON.parse(JSON.stringify(site));
   if (!form.shipping) form.shipping = { freeMinimum: 500, standardRate: 99, country: 'South Africa' };
   if (!form.hero) form.hero = {};
-  if (form.hero.ctaLink === undefined) form.hero.ctaLink = '/products';
+  if (form.hero.ctaLink === undefined) form.hero.ctaLink = '/shop';
   if (form.hero.video === undefined) form.hero.video = '';
   if (!form.maintenance) form.maintenance = { enabled: false, collectEmails: false, title: "We'll be back soon.", message: 'Our store is currently undergoing scheduled maintenance. Please check back shortly.', background: '' };
   if (form.maintenance.collectEmails === undefined) form.maintenance.collectEmails = false;
@@ -232,8 +232,8 @@
       </div>
       <div>
         <label for="h-cta-link" class="text-label block mb-1.5">CTA BUTTON LINK</label>
-        <input id="h-cta-link" bind:value={form.hero.ctaLink} placeholder="/products" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-        <p class="text-xs text-muted-foreground mt-1">Use a relative path (e.g. /products, /lookbook) or a full URL.</p>
+        <input id="h-cta-link" bind:value={form.hero.ctaLink} placeholder="/shop" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+        <p class="text-xs text-muted-foreground mt-1">Use a relative path (e.g. /shop, /lookbook) or a full URL.</p>
       </div>
       <!-- Hero background: image OR video/gif -->
       <div class="space-y-3">

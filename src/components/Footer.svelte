@@ -6,8 +6,8 @@
 
   $: footerLinks = {
     Shop: [
-      { label: 'New Arrivals', href: '/products?filter=new' },
-      ...categories.map(c => ({ label: c.name, href: `/products?category=${c.id}` }))
+      { label: 'New Arrivals', href: '/shop?filter=new' },
+      ...categories.map(c => ({ label: c.name, href: `/shop?category=${c.id}` }))
     ],
     Brand: [
       { label: 'Community',  href: '/community' },

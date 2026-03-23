@@ -21,7 +21,7 @@
 
   function shopAll(e) {
     e.preventDefault();
-    if (window.__navigate) window.__navigate('/products');
+    if (window.__navigate) window.__navigate('/shop');
   }
 </script>
 
