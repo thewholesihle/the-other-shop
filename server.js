@@ -14,7 +14,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
-const { connect } = require('./src/db/connection');
+const { connect, getIsConnected } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
 const crypto = require('crypto');
 
@@ -60,6 +60,36 @@ if (!ADMIN_USER || !ADMIN_PASS) {
   console.error('FATAL: ADMIN_USER and ADMIN_PASS must be set in .env');
   process.exit(1);
 }
+
+// ─── System Failsafe (Hard Maintenance) ───────────────────────────────────────
+const hardMaintenanceHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Others. — Maintenance</title>
+    <style>
+        body { margin: 0; background: #000; color: #fff; height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; font-family: sans-serif; }
+        h1 { font-family: serif; font-size: 3rem; letter-spacing: 0.2em; margin-bottom: 1.5rem; }
+        p { color: #666; max-width: 400px; line-height: 1.6; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>OTHERS.</h1>
+        <p>Our store is currently undergoing urgent technical maintenance. We apologize for the inconvenience and will be back shortly.</p>
+    </div>
+</body>
+</html>
+`;
+
+app.use((req, res, next) => {
+  // If DB is down, intercept public routes (bypass admin and api so admin can still try to fix things/logs if server is up)
+  if (!getIsConnected() && !req.path.startsWith('/admin') && !req.path.startsWith('/api/')) {
+    return res.status(503).send(hardMaintenanceHTML);
+  }
+  next();
+});
 
 function basicAuth(req, res, next) {
   const h = req.headers['authorization'];
@@ -607,6 +637,16 @@ app.get('/manifest.json', async (req, res) => {
 });
 
 app.get('/api/data', async (req, res) => {
+  if (!getIsConnected()) {
+    // Return a minimal failsafe response if DB is down
+    return res.json({
+      site: {
+        name: 'Others.',
+        maintenance: { enabled: true, title: 'System Offline', message: 'The store database is currently unreachable. We are working to restore service.' }
+      },
+      products: [], categories: [], lookbooks: [], community: [], pages: {}, subscribers: []
+    });
+  }
   try {
     res.json(await readData());
   } catch (err) {
@@ -999,23 +1039,31 @@ app.use((_req, res) => {
 });
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
-connect().then(() => {
-  app.listen(port, () => {
-    console.log(`\nOthers. Store  → http://localhost:${port}`);
-    console.log(`PayFast mode   → ${PF.sandbox ? 'SANDBOX' : 'LIVE'}`);
-    console.log(`Admin          → http://localhost:${port}/admin  [${ADMIN_USER}]`);
-    console.log(`MongoDB        → connected\n`);
-  });
-}).catch(err => {
-  console.error('CRITICAL: DB Connection failed', err);
-  process.exit(1);
+connect().catch(err => {
+  console.error('Initial DB Connection failed - starting in failsafe mode');
+});
+
+app.listen(port, () => {
+  console.log(`\nOthers. Store  → http://localhost:${port}`);
+  console.log(`PayFast mode   → ${PF.sandbox ? 'SANDBOX' : 'LIVE'}`);
+  console.log(`Admin          → http://localhost:${port}/admin  [${ADMIN_USER}]`);
+  console.log(`MongoDB        → ${getIsConnected() ? 'connected' : 'OFFLINE (failsafe active)'}\n`);
+});
+
+// ─── Database Alerts ─────────────────────────────────────────────────────────
+mongoose.connection.on('disconnected', () => {
+  notifyAdminOfError(
+    new Error('DATABASE_CONNECTION_LOST'),
+    null,
+    'CRITICAL: The store database has disconnected. Automated Hard Maintenance mode is now active.'
+  ).catch(e => console.error('Failsafe alert failed:', e.message));
 });
 
 // ─── Error Notification ──────────────────────────────────────────────────────
 let lastErrorEmailTime = 0;
 const ERROR_EMAIL_THROTTLE = 15 * 60 * 1000; // 15 minutes
 
-async function notifyAdminOfError(err, req) {
+async function notifyAdminOfError(err, req = null, customMsg = null) {
   if (!process.env.ADMIN_EMAIL || !process.env.SMTP_HOST) return;
   const now = Date.now();
   if (now - lastErrorEmailTime < ERROR_EMAIL_THROTTLE) return;
@@ -1037,14 +1085,19 @@ async function notifyAdminOfError(err, req) {
       to: process.env.ADMIN_EMAIL,
       subject: `[ALERT] Site Error: ${err.message.slice(0, 50)}`,
       html: `
-        <div style="font-family: sans-serif; padding: 20px; color: #111;">
-          <h2 style="color: #d32f2f;">Critical Site Error</h2>
-          <p>The system detected an internal error that might require your attention.</p>
-          <div style="background: #f5f5f5; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;">
-            <p><strong>Path:</strong> ${req.method} ${req.url}</p>
-            <p><strong>Message:</strong> ${err.message}</p>
+        <div style="font-family: sans-serif; padding: 20px; color: #111; max-width: 600px; border: 1px solid #eee;">
+          <h2 style="color: #d32f2f; text-transform: uppercase; letter-spacing: 0.1em;">${customMsg ? 'System Alert' : 'Critical Site Error'}</h2>
+          <p>${customMsg || 'The system detected an internal error that might require your attention.'}</p>
+          <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;">
+            ${req ? `<p style="margin: 0 0 10px;"><strong>Path:</strong> ${req.method} ${req.url}</p>` : ''}
+            <p style="margin: 0;"><strong>Message:</strong> ${err.message}</p>
           </div>
-          <p><a href="${req.protocol}://${req.get('host')}/admin" style="display: inline-block; padding: 10px 20px; background: #000; color: #fff; text-decoration: none; border-radius: 4px;">Open Admin Dashboard</a></p>
+          <p style="margin-top: 30px;">
+            <a href="${req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:' + port}/admin" 
+               style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; font-weight: bold; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;">
+               Open Admin Dashboard
+            </a>
+          </p>
           <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;" />
           <p style="font-size: 12px; color: #888;">This alert is throttled to once every 15 minutes.</p>
         </div>

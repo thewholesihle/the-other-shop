@@ -19,7 +19,8 @@ async function connect() {
     console.log(`MongoDB connected → ${MONGODB_URI.replace(/:\/\/[^@]*@/, '://***:***@')}`);
   } catch (err) {
     console.error('MongoDB connection failed:', err.message);
-    process.exit(1);
+    isConnected = false;
+    // We allow the server to keep running so it can show a maintenance page
   }
 
   mongoose.connection.on('disconnected', () => {
@@ -37,4 +38,4 @@ async function connect() {
 process.on('SIGINT',  () => mongoose.connection.close().then(() => process.exit(0)));
 process.on('SIGTERM', () => mongoose.connection.close().then(() => process.exit(0)));
 
-module.exports = { connect };
+module.exports = { connect, getIsConnected: () => isConnected };
