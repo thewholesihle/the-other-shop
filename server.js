@@ -725,7 +725,7 @@ app.post('/api/checkout', async (req, res) => {
   params.merchant_key  = PF.merchantKey;
   // Return URLs
   params.return_url    = `${baseUrl}/payment/success`;
-  params.cancel_url    = `${baseUrl}/payment/cancel`;
+  params.cancel_url    = `${baseUrl}/payment/cancel?orderId=${orderId}`;
   params.notify_url    = `${baseUrl}/api/payfast/itn`;
   // Buyer details
   params.name_first    = (order.customer || 'Customer').split(' ')[0].slice(0, 100);
@@ -748,6 +748,39 @@ app.post('/api/checkout', async (req, res) => {
   params.signature = pfSignature(params);
 
   res.json({ paymentUrl: PF_HOST, params, orderId });
+});
+
+// ─── API: Cancel Payment (Restore Stock) ───────────────────────────────────────
+app.post('/api/payfast/cancel', async (req, res) => {
+  const { orderId } = req.body;
+  if (!orderId) return res.status(400).json({ error: 'Missing orderId.' });
+
+  try {
+    const order = await Order.findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+    // Only cancel if it's still pending_payment to avoid double-cancelling or cancelling paid orders
+    if (order.status === 'pending_payment') {
+      order.status = 'cancelled';
+      await order.save();
+
+      // Restore stock
+      const orderItems = Array.isArray(order.items) ? order.items : [];
+      for (const item of orderItems) {
+        const pId = item.productId || item.id;
+        let query = { id: pId };
+        if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
+        await Product.updateOne(query, { $inc: { stock: item.quantity } });
+      }
+      
+      console.log(`[PayFast] Order ${orderId} cancelled by user. Stock restored.`);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Cancel payment error:', err);
+    res.status(500).json({ error: 'Failed to process cancellation.' });
+  }
 });
 
 // ─── API: PayFast ITN ─────────────────────────────────────────────────────────

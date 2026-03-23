@@ -25,9 +25,22 @@
   onMount(async () => {
     try {
       data = await loadStoreData();
+      const params = new URLSearchParams(window.location.search);
       const path = window.location.pathname;
-      if (path === '/payment/success') step = 'success';
-      else if (path === '/payment/cancel') step = 'cancel';
+
+      if (path === '/payment/success') {
+        step = 'success';
+      } else if (path === '/payment/cancel') {
+        step = 'cancel';
+        const oid = params.get('orderId');
+        if (oid) {
+          fetch('/api/payfast/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: oid })
+          }).catch(console.error);
+        }
+      }
     } finally { loading = false; }
   });
 
