@@ -46,20 +46,22 @@ function basicAuth(req, res, next) {
 }
 
 // ─── PayFast Config ───────────────────────────────────────────────────────────
-const isSandbox = process.env.PAYFAST_SANDBOX !== 'false';
-
-if (!process.env.PAYFAST_MERCHANT_ID || !process.env.PAYFAST_MERCHANT_KEY) {
-  console.error('FATAL: PAYFAST_MERCHANT_ID and PAYFAST_MERCHANT_KEY must be set in .env');
-  console.error('       For sandbox testing, use the PayFast test credentials from your PayFast dashboard.');
-  process.exit(1);
-}
+const isSandbox = process.env.PAYFAST_SANDBOX === 'true';
 
 const PF = {
-  merchantId:  (process.env.PAYFAST_MERCHANT_ID || '').trim(),
-  merchantKey: (process.env.PAYFAST_MERCHANT_KEY || '').trim(),
-  passphrase:  (process.env.PAYFAST_PASSPHRASE || '').trim(),
+  merchantId:  (isSandbox ? process.env.PAYFAST_MERCHANT_ID_SANDBOX : process.env.PAYFAST_MERCHANT_ID_LIVE) || '',
+  merchantKey: (isSandbox ? process.env.PAYFAST_MERCHANT_KEY_SANDBOX : process.env.PAYFAST_MERCHANT_KEY_LIVE) || '',
+  passphrase:  (isSandbox ? process.env.PAYFAST_PASSPHRASE_SANDBOX : process.env.PAYFAST_PASSPHRASE_LIVE) || '',
   sandbox:     isSandbox,
 };
+
+// Simple visual indicator of active payment mode
+console.log(`PayFast mode   → ${PF.sandbox ? 'SANDBOX' : 'LIVE'}`);
+
+if (!PF.merchantId || !PF.merchantKey) {
+  console.error(`FATAL: PAYFAST_MERCHANT_ID_${PF.sandbox ? 'SANDBOX' : 'LIVE'} and PAYFAST_MERCHANT_KEY_${PF.sandbox ? 'SANDBOX' : 'LIVE'} must be set in .env`);
+  process.exit(1);
+}
 const PF_HOST = PF.sandbox
   ? 'https://sandbox.payfast.co.za/eng/process'
   : 'https://www.payfast.co.za/eng/process';
