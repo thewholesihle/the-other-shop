@@ -778,7 +778,7 @@ function pfUrlEncode(str) {
 
 function pfSignature(params) {
   const str = Object.keys(params)
-    .filter(k => k !== 'signature' && params[k] !== '' && params[k] !== null && params[k] !== undefined)
+    .filter(k => k !== 'signature' && params[k] !== null && params[k] !== undefined)
     .map(k => `${k}=${pfUrlEncode(params[k])}`)
     .join('&');
   const withPassphrase = PF.passphrase
