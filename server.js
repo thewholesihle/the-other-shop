@@ -183,7 +183,7 @@ async function sendOrderNotification(order) {
     const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${i.size || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
     
     await transporter.sendMail({
-      from: `"Others. Store" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
+      from: `"Others. Store" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
       to: recipients.join(', '),
       subject: `New Order Paid: #${order.id}`,
       html: `
@@ -453,7 +453,7 @@ async function sendCustomerStatusEmail(order) {
       </li>`).join('');
 
     await transporter.sendMail({
-      from: `"${siteName}" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
+      from: `"${siteName}" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
       to: order.email,
       subject: `Order Update: #${order.id} [${statusMap[order.status]?.toUpperCase() || order.status.toUpperCase()}]`,
       html: `
@@ -775,7 +775,7 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
     for (const sub of subscribers) {
       try {
         await transporter.sendMail({
-          from: `"${siteName}" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
+          from: `"${siteName}" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
           to: sub.email,
           subject: subject,
           html: emailHtml
@@ -1200,7 +1200,7 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
     if (recipients.length === 0) return;
 
     await transporter.sendMail({
-      from: `"Others. System" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
+      from: `"Others. System" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
       to: recipients.join(', '),
       subject: `[ALERT] Site Error: ${err.message.slice(0, 50)}`,
       html: `
