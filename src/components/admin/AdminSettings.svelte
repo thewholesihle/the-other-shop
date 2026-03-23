@@ -37,6 +37,7 @@
       cancelled: 'Your order {orderId} has been cancelled. If you have any questions, please contact our support team.'
     };
   }
+  if (form.adminNotificationEmails === undefined) form.adminNotificationEmails = 'othersworldwide@gmail.com';
   let saved = false;
 
   function handleSave() {
@@ -124,6 +125,17 @@
             <ImageUpload label="" value={form.emailLogo || ''} onChange={(url) => (form.emailLogo = url)} />
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight uppercase">Notifications</h2>
+      <p class="text-xs text-muted-foreground mb-4">Manage who gets notified of new orders and site events.</p>
+      <div>
+        <label for="s-admin-emails" class="text-label block mb-1.5 uppercase tracking-widest font-bold">Admin Notification Emails</label>
+        <p class="text-xs text-muted-foreground mb-2">Separate multiple email addresses with commas. All selected admins will be notified of new orders and system alerts.</p>
+        <input id="s-admin-emails" bind:value={form.adminNotificationEmails} placeholder="othersworldwide@gmail.com, admin@store.com" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
       </div>
     </div>
 

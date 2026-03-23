@@ -114,7 +114,20 @@ const PF_HOST = PF.sandbox
 
 // ─── Email Notifier ──────────────────────────────────────────────────────────
 async function sendOrderNotification(order) {
-  if (!process.env.SMTP_HOST || !process.env.ADMIN_EMAIL) return;
+  let recipients = ['othersworldwide@gmail.com'];
+  try {
+    const site = await Settings.findOne({ _id: 'main' }).lean();
+    if (site?.adminNotificationEmails) {
+      recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (process.env.ADMIN_EMAIL) {
+      recipients = [process.env.ADMIN_EMAIL];
+    }
+  } catch (e) {
+    console.error('Failed to fetch admin emails for notification:', e);
+  }
+
+  if (recipients.length === 0 || !process.env.SMTP_HOST) return;
+
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -129,8 +142,8 @@ async function sendOrderNotification(order) {
     const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${i.size || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
     
     await transporter.sendMail({
-      from: `"Others. Store" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
-      to: process.env.ADMIN_EMAIL,
+      from: `"Others. Store" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
+      to: recipients.join(', '),
       subject: `New Order Paid: #${order.id}`,
       html: `
         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
@@ -944,7 +957,13 @@ app.post('/api/payfast/itn', async (req, res) => {
         { $set: { status: 'paid', payfastId: pf_payment_id || '' } },
         { returnDocument: 'after' }
       );
-      if (updated) sendOrderNotification(updated).catch(e => console.error(e));
+      if (updated) {
+        // Trigger admin notifications for the newly paid order
+        sendOrderNotification(updated).catch(e => console.error('Error sending ITN admin notification:', e));
+        
+        // Also send customer success email
+        sendCustomerStatusEmail(updated).catch(e => console.error('Error sending ITN customer email:', e));
+      }
       console.log(`✓ ITN: order ${orderId} marked PAID (PayFast ID: ${pf_payment_id})`);
     } else {
       const updated = await Order.findOneAndUpdate(
