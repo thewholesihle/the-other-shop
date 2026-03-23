@@ -5,6 +5,7 @@
   export let onUpdate = () => {};
   export let onReset = () => {};
   export let lookbooks = [];
+  export let articles = [];
 
   let form = JSON.parse(JSON.stringify(site));
   if (!form.shipping) form.shipping = { freeMinimum: 500, standardRate: 99, country: 'South Africa' };
@@ -15,7 +16,11 @@
   if (form.maintenance.collectEmails === undefined) form.maintenance.collectEmails = false;
   if (!form.socials) form.socials = { instagram: '', twitter: '', tiktok: '', youtube: '' };
   if (form.socials.youtube === undefined) form.socials.youtube = '';
+  
+  // Backwards compat for old DB schema
   if (form.featuredLookbook === undefined) form.featuredLookbook = '';
+  if (form.featuredEditorialType === undefined) form.featuredEditorialType = 'lookbook';
+
   if (!form.colors) form.colors = { background: '#f8f5f2', foreground: '#211c1a', primary: '#211c1a', border: '#dbd8d4', hover: '#ff4400' };
   if (form.colors.hover === undefined) form.colors.hover = form.colors.primary || '#ff4400';
   if (form.footerLogo === undefined) form.footerLogo = '';
@@ -275,20 +280,41 @@
       {/if}
     </div>
 
-    <!-- Featured Lookbook -->
+    <!-- Featured Editorial -->
     <div class="space-y-3 bg-card border border-border p-5">
-      <h3 class="text-label">FEATURED LOOKBOOK</h3>
-      <p class="text-xs text-muted-foreground">Choose which lookbook is shown on the homepage.</p>
-      {#if lookbooks.length === 0}
-        <p class="text-xs text-muted-foreground italic">No lookbooks yet — create one in the Lookbook section first.</p>
-      {:else}
-        <select bind:value={form.featuredLookbook} class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer">
-          <option value="">— Latest lookbook (default) —</option>
-          {#each lookbooks as lb}
-            <option value={lb.id}>{lb.title}</option>
-          {/each}
+      <h3 class="text-label">FEATURED EDITORIAL</h3>
+      <p class="text-xs text-muted-foreground">Choose an Article or Lookbook to promote natively on the home page.</p>
+
+      <div class="grid grid-cols-2 gap-4">
+        <select bind:value={form.featuredEditorialType} class="col-span-2 md:col-span-1 border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer bg-background">
+          <option value="lookbook">Lookbook</option>
+          <option value="article">Article</option>
         </select>
-      {/if}
+
+        {#if form.featuredEditorialType === 'article'}
+          {#if !articles || articles.length === 0}
+            <p class="text-xs text-muted-foreground italic col-span-2 md:col-span-1 flex items-center">No articles found.</p>
+          {:else}
+            <select bind:value={form.featuredLookbook} class="col-span-2 md:col-span-1 border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer bg-background">
+              <option value="">— Latest article (default) —</option>
+              {#each articles.filter(a => a.published) as a}
+                <option value={a.id}>{a.title}</option>
+              {/each}
+            </select>
+          {/if}
+        {:else}
+          {#if !lookbooks || lookbooks.length === 0}
+            <p class="text-xs text-muted-foreground italic col-span-2 md:col-span-1 flex items-center">No lookbooks found.</p>
+          {:else}
+            <select bind:value={form.featuredLookbook} class="col-span-2 md:col-span-1 border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer bg-background">
+              <option value="">— Latest lookbook (default) —</option>
+              {#each lookbooks as lb}
+                <option value={lb.id}>{lb.title}</option>
+              {/each}
+            </select>
+          {/if}
+        {/if}
+      </div>
     </div>
 
     <!-- Socials -->

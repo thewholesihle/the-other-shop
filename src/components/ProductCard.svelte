@@ -3,8 +3,6 @@
   export let product;
   export let currency = 'R';
 
-  let isHovered = false;
-
   function goToProduct() {
     if (window.__navigate) window.__navigate(`/products/${product.id}`);
   }
@@ -19,19 +17,30 @@
   role="button"
   tabindex="0"
   aria-label="View {product.name}"
-  onmouseenter={() => (isHovered = true)}
-  onmouseleave={() => (isHovered = false)}
   onclick={goToProduct}
   onkeydown={(e) => e.key === 'Enter' && goToProduct()}
 >
   <!-- Image container -->
   <div class="relative aspect-[3/4] overflow-hidden bg-secondary mb-3">
+    <!-- Secondary Image (Backdrop Fade-In) -->
+    {#if primaryImage !== hoverImage}
+      <img
+        src={getOptimizedUrl(hoverImage, 600)}
+        srcset={getSrcset(hoverImage)}
+        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+        alt="{product.name} alternate view"
+        class="w-full h-full object-cover absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+        loading="lazy"
+      />
+    {/if}
+
+    <!-- Primary Image (Foreground Fade-Out) -->
     <img
-      src={getOptimizedUrl(isHovered ? hoverImage : primaryImage, 600)}
-      srcset={getSrcset(isHovered ? hoverImage : primaryImage)}
+      src={getOptimizedUrl(primaryImage, 600)}
+      srcset={getSrcset(primaryImage)}
       sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
       alt={product.name}
-      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+      class="w-full h-full object-cover absolute inset-0 transition-opacity duration-300 opacity-100 {primaryImage !== hoverImage ? 'group-hover:opacity-0' : ''}"
       loading="lazy"
     />
 

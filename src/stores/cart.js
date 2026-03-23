@@ -17,9 +17,9 @@ function createCart() {
   return {
     subscribe,
 
-    addItem(product, size, quantity = 1) {
+    addItem(product, size = '', color = '', quantity = 1) {
       update(items => {
-        const key = `${product.id}-${size}`;
+        const key = `${product.id}-${size}-${color}`;
         const existing = items.find(i => i.key === key);
         if (existing) {
           return items.map(i => i.key === key ? { ...i, quantity: i.quantity + quantity } : i);
@@ -31,6 +31,7 @@ function createCart() {
           image: product.image,
           price: product.price,
           size,
+          color,
           quantity,
         }];
       });

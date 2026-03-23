@@ -337,6 +337,6 @@
       {/if}
 
     </div>
-    <Footer site={data.site} />
+    <Footer {data} />
   </div>
 {/if}

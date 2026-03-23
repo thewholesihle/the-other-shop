@@ -5,6 +5,7 @@
   import Hero from '../components/Hero.svelte';
   import ProductGrid from '../components/ProductGrid.svelte';
   import LookbookSection from '../components/LookbookSection.svelte';
+  import ArticleSection from '../components/ArticleSection.svelte';
   import Footer from '../components/Footer.svelte';
   import { loadStoreData } from '../lib/storeData.js';
 
@@ -18,10 +19,18 @@
   });
 
   $: featuredId = data?.site?.featuredLookbook;
+  $: editorialType = data?.site?.featuredEditorialType || 'lookbook';
+  
   $: allLookbooks = data?.lookbooks ?? [];
-  $: featuredLookbook = featuredId
-    ? allLookbooks.find(lb => lb.id === featuredId) || allLookbooks[0] || null
-    : allLookbooks[0] || null;
+  $: allArticles = data?.community ?? [];
+  
+  $: featuredLookbook = editorialType === 'lookbook' 
+    ? (featuredId ? allLookbooks.find(lb => lb.id === featuredId) || allLookbooks[0] || null : allLookbooks[0] || null)
+    : null;
+    
+  $: featuredArticle = editorialType === 'article'
+    ? (featuredId ? allArticles.find(a => a.id === featuredId) || allArticles.find(a => a.published) || null : allArticles.find(a => a.published) || null)
+    : null;
 </script>
 
 <svelte:head>
@@ -39,7 +48,13 @@
     <Hero hero={data.site.hero} />
     <AnnouncementBar text={data.site.announcement} />
     <ProductGrid products={data.products} currency={data.site.currency} />
-    <LookbookSection lookbook={featuredLookbook} allLookbooks={allLookbooks} />
-    <Footer site={data.site} />
+    
+    {#if editorialType === 'article'}
+      <ArticleSection article={featuredArticle} {allArticles} />
+    {:else}
+      <LookbookSection lookbook={featuredLookbook} {allLookbooks} />
+    {/if}
+
+    <Footer {data} />
   </div>
 {/if}

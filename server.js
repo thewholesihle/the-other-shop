@@ -460,6 +460,57 @@ app.post('/api/newsletter', async (req, res) => {
   }
 });
 
+// ─── API: Newsletter Broadcast (Admin Only) ──────────────────────────────────
+app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
+  const { subject, html } = req.body;
+  if (!subject || !html) return res.status(400).json({ error: 'Subject and HTML body required.' });
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return res.status(500).json({ error: 'SMTP not configured on server.' });
+
+  try {
+    const subscribers = await Subscriber.find().lean();
+    if (subscribers.length === 0) return res.status(400).json({ error: 'No active subscribers found.' });
+    const site = await Settings.findOne({ _id: 'main' }).lean();
+    const siteName = site?.name || 'Others.';
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      secure: Number(process.env.SMTP_PORT) === 465,
+    });
+
+    const bccList = subscribers.map(s => s.email).join(', ');
+
+    await transporter.sendMail({
+      from: `"${siteName}" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
+      bcc: bccList, 
+      subject: subject,
+      html: `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
+          <div style="text-align: center; margin-bottom: 40px;">
+            ${site?.logo ? `<img src="${site.logo}" alt="${siteName}" style="max-height: 45px; max-width: 200px; display: block; margin: 0 auto;" />` : `<h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">${siteName}</h1>`}
+          </div>
+          
+          <div style="font-size: 16px; margin-bottom: 30px;">
+            ${html}
+          </div>
+          
+          <div style="text-align: center; margin-top: 50px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid #eaeaea; padding-top: 30px;">
+            <p>${site?.footerTagline || ''}</p>
+            <p>&copy; ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
+          </div>
+        </div>
+      `
+    });
+
+    console.log(`[Broadcast] Delivered standard HTML newsletter to ${subscribers.length} recipients`);
+    res.json({ ok: true, sentCount: subscribers.length });
+  } catch (err) {
+    console.error('POST /api/newsletter/broadcast', err);
+    res.status(500).json({ error: 'Mail delivery failed. Check your SMTP configurations.' });
+  }
+});
+
 // ─── PayFast Helpers ─────────────────────────────────────────────────────────
 /**
  * PHP-equivalent urlencode:

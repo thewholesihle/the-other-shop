@@ -1,14 +1,13 @@
 <script>
-  export let site = {};
+  export let data = { site: {}, categories: [] };
+  
+  $: site = data.site || {};
+  $: categories = data.categories || [];
 
-  const footerLinks = {
+  $: footerLinks = {
     Shop: [
-      { label: 'New Arrivals',  href: '/products' },
-      { label: 'Hoodies',       href: '/products' },
-      { label: 'T-Shirts',      href: '/products' },
-      { label: 'Pants',         href: '/products' },
-      { label: 'Jackets',       href: '/products' },
-      { label: 'Accessories',   href: '/products' },
+      { label: 'New Arrivals', href: '/products?filter=new' },
+      ...categories.map(c => ({ label: c.name, href: `/products?category=${c.slug}` }))
     ],
     Brand: [
       { label: 'Community',  href: '/community' },

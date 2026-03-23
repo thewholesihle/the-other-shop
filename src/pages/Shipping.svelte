@@ -28,6 +28,6 @@
         {@html data.pages?.shipping?.content ?? '<p>Shipping information coming soon.</p>'}
       </div>
     </div>
-    <Footer site={data.site} />
+    <Footer {data} />
   </div>
 {/if}

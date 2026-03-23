@@ -12,6 +12,7 @@
   let product = null;
   let loading = true;
   let selectedSize = '';
+  let selectedColor = '';
   let selectedImage = 0;
   let added = false;
 
@@ -20,18 +21,27 @@
     try {
       data = await loadStoreData();
       product = data.products.find(p => p.id === productId) ?? null;
-      if (product) selectedSize = product.sizes[0] || '';
+      if (product) {
+        selectedSize = product.sizes?.length === 1 ? product.sizes[0] : '';
+        selectedColor = product.colors?.length === 1 ? product.colors[0] : '';
+      }
     } finally { loading = false; }
   });
 
   function addToCart() {
-    if (!selectedSize || !product) return;
-    cart.addItem(product, selectedSize);
+    if (!product) return;
+    if (product.sizes?.length > 0 && !selectedSize) return;
+    if (product.colors?.length > 0 && !selectedColor) return;
+    
+    cart.addItem(product, selectedSize, selectedColor);
     added = true;
     setTimeout(() => (added = false), 2000);
   }
 
   $: images = product ? (product.images?.length ? product.images : [product.image]) : [];
+  $: missingSize = product?.sizes?.length > 0 && !selectedSize;
+  $: missingColor = product?.colors?.length > 0 && !selectedColor;
+  $: disabledAdd = product?.stock === 0 || missingSize || missingColor;
 </script>
 
 <svelte:head>
@@ -101,10 +111,14 @@
           <!-- Colors -->
           {#if product.colors?.length}
             <div>
-              <p class="text-label mb-3">COLOR: {product.colors[0]}</p>
+              <p class="text-label mb-3">COLOR <span class="text-destructive text-xs lowercase ml-1">{product.colors.length > 1 && !selectedColor ? '(required)' : ''}</span></p>
               <div class="flex gap-2">
                 {#each product.colors as color}
-                  <span class="text-xs border border-border px-3 py-1.5">{color}</span>
+                  <button
+                    onclick={() => (selectedColor = color)}
+                    class="text-xs border transition-colors px-3 py-1.5 {selectedColor === color ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'}">
+                    {color}
+                  </button>
                 {/each}
               </div>
             </div>
@@ -131,9 +145,21 @@
           <div class="space-y-3 pt-2">
             <button
               onclick={addToCart}
-              disabled={product.stock === 0 || !selectedSize}
-              class="w-full py-4 text-label tracking-[0.25em] transition-all duration-300 {product.stock === 0 ? 'bg-muted text-muted-foreground cursor-not-allowed' : added ? 'bg-green-700 text-white' : 'bg-foreground text-primary-foreground hover:bg-foreground/90 active:scale-[0.97]'}">
-              {product.stock === 0 ? 'SOLD OUT' : added ? 'ADDED TO CART ✓' : 'ADD TO CART'}
+              disabled={disabledAdd}
+              class="w-full py-4 text-label tracking-[0.25em] transition-all duration-300 {product.stock === 0 ? 'bg-muted text-muted-foreground cursor-not-allowed' : added ? 'bg-green-700 text-white' : disabledAdd ? 'bg-muted text-foreground cursor-not-allowed border border-border' : 'bg-foreground text-primary-foreground hover:bg-foreground/90 active:scale-[0.97]'}">
+              {#if product.stock === 0}
+                SOLD OUT
+              {:else if added}
+                ADDED TO CART ✓
+              {:else if missingSize && missingColor}
+                SELECT SIZE & COLOR
+              {:else if missingSize}
+                SELECT SIZE
+              {:else if missingColor}
+                SELECT COLOR
+              {:else}
+                ADD TO CART
+              {/if}
             </button>
             <a href="/cart" class="block w-full py-3.5 text-label tracking-[0.25em] text-center border border-border hover:bg-muted transition-colors">
               VIEW CART
@@ -148,6 +174,6 @@
       </div>
     </div>
 
-    <Footer site={data.site} />
+    <Footer {data} />
   </div>
 {/if}
