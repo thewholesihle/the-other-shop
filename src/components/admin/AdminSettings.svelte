@@ -32,6 +32,7 @@
   if (!form.emailTemplates) {
     form.emailTemplates = {
       paid: 'Your payment for order {orderId} has been confirmed. We are now preparing your items for dispatch.',
+      processing: 'We are currently processing your order {orderId}. You will be notified once it has been shipped.',
       shipped: 'Great news! Your order {orderId} has been shipped and is on its way to you.',
       delivered: 'Your order {orderId} has been delivered. We hope you enjoy your new pieces!',
       cancelled: 'Your order {orderId} has been cancelled. If you have any questions, please contact our support team.'
@@ -405,6 +406,7 @@
       <div class="space-y-4">
         {#each [
           { key: 'paid', label: 'PAYMENT CONFIRMED (PAID)' },
+          { key: 'processing', label: 'ORDER PROCESSING' },
           { key: 'shipped', label: 'ORDER SHIPPED' },
           { key: 'delivered', label: 'ORDER DELIVERED' },
           { key: 'cancelled', label: 'ORDER CANCELLED' }

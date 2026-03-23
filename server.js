@@ -157,6 +157,12 @@ async function sendOrderNotification(order) {
     } else if (process.env.ADMIN_EMAIL) {
       recipients = [process.env.ADMIN_EMAIL];
     }
+    
+    await Log.create({
+      id: `log-${Date.now()}-adm-mail`,
+      type: 'info', message: `Order notification: Sending to ${recipients.join(', ')}`,
+      context: 'EMAIL', data: { orderId: order.id, recipients }
+    }).catch(() => {});
   } catch (e) {
     console.error('Failed to fetch admin emails for notification:', e);
   }
@@ -407,6 +413,12 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
 // ─── Email Notifier Helper for Customers ──────────────────────────────────────
 async function sendCustomerStatusEmail(order) {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !order.email) return;
+  
+  await Log.create({
+    id: `log-${Date.now()}-cus-mail`,
+    type: 'info', message: `Customer update: Sending "${order.status}" email to ${order.email}`,
+    context: 'EMAIL', data: { orderId: order.id, status: order.status, email: order.email }
+  }).catch(() => {});
   try {
     const site = await Settings.findOne({ _id: 'main' }).lean();
     const siteName = site?.name || 'Others.';
@@ -486,7 +498,7 @@ async function sendCustomerStatusEmail(order) {
 
 // ─── API: Update Order Status (accept / reject) ─────────────────────────────────
 app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
-  const allowed = ['shipped', 'delivered', 'cancelled', 'paid', 'pending_payment'];
+  const allowed = ['processing', 'shipped', 'delivered', 'cancelled', 'paid', 'pending_payment'];
   const { status, reason } = req.body;
   if (!allowed.includes(status))
     return res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` });
@@ -819,6 +831,12 @@ const PF_IPS = [
 // ─── API: Checkout (PayFast) ──────────────────────────────────────────────────
 app.post('/api/checkout', async (req, res) => {
   const { order } = req.body;
+  
+  await Log.create({
+    id: `log-${Date.now()}-checkout`,
+    type: 'info', message: 'Checkout initiated',
+    context: 'PAYMENT', data: { customer: order?.customer, email: order?.email, total: order?.total }
+  }).catch(() => {});
   if (!order) return res.status(400).json({ error: 'Missing order.' });
 
   let shippingConfig = { freeMinimum: 500, standardRate: 99 };
@@ -1042,6 +1060,12 @@ app.post('/api/payfast/itn', async (req, res) => {
         { returnDocument: 'after' }
       );
       if (updated) {
+        await Log.create({
+          id: `log-${Date.now()}-pay-ok`,
+          type: 'info', message: `Payment completed for order ${orderId}`,
+          context: 'PAYMENT', data: { orderId, pfId: pf_payment_id }
+        }).catch(() => {});
+
         // Trigger admin notifications for the newly paid order
         sendOrderNotification(updated).catch(e => console.error('Error sending ITN admin notification:', e));
         
@@ -1065,6 +1089,12 @@ app.post('/api/payfast/itn', async (req, res) => {
           await Product.updateOne(query, { $inc: { stock: item.quantity } });
         }
       }
+      await Log.create({
+        id: `log-${Date.now()}-pay-fail`,
+        type: 'warn', message: `Payment failure/cancel: status=${payment_status} for order ${orderId}`,
+        context: 'PAYMENT', data: { orderId, status: payment_status }
+      }).catch(() => {});
+
       console.log(`ITN: order ${orderId} — payment_status=${payment_status}`);
     }
   } catch (err) {

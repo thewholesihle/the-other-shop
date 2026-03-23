@@ -58,6 +58,7 @@ const SettingsSchema = new mongoose.Schema({
   emailLogo:     { type: String, default: '' },
   emailTemplates: {
     paid:      { type: String, default: 'Your payment for order {orderId} has been confirmed. We are now preparing your items for dispatch.' },
+    processing: { type: String, default: 'We are currently processing your order {orderId}. You will be notified once it has been shipped.' },
     shipped:   { type: String, default: 'Great news! Your order {orderId} has been shipped and is on its way to you.' },
     delivered: { type: String, default: 'Your order {orderId} has been delivered. We hope you enjoy your new pieces!' },
     cancelled: { type: String, default: 'Your order {orderId} has been cancelled. If you have any questions, please contact our support team.' },
