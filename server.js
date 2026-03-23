@@ -182,6 +182,8 @@ async function sendOrderNotification(order) {
       secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for 587
     });
 
+    console.log(`[Mail] Sending order notification for #${order.id} to ${recipients.join(', ')}...`);
+
     const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${i.size || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
     
     await transporter.sendMail({
@@ -979,6 +981,7 @@ app.post('/api/payfast/cancel', async (req, res) => {
 });
 app.post('/api/payfast/itn', async (req, res) => {
   // Step 1 — Respond 200 immediately so PayFast does not retry
+  console.log(`[ITN] Request received from PayFast (IP: ${req.headers["x-forwarded-for"] || req.socket.remoteAddress})`);
   res.status(200).send('OK');
 
   await Log.create({
@@ -1007,6 +1010,7 @@ app.post('/api/payfast/itn', async (req, res) => {
     const received = { ...itnData };
     delete received.signature;
     const computed = pfSignature(received);
+      console.error(`[ITN] Signature mismatch for #${orderId}`);
     if (computed !== itnData.signature) {
       await Log.create({
         id: `log-${Date.now()}-itn-sig`,
