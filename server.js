@@ -15,7 +15,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const { connect } = require('./src/db/connection');
-const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber } = require('./src/db/models');
+const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
+const crypto = require('crypto');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -66,8 +67,26 @@ function basicAuth(req, res, next) {
     res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
     return res.status(401).send('Authentication required.');
   }
-  const [user, pass] = Buffer.from(h.slice(6), 'base64').toString().split(':');
-  if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
+  
+  try {
+    const [user, pass] = Buffer.from(h.slice(6), 'base64').toString().split(':');
+    
+    // Timing-safe comparison to prevent side-channel attacks
+    const userBuffer = Buffer.from(user);
+    const adminUserBuffer = Buffer.from(ADMIN_USER);
+    const passBuffer = Buffer.from(pass);
+    const adminPassBuffer = Buffer.from(ADMIN_PASS);
+
+    if (userBuffer.length === adminUserBuffer.length &&
+        passBuffer.length === adminPassBuffer.length &&
+        crypto.timingSafeEqual(userBuffer, adminUserBuffer) &&
+        crypto.timingSafeEqual(passBuffer, adminPassBuffer)) {
+      return next();
+    }
+  } catch (e) {
+    // Basic auth format error
+  }
+
   res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
   return res.status(401).send('Invalid credentials.');
 }
@@ -497,6 +516,47 @@ app.post('/api/upload', basicAuth, upload.single('image'), (req, res) => {
 app.post('/api/upload/multi', basicAuth, upload.array('images', 20), (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded.' });
   res.json({ urls: req.files.map(f => f.path) }); // Cloudinary: .path = secure_url
+});
+
+// ─── API: Admin Diagnostics ──────────────────────────────────────────────────
+app.get('/api/admin/status', basicAuth, async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'connecting';
+    const cloudinaryOk = !!(process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_CLOUD_NAME);
+    let emailStatus = (process.env.SMTP_HOST && process.env.SMTP_USER) ? 'configured' : 'not_configured';
+
+    res.json({
+      db: dbStatus,
+      email: emailStatus,
+      cloudinary: cloudinaryOk ? 'configured' : 'missing',
+      stats: {
+        orders: await Order.countDocuments(),
+        products: await Product.countDocuments(),
+        subscribers: await Subscriber.countDocuments(),
+        logs: await Log.countDocuments({ type: 'error' }),
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch diagnostics.' });
+  }
+});
+
+app.get('/api/admin/logs', basicAuth, async (req, res) => {
+  try {
+    const logs = await Log.find().sort({ timestamp: -1 }).limit(100).lean();
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch logs.' });
+  }
+});
+
+app.delete('/api/admin/logs', basicAuth, async (req, res) => {
+  try {
+    await Log.deleteMany({});
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to clear logs.' });
+  }
 });
 
 // ─── API: Store Data ──────────────────────────────────────────────────────────
@@ -932,12 +992,74 @@ connect().then(() => {
   process.exit(1);
 });
 
+// ─── Error Notification ──────────────────────────────────────────────────────
+let lastErrorEmailTime = 0;
+const ERROR_EMAIL_THROTTLE = 15 * 60 * 1000; // 15 minutes
+
+async function notifyAdminOfError(err, req) {
+  if (!process.env.ADMIN_EMAIL || !process.env.SMTP_HOST) return;
+  const now = Date.now();
+  if (now - lastErrorEmailTime < ERROR_EMAIL_THROTTLE) return;
+  
+  lastErrorEmailTime = now;
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      secure: Number(process.env.SMTP_PORT) === 465,
+    });
+
+    await transporter.sendMail({
+      from: `"Others. System" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
+      to: process.env.ADMIN_EMAIL,
+      subject: `[ALERT] Site Error: ${err.message.slice(0, 50)}`,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; color: #111;">
+          <h2 style="color: #d32f2f;">Critical Site Error</h2>
+          <p>The system detected an internal error that might require your attention.</p>
+          <div style="background: #f5f5f5; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;">
+            <p><strong>Path:</strong> ${req.method} ${req.url}</p>
+            <p><strong>Message:</strong> ${err.message}</p>
+          </div>
+          <p><a href="${req.protocol}://${req.get('host')}/admin" style="display: inline-block; padding: 10px 20px; background: #000; color: #fff; text-decoration: none; border-radius: 4px;">Open Admin Dashboard</a></p>
+          <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;" />
+          <p style="font-size: 12px; color: #888;">This alert is throttled to once every 15 minutes.</p>
+        </div>
+      `
+    });
+  } catch (e) {
+    console.error('Failed to send error notification email:', e);
+  }
+}
+
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
+  const status = err.status || 500;
+  
+  // Log to DB
+  Log.create({
+    id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type: status >= 500 ? 'error' : 'warn',
+    message: err.message,
+    context: 'SERVER_ERROR',
+    data: { 
+      path: req.url, 
+      method: req.method,
+      stack: err.stack?.slice(0, 500)
+    }
+  }).catch(e => console.error('Failed to save log to DB:', e));
+
+  // Notify admin if it's a 500 error
+  if (status === 500) {
+    notifyAdminOfError(err, req).catch(console.error);
+  }
+
   console.error(`[Server Error] ${req.method} ${req.url}`, err);
   
-  // Don't leak stack traces in production
-  const status = err.status || 500;
   res.status(status).json({
     error: status === 500 ? 'Internal Server Error' : err.message,
     ok: false

@@ -10,6 +10,7 @@
   import AdminPages from '../components/admin/AdminPages.svelte';
   import AdminSubscribers from '../components/admin/AdminSubscribers.svelte';
   import AdminNewsletter from '../components/admin/AdminNewsletter.svelte';
+  import AdminStatus from '../components/admin/AdminStatus.svelte';
   import Loader from '../components/Loader.svelte';
 
   let data = null;
@@ -118,6 +119,8 @@
       <AdminSubscribers subscribers={data.subscribers} onUpdate={updateSubscribers} />
     {:else if activeSection === 'newsletter'}
       <AdminNewsletter subscribers={data.subscribers} siteName={data.site?.name} />
+    {:else if activeSection === 'status'}
+      <AdminStatus />
     {:else if activeSection === 'settings'}
       <AdminSettings site={data.site} lookbooks={data.lookbooks} articles={data.community} onUpdate={updateSite} onReset={resetData} />
     {/if}

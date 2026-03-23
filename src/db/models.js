@@ -182,6 +182,16 @@ const SubscriberSchema = new mongoose.Schema({
   date: { type: String, default: () => new Date().toISOString().slice(0, 10) },
 }, { strict: true, versionKey: false });
 
+// ── Site Log ─────────────────────────────────────────────────────────────────
+const LogSchema = new mongoose.Schema({
+  id:        { type: String, required: true, unique: true },
+  timestamp: { type: Date, default: Date.now },
+  type:      { type: String, enum: ['info', 'warn', 'error'], default: 'info' },
+  message:   { type: String, required: true },
+  context:   { type: String, default: '' }, // e.g. 'API', 'PAYMENT', 'STOCK'
+  data:      { type: mongoose.Schema.Types.Mixed, default: {} },
+}, { strict: true, versionKey: false });
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 module.exports = {
   Settings:   mongoose.model('Settings',   SettingsSchema,   'settings'),
@@ -192,4 +202,5 @@ module.exports = {
   Article:    mongoose.model('Article',    ArticleSchema,    'articles'),
   Pages:      mongoose.model('Pages',      PagesSchema,      'pages'),
   Subscriber: mongoose.model('Subscriber', SubscriberSchema, 'subscribers'),
+  Log:        mongoose.model('Log',        LogSchema,        'logs'),
 };
