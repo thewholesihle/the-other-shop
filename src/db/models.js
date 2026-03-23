@@ -55,6 +55,7 @@ const SettingsSchema = new mongoose.Schema({
   featuredEditorialCta:     { type: String, default: '' },
   navLogoSize:    { type: Number, default: 28 },
   favicon:       { type: String, default: '' },
+  emailLogo:     { type: String, default: '' },
   emailTemplates: {
     paid:      { type: String, default: 'Your payment for order {orderId} has been confirmed. We are now preparing your items for dispatch.' },
     shipped:   { type: String, default: 'Great news! Your order {orderId} has been shipped and is on its way to you.' },

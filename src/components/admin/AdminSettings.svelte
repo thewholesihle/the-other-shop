@@ -110,6 +110,20 @@
             <span class="text-sm font-mono w-10 text-right">{form.navLogoSize}px</span>
           </div>
         </div>
+
+        <div>
+          <p class="text-label block mb-1.5">EMAIL LOGO (optional)</p>
+          <p class="text-xs text-muted-foreground mb-2">Dedicated logo for order emails. Fallback is main logo.</p>
+          <div class="flex items-start gap-4">
+            {#if form.emailLogo}
+              <div class="space-y-2">
+                <img src={form.emailLogo} alt="Email Logo" class="h-10 w-auto max-w-[120px] object-contain bg-secondary p-1" />
+                <button onclick={() => (form.emailLogo = null)} class="text-xs text-destructive hover:underline">Remove</button>
+              </div>
+            {/if}
+            <ImageUpload label="" value={form.emailLogo || ''} onChange={(url) => (form.emailLogo = url)} />
+          </div>
+        </div>
       </div>
     </div>
 

@@ -351,7 +351,7 @@ async function sendCustomerStatusEmail(order) {
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 48px 24px; background-color: #ffffff; color: #111111; line-height: 1.6;">
           <div style="text-align: center; margin-bottom: 48px;">
-            ${site?.logo ? `<img src="${site.logo}" alt="${siteName}" style="max-height: 48px; max-width: 200px; display: block; margin: 0 auto;" />` : `<h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">${siteName}</h1>`}
+            ${(site?.emailLogo || site?.logo) ? `<img src="${site.emailLogo || site.logo}" alt="${siteName}" style="max-height: 48px; max-width: 200px; display: block; margin: 0 auto;" />` : `<h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">${siteName}</h1>`}
           </div>
           
           <p style="font-size: 16px; margin-bottom: 24px;">Hi ${order.customer.split(' ')[0] || 'there'},</p>
