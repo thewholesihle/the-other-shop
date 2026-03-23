@@ -56,7 +56,7 @@
     },
     "favicon": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774262791/others-store/t5uapzoq4hh2murnvzuf.png",
     "navLogoSize": 56,
-    "adminNotificationEmails": "othersworldwidemedia@gmail.com, siphesihlebomela@gmail.com"
+    "adminNotificationEmails": "siphesihlebomela@gmail.com"
   },
   "categories": [
     {
@@ -166,7 +166,7 @@
         "M",
         "L"
       ],
-      "stock": 7
+      "stock": 5
     },
     {
       "_id": "69c0b628dd2f30aa703db71e",
@@ -191,7 +191,7 @@
         "L",
         "XL"
       ],
-      "stock": 5
+      "stock": 1
     },
     {
       "_id": "69c11d2ddd2f30aa703db74c",
@@ -222,6 +222,50 @@
   ],
   "orders": [
     {
+      "_id": "69c149438454a5f72d4636b9",
+      "id": "ORD-1774274883182",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, KwaZulu-Natal, South Africa",
+      "items": [
+        {
+          "name": "Others Staple Hoodie",
+          "price": 400,
+          "quantity": 4,
+          "size": "M",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774237184/others-store/geyk7hulno49hp5ytgrq.jpg"
+        }
+      ],
+      "total": 1600,
+      "shippingCost": 0,
+      "status": "paid",
+      "payfastId": "3069089",
+      "createdAt": "2026-03-23T14:08:03.727Z"
+    },
+    {
+      "_id": "69c148c58454a5f72d4635c6",
+      "id": "ORD-1774274757038",
+      "customer": "Siphesihle Bomela",
+      "email": "siphesihlebomela@gmail.com",
+      "phone": "0635993681",
+      "address": "802 Mmila Road, Soweto 1801, Northern Cape, South Africa",
+      "items": [
+        {
+          "name": "Others Staple Tee",
+          "price": 150,
+          "quantity": 2,
+          "size": "M",
+          "image": "https://res.cloudinary.com/dwjgc4ymn/image/upload/v1774235687/others-store/tn1lqdku9vt5txsb1m4a.jpg"
+        }
+      ],
+      "total": 360,
+      "shippingCost": 60,
+      "status": "cancelled",
+      "payfastId": "3069085",
+      "createdAt": "2026-03-23T14:05:57.594Z"
+    },
+    {
       "_id": "69c1448b9edc7330ee9fc660",
       "id": "ORD-1774273675150",
       "customer": "Siphesihle Bomela",
@@ -239,7 +283,7 @@
       ],
       "total": 510,
       "shippingCost": 60,
-      "status": "processing",
+      "status": "cancelled",
       "payfastId": "3069012",
       "createdAt": "2026-03-23T13:47:55.715Z"
     },
@@ -261,7 +305,7 @@
       ],
       "total": 460,
       "shippingCost": 60,
-      "status": "processing",
+      "status": "cancelled",
       "payfastId": "3068966",
       "createdAt": "2026-03-23T13:31:40.714Z"
     },

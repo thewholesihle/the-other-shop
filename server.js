@@ -1,12 +1,12 @@
 'use strict';
 require('dotenv').config();
 
-const express  = require('express');
-const path     = require('path');
-const fs       = require('fs');
-const multer   = require('multer');
-const md5      = require('md5');
-const morgan   = require('morgan');
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const md5 = require('md5');
+const morgan = require('morgan');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
@@ -18,7 +18,7 @@ const { connect, getIsConnected } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
 const crypto = require('crypto');
 
-const app  = express();
+const app = express();
 const port = process.env.PORT || 3000;
 
 // Add HTTP request logging
@@ -102,10 +102,10 @@ function basicAuth(req, res, next) {
     res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
     return res.status(401).send('Authentication required.');
   }
-  
+
   try {
     const [user, pass] = Buffer.from(h.slice(6), 'base64').toString().split(':');
-    
+
     // Timing-safe comparison to prevent side-channel attacks
     const userBuffer = Buffer.from(user);
     const adminUserBuffer = Buffer.from(ADMIN_USER);
@@ -113,9 +113,9 @@ function basicAuth(req, res, next) {
     const adminPassBuffer = Buffer.from(ADMIN_PASS);
 
     if (userBuffer.length === adminUserBuffer.length &&
-        passBuffer.length === adminPassBuffer.length &&
-        crypto.timingSafeEqual(userBuffer, adminUserBuffer) &&
-        crypto.timingSafeEqual(passBuffer, adminPassBuffer)) {
+      passBuffer.length === adminPassBuffer.length &&
+      crypto.timingSafeEqual(userBuffer, adminUserBuffer) &&
+      crypto.timingSafeEqual(passBuffer, adminPassBuffer)) {
       return next();
     }
   } catch (e) {
@@ -130,10 +130,10 @@ function basicAuth(req, res, next) {
 const isSandbox = process.env.PAYFAST_SANDBOX === 'true';
 
 const PF = {
-  merchantId:  (isSandbox ? process.env.PAYFAST_MERCHANT_ID_SANDBOX : process.env.PAYFAST_MERCHANT_ID_LIVE) || '',
+  merchantId: (isSandbox ? process.env.PAYFAST_MERCHANT_ID_SANDBOX : process.env.PAYFAST_MERCHANT_ID_LIVE) || '',
   merchantKey: (isSandbox ? process.env.PAYFAST_MERCHANT_KEY_SANDBOX : process.env.PAYFAST_MERCHANT_KEY_LIVE) || '',
-  passphrase:  (isSandbox ? process.env.PAYFAST_PASSPHRASE_SANDBOX : process.env.PAYFAST_PASSPHRASE_LIVE) || '',
-  sandbox:     isSandbox,
+  passphrase: (isSandbox ? process.env.PAYFAST_PASSPHRASE_SANDBOX : process.env.PAYFAST_PASSPHRASE_LIVE) || '',
+  sandbox: isSandbox,
 };
 
 // Simple visual indicator of active payment mode
@@ -150,23 +150,10 @@ const PF_HOST = PF.sandbox
 // ─── Email Notifier ──────────────────────────────────────────────────────────
 async function sendOrderNotification(order) {
   let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
-  
-  // Try to get custom emails from DB if connected
-  if (mongoose.connection.readyState === 1) {
-    try {
-      const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
-      if (site?.adminNotificationEmails) {
-        recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
-      }
-      
-      await Log.create({
-        id: `log-${Date.now()}-adm-mail`,
-        type: 'info', message: `Order notification: Sending to ${recipients.join(', ')}`,
-        context: 'EMAIL', data: { orderId: order.id, recipients }
-      }).catch(() => {});
-    } catch (e) {
-      console.error('Failed to fetch admin emails from DB (using defaults):', e.message);
-    }
+  const site = await getSiteSettings();
+  const siteName = site.name || 'Others.';
+  if (site.adminNotificationEmails) {
+    recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
   }
 
   if (recipients.length === 0 || !process.env.SMTP_HOST) return;
@@ -185,9 +172,9 @@ async function sendOrderNotification(order) {
     console.log(`[Mail] Sending order notification for #${order.id} to ${recipients.join(', ')}...`);
 
     const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${i.size || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
-    
+
     await transporter.sendMail({
-      from: `"Others. Store" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
+      from: `"${siteName}" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
       to: recipients.join(', '),
       subject: `New Order Paid: #${order.id}`,
       html: `
@@ -223,15 +210,15 @@ async function sendOrderNotification(order) {
 // ─── Cloudinary Upload (━ replaces multer diskStorage) ────────────────────────────
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (_req, file) => ({
-    folder:         'others-store',
-    resource_type:  file.mimetype.startsWith('video/') ? 'video' : 'image',
+    folder: 'others-store',
+    resource_type: file.mimetype.startsWith('video/') ? 'video' : 'image',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm'],
     transformation: file.mimetype.startsWith('image/')
       ? [{ quality: 'auto', fetch_format: 'auto' }]
@@ -273,6 +260,30 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 
+/** Helper to get site settings with static fallback */
+async function getSiteSettings() {
+  let site = null;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
+    } catch (e) {
+      console.error('[Settings] DB fetch failed:', e.message);
+    }
+  }
+  if (!site) {
+    try {
+      const storePath = path.join(__dirname, 'public', 'store.json');
+      if (fs.existsSync(storePath)) {
+        const storeData = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+        site = storeData.site;
+      }
+    } catch (e) {
+      console.error('[Settings] Static fallback failed:', e.message);
+    }
+  }
+  return site || { name: 'Others.', currency: 'R' };
+}
+
 /** Assemble the full store data shape expected by the frontend */
 async function readData() {
   const [site, categories, products, orders, lookbooks, community, pages, subscribers] = await Promise.all([
@@ -287,13 +298,13 @@ async function readData() {
   ]);
 
   return {
-    site:        site        || {},
-    categories:  categories  || [],
-    products:    products    || [],
-    orders:      orders      || [],
-    lookbooks:   lookbooks   || [],
-    community:   community   || [],
-    pages:       pages       || { shipping: { content: '' }, faq: { items: [] }, contact: { address: '', details: [] } },
+    site: site || {},
+    categories: categories || [],
+    products: products || [],
+    orders: orders || [],
+    lookbooks: lookbooks || [],
+    community: community || [],
+    pages: pages || { shipping: { content: '' }, faq: { items: [] }, contact: { address: '', details: [] } },
     subscribers: subscribers || [],
   };
 }
@@ -373,13 +384,13 @@ app.delete('/api/products/:id', basicAuth, async (req, res) => {
     const { id } = req.params;
     const target = await Product.findOne({ id }).lean();
     if (!target) return res.status(404).json({ error: 'Product not found.' });
-    
+
     // Garbage collect assets
     if (target.image) await deleteCloudinaryAsset(target.image);
     if (target.images && target.images.length) {
       for (const img of target.images) await deleteCloudinaryAsset(img);
     }
-    
+
     await Product.deleteOne({ id });
     await syncStaticStore();
     res.json({ ok: true });
@@ -434,26 +445,19 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
 // ─── Email Notifier Helper for Customers ──────────────────────────────────────
 async function sendCustomerStatusEmail(order) {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !order.email) return;
-  
+
   if (mongoose.connection.readyState === 1) {
     await Log.create({
       id: `log-${Date.now()}-cus-mail`,
       type: 'info', message: `Customer update: Sending "${order.status}" email to ${order.email}`,
       context: 'EMAIL', data: { orderId: order.id, status: order.status, email: order.email }
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   try {
-    let siteName = 'Others.';
-    let templates = {};
-
-    if (mongoose.connection.readyState === 1) {
-      const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
-      if (site) {
-        siteName = site.name || 'Others.';
-        templates = site.emailTemplates || {};
-      }
-    }
+    const site = await getSiteSettings();
+    const siteName = site.name || 'Others.';
+    const templates = site.emailTemplates || {};
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -468,7 +472,7 @@ async function sendCustomerStatusEmail(order) {
       cancelled: 'cancelled',
       paid: 'confirmed'
     };
-    
+
     // Get custom template or fallback
     let messageBody = templates[order.status] || `Your order status has been updated to: ${order.status}.`;
     // Inject order ID
@@ -484,7 +488,7 @@ async function sendCustomerStatusEmail(order) {
       </li>`).join('');
 
     await transporter.sendMail({
-      from: `"${siteName}" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
+      from: `"Others Store" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL}>`,
       to: order.email,
       subject: `Order Update: #${order.id} [${statusMap[order.status]?.toUpperCase() || order.status.toUpperCase()}]`,
       html: `
@@ -547,18 +551,18 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
 
     // If cancelled manually, restore stock mapped into MongoDB
     if (status === 'cancelled' && oldOrder.status !== 'cancelled') {
-        const orderItems = Array.isArray(order.items) ? order.items : [];
-        for (const item of orderItems) {
-          const pId = item.productId || item.id;
-          let query = { id: pId };
-          if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-          await Product.updateOne(query, { $inc: { stock: item.quantity } });
-        }
+      const orderItems = Array.isArray(order.items) ? order.items : [];
+      for (const item of orderItems) {
+        const pId = item.productId || item.id;
+        let query = { id: pId };
+        if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
+        await Product.updateOne(query, { $inc: { stock: item.quantity } });
+      }
     }
 
     // Email customer if status explicitly changed
     if (status !== oldOrder.status) {
-        sendCustomerStatusEmail(order).catch(console.error);
+      sendCustomerStatusEmail(order).catch(console.error);
     }
 
     await syncStaticStore();
@@ -575,7 +579,7 @@ app.delete('/api/orders/:id', basicAuth, async (req, res) => {
     const { id } = req.params;
     const order = await Order.findOne({ id }).lean();
     if (!order) return res.status(404).json({ error: 'Order not found.' });
-    
+
     // Restore product stock if it hasn't been cancelled
     if (order.status !== 'cancelled') {
       const orderItems = Array.isArray(order.items) ? order.items : [];
@@ -648,11 +652,11 @@ app.get('/api/admin/status', basicAuth, async (req, res) => {
 app.get('/api/admin/logs', basicAuth, async (req, res) => {
   try {
     if (!getIsConnected()) {
-      return res.json([{ 
-        timestamp: new Date(), 
-        type: 'error', 
-        context: 'SYSTEM', 
-        message: 'DATABASE DISCONNECTED: Persistent logs are currently unavailable.' 
+      return res.json([{
+        timestamp: new Date(),
+        type: 'error',
+        context: 'SYSTEM',
+        message: 'DATABASE DISCONNECTED: Persistent logs are currently unavailable.'
       }]);
     }
     const logs = await Log.find().sort({ timestamp: -1 }).limit(100).lean();
@@ -681,7 +685,7 @@ app.get('/manifest.json', async (req, res) => {
 
     const name = site.name || 'Others.';
     const iconBase = site.favicon || site.logo || '';
-    
+
     let icons = [];
     if (iconBase.includes('cloudinary.com')) {
       icons = [
@@ -775,7 +779,7 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
 
     const subscribers = await Subscriber.find(query).lean();
     if (subscribers.length === 0) return res.status(400).json({ error: 'No active recipients found matching selection.' });
-    
+
     const site = await Settings.findOne({ _id: 'main' }).lean();
     const siteName = site?.name || 'Others.';
 
@@ -858,18 +862,18 @@ function pfSignature(params) {
 /** PayFast-permitted source IP ranges (keep in sync with docs) */
 const PF_IPS = [
   '197.97.145.144', '197.97.145.145', '197.97.145.146', '197.97.145.147',
-  '41.74.179.194',  '41.74.179.195',  '41.74.179.196',  '41.74.179.197',
+  '41.74.179.194', '41.74.179.195', '41.74.179.196', '41.74.179.197',
 ];
 
 // ─── API: Checkout (PayFast) ──────────────────────────────────────────────────
 app.post('/api/checkout', async (req, res) => {
   const { order } = req.body;
-  
+
   await Log.create({
     id: `log-${Date.now()}-checkout`,
     type: 'info', message: 'Checkout initiated',
     context: 'PAYMENT', data: { customer: order?.customer, email: order?.email, total: order?.total }
-  }).catch(() => {});
+  }).catch(() => { });
   if (!order) return res.status(400).json({ error: 'Missing order.' });
 
   let shippingConfig = { freeMinimum: 500, standardRate: 99 };
@@ -878,21 +882,21 @@ app.post('/api/checkout', async (req, res) => {
     if (site?.shipping) shippingConfig = site.shipping;
   } catch { /* use defaults */ }
 
-  const subtotal     = parseFloat(order.total) || 0;
+  const subtotal = parseFloat(order.total) || 0;
   const shippingCost = subtotal >= shippingConfig.freeMinimum ? 0 : shippingConfig.standardRate;
-  const grandTotal   = (subtotal + shippingCost).toFixed(2);
-  const orderId      = `ORD-${Date.now()}`;
+  const grandTotal = (subtotal + shippingCost).toFixed(2);
+  const orderId = `ORD-${Date.now()}`;
 
   // ── Stock validation ──────────────────────────────────────────────────────
   const orderItems = Array.isArray(order.items) ? order.items : [];
   const stockErrors = [];
   const itemsToDeduct = [];
-  
+
   for (const item of orderItems) {
     const pId = item.productId || item.id;
     let query = { id: pId };
     if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-    
+
     const product = await Product.findOne(query).lean();
     if (!product) {
       stockErrors.push(`"${item.name}" is no longer available.`);
@@ -919,11 +923,11 @@ app.post('/api/checkout', async (req, res) => {
     await Order.create({
       id: orderId,
       customer: order.customer || '',
-      email:    order.email    || '',
-      phone:    order.phone    || '',
-      address:  order.address  || '',
-      items:    orderItems,
-      total:    parseFloat(grandTotal),
+      email: order.email || '',
+      phone: order.phone || '',
+      address: order.address || '',
+      items: orderItems,
+      total: parseFloat(grandTotal),
       shippingCost,
       status: 'pending_payment',
     });
@@ -938,20 +942,20 @@ app.post('/api/checkout', async (req, res) => {
   // Fields MUST be in this exact order per PayFast documentation
   const params = {};
   // Merchant details
-  params.merchant_id   = PF.merchantId;
-  params.merchant_key  = PF.merchantKey;
+  params.merchant_id = PF.merchantId;
+  params.merchant_key = PF.merchantKey;
   // Return URLs
-  params.return_url    = `${baseUrl}/payment/success`;
-  params.cancel_url    = `${baseUrl}/payment/cancel?orderId=${orderId}`;
-  params.notify_url    = `${baseUrl}/api/payfast/itn`;
+  params.return_url = `${baseUrl}/payment/success`;
+  params.cancel_url = `${baseUrl}/payment/cancel?orderId=${orderId}`;
+  params.notify_url = `${baseUrl}/api/payfast/itn`;
   // Buyer details
-  params.name_first    = (order.customer || 'Customer').split(' ')[0].slice(0, 100);
-  params.name_last     = (order.customer || '').split(' ').slice(1).join(' ').slice(0, 100);
+  params.name_first = (order.customer || 'Customer').split(' ')[0].slice(0, 100);
+  params.name_last = (order.customer || '').split(' ').slice(1).join(' ').slice(0, 100);
   params.email_address = (order.email || '').slice(0, 255);
   // Transaction details
-  params.m_payment_id  = orderId;           // our internal order reference
-  params.amount        = grandTotal;        // must be '0.00' format, min R1.00
-  params.item_name     = `Others. Order ${orderId}`.slice(0, 100);
+  params.m_payment_id = orderId;           // our internal order reference
+  params.amount = grandTotal;        // must be '0.00' format, min R1.00
+  params.item_name = `Others. Order ${orderId}`.slice(0, 100);
   params.item_description = `${order.items?.length || 1} item(s)`.slice(0, 255);
 
   // Clean the params object of any empty properties
@@ -989,7 +993,7 @@ app.post('/api/payfast/cancel', async (req, res) => {
         if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
         await Product.updateOne(query, { $inc: { stock: item.quantity } });
       }
-      
+
       console.log(`[PayFast] Order ${orderId} cancelled by user. Stock restored.`);
     }
 
@@ -1009,7 +1013,7 @@ app.post('/api/payfast/itn', async (req, res) => {
     id: `log-${Date.now()}-itn-rx`,
     type: 'info', message: 'ITN: Request received from PayFast',
     context: 'PAYFAST_ITN', data: { body: req.body, ip: (req.headers['x-forwarded-for'] || req.socket.remoteAddress) }
-  }).catch(() => {});
+  }).catch(() => { });
 
   try {
     // Step 2 — IP allowlist check (skip in sandbox mode)
@@ -1031,7 +1035,7 @@ app.post('/api/payfast/itn', async (req, res) => {
     const received = { ...itnData };
     delete received.signature;
     const computed = pfSignature(received);
-      console.error(`[ITN] Signature mismatch for #${orderId}`);
+    console.error(`[ITN] Signature mismatch for #${orderId}`);
     if (computed !== itnData.signature) {
       await Log.create({
         id: `log-${Date.now()}-itn-sig`,
@@ -1106,11 +1110,11 @@ app.post('/api/payfast/itn', async (req, res) => {
           id: `log-${Date.now()}-pay-ok`,
           type: 'info', message: `Payment completed for order ${orderId}`,
           context: 'PAYMENT', data: { orderId, pfId: pf_payment_id }
-        }).catch(() => {});
+        }).catch(() => { });
 
         // Trigger admin notifications for the newly paid order
         sendOrderNotification(updated).catch(e => console.error('Error sending ITN admin notification:', e));
-        
+
         // Also send customer success email
         sendCustomerStatusEmail(updated).catch(e => console.error('Error sending ITN customer email:', e));
       } else {
@@ -1140,7 +1144,7 @@ app.post('/api/payfast/itn', async (req, res) => {
           console.error(`ITN: DB status cancel failed for ${orderId}:`, e.message);
         }
       }
-      
+
       // Only selectively restore stock if the order wasn't ALREADY cancelled.
       if (updated && updated.status !== 'cancelled') {
         const orderItems = Array.isArray(updated.items) ? updated.items : [];
@@ -1157,7 +1161,7 @@ app.post('/api/payfast/itn', async (req, res) => {
           id: `log-${Date.now()}-pay-fail`,
           type: 'warn', message: `Payment failure/cancel: status=${payment_status} for order ${orderId}`,
           context: 'PAYMENT', data: { orderId, status: payment_status }
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       console.log(`ITN: order ${orderId} — payment_status=${payment_status}`);
@@ -1195,7 +1199,7 @@ app.get('/shop/:id', async (req, res) => {
       const title = `${product.name} — Others.`;
       const desc = (product.description || '').replace(/"/g, '&quot;').slice(0, 200);
       let img = product.image || (product.images && product.images[0]) || '';
-      
+
       // Basic Cloudinary optimization for sharing
       if (img.includes('res.cloudinary.com')) {
         img = img.replace('/upload/', '/upload/c_limit,w_1200,q_auto,f_auto/');
@@ -1262,9 +1266,17 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
   if (!process.env.ADMIN_EMAIL || !process.env.SMTP_HOST) return;
   const now = Date.now();
   if (now - lastErrorEmailTime < ERROR_EMAIL_THROTTLE) return;
-  
+
   lastErrorEmailTime = now;
   try {
+    let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
+    const site = await getSiteSettings();
+    if (site.adminNotificationEmails) {
+      recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    if (recipients.length === 0) return;
+
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 587,
@@ -1274,22 +1286,6 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
       },
       secure: Number(process.env.SMTP_PORT) === 465,
     });
-
-    const isConnected = mongoose.connection.readyState === 1;
-    let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
-
-    if (isConnected) {
-      try {
-        const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
-        if (site?.adminNotificationEmails) {
-          recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
-        }
-      } catch (e) {
-        console.error('Failsafe: error fetching settings for alert:', e.message);
-      }
-    }
-
-    if (recipients.length === 0) return;
 
     await transporter.sendMail({
       from: `"Others. System" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
@@ -1322,15 +1318,15 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   const status = err.status || 500;
-  
+
   // Log to DB
   Log.create({
     id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     type: status >= 500 ? 'error' : 'warn',
     message: err.message,
     context: 'SERVER_ERROR',
-    data: { 
-      path: req.url, 
+    data: {
+      path: req.url,
       method: req.method,
       stack: err.stack?.slice(0, 500)
     }
@@ -1342,7 +1338,7 @@ app.use((err, req, res, next) => {
   }
 
   console.error(`[Server Error] ${req.method} ${req.url}`, err);
-  
+
   res.status(status).json({
     error: status === 500 ? 'Internal Server Error' : err.message,
     ok: false
