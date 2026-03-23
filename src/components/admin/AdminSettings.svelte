@@ -44,8 +44,8 @@
 
   <div class="space-y-6">
     <!-- Branding -->
-    <div class="space-y-4 bg-card border border-border p-5">
-      <h3 class="text-label">BRANDING</h3>
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">BRANDING</h2>
       <div>
         <label for="s-name" class="text-label block mb-1.5">STORE NAME</label>
         <input id="s-name" bind:value={form.name} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
@@ -86,8 +86,8 @@
     </div>
 
     <!-- Color Palette -->
-    <div class="space-y-4 bg-card border border-border p-5">
-      <h3 class="text-label">COLOR PALETTE</h3>
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">COLOR PALETTE</h2>
       <p class="text-xs text-muted-foreground mb-4">Customize the global colors of the website.</p>
       <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div>
@@ -129,8 +129,8 @@
     </div>
 
     <!-- Announcement -->
-    <div class="space-y-4 bg-card border border-border p-5">
-      <h3 class="text-label">ANNOUNCEMENT BAR</h3>
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">ANNOUNCEMENT BAR</h2>
       <div>
         <label for="s-ann" class="text-label block mb-1.5">ANNOUNCEMENT TEXT</label>
         <input id="s-ann" bind:value={form.announcement} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
@@ -142,8 +142,8 @@
     </div>
 
     <!-- Shipping -->
-    <div class="space-y-4 bg-card border border-border p-5">
-      <h3 class="text-label">SHIPPING</h3>
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">SHIPPING</h2>
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label for="s-free-min" class="text-label block mb-1.5">FREE SHIPPING MINIMUM ({form.currency})</label>
@@ -158,8 +158,8 @@
     </div>
 
     <!-- Hero -->
-    <div class="space-y-4 bg-card border border-border p-5">
-      <h3 class="text-label">HERO SECTION</h3>
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">HERO SECTION</h2>
       <div>
         <label for="h-label" class="text-label block mb-1.5">SEASON LABEL</label>
         <input id="h-label" bind:value={form.hero.label} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
@@ -281,8 +281,8 @@
     </div>
 
     <!-- Featured Editorial -->
-    <div class="space-y-3 bg-card border border-border p-5">
-      <h3 class="text-label">FEATURED EDITORIAL</h3>
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">FEATURED EDITORIAL</h2>
       <p class="text-xs text-muted-foreground">Choose an Article or Lookbook to promote natively on the home page.</p>
 
       <div class="grid grid-cols-2 gap-4">
@@ -302,6 +302,21 @@
               {/each}
             </select>
           {/if}
+          
+          <div class="col-span-2 space-y-4 mt-2">
+             <div>
+               <label class="text-[10px] tracking-[0.15em] text-muted-foreground uppercase font-bold">Heading Override (Optional)</label>
+               <input bind:value={form.featuredEditorialHeading} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm mt-1.5 focus:outline-none focus:border-foreground transition-colors" placeholder="e.g. LATEST EDITORIAL" />
+             </div>
+             <div>
+               <label class="text-[10px] tracking-[0.15em] text-muted-foreground uppercase font-bold">Message Override (Optional)</label>
+               <textarea bind:value={form.featuredEditorialMessage} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm mt-1.5 focus:outline-none focus:border-foreground transition-colors" rows="2" placeholder="e.g. Read the full story behind the collection..."></textarea>
+             </div>
+             <div>
+               <label class="text-[10px] tracking-[0.15em] text-muted-foreground uppercase font-bold">CTA Button Text (Optional)</label>
+               <input bind:value={form.featuredEditorialCta} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm mt-1.5 focus:outline-none focus:border-foreground transition-colors" placeholder="e.g. Read Article" />
+             </div>
+          </div>
         {:else}
           {#if !lookbooks || lookbooks.length === 0}
             <p class="text-xs text-muted-foreground italic col-span-2 md:col-span-1 flex items-center">No lookbooks found.</p>
@@ -318,8 +333,8 @@
     </div>
 
     <!-- Socials -->
-    <div class="space-y-4 bg-card border border-border p-5">
-      <h3 class="text-label">SOCIAL LINKS</h3>
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">SOCIAL LINKS</h2>
       {#each [['instagram','Instagram'],['twitter','X / Twitter'],['tiktok','TikTok'],['youtube','YouTube']] as [key, label]}
         <div>
           <label for="social-{key}" class="text-label block mb-1.5">{label}</label>
@@ -329,8 +344,8 @@
     </div>
 
     <!-- Footer Content -->
-    <div class="space-y-4 bg-card border border-border p-5">
-      <h3 class="text-label">FOOTER CONTENT</h3>
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">FOOTER CONTENT</h2>
       <div>
         <label for="f-tagline" class="text-label block mb-1.5">FOOTER TAGLINE</label>
         <input id="f-tagline" bind:value={form.footerTagline} placeholder="Sign up for drops, exclusives & community news." class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />

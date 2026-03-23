@@ -71,7 +71,7 @@
       <p class="text-label block mb-1.5">EMAIL MESSAGE BODY</p>
       <p class="text-[10px] text-muted-foreground uppercase tracking-widest mb-3">Your store logo, header, and footer will be automatically injected around this message.</p>
       <div class="border border-border">
-        <RichEditor bind:html={htmlContent} />
+        <RichEditor value={htmlContent} onChange={val => htmlContent = val} />
       </div>
     </div>
     

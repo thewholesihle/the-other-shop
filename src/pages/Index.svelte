@@ -50,7 +50,7 @@
     <ProductGrid products={data.products} currency={data.site.currency} />
     
     {#if editorialType === 'article'}
-      <ArticleSection article={featuredArticle} {allArticles} />
+      <ArticleSection article={featuredArticle} {allArticles} heading={data.site.featuredEditorialHeading} message={data.site.featuredEditorialMessage} cta={data.site.featuredEditorialCta} />
     {:else}
       <LookbookSection lookbook={featuredLookbook} {allLookbooks} />
     {/if}

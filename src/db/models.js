@@ -50,6 +50,9 @@ const SettingsSchema = new mongoose.Schema({
   },
   featuredLookbook: { type: String, default: '' },
   featuredEditorialType: { type: String, default: 'lookbook' }, // 'lookbook' | 'article'
+  featuredEditorialHeading: { type: String, default: '' },
+  featuredEditorialMessage: { type: String, default: '' },
+  featuredEditorialCta: { type: String, default: '' },
 }, { strict: true, _id: false, versionKey: false });
 
 // ── Category ──────────────────────────────────────────────────────────────────

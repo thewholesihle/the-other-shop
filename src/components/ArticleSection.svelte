@@ -2,7 +2,10 @@
   import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
   export let article = null;
   export let allArticles = [];
-
+  export let heading = '';
+  export let message = '';
+  export let cta = '';
+  
   $: displayArticle = article || allArticles.find(a => a.published) || null;
 
   function goToArticle() {
@@ -46,13 +49,13 @@
       <div class="space-y-6 max-w-md">
         <div>
           <span class="inline-block text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3 font-medium">
-            EDITORIAL — {new Date(displayArticle.date || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric'})}
+            {heading || `EDITORIAL — ${new Date(displayArticle.date || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric'})}`}
           </span>
           <h2 class="text-3xl md:text-5xl font-display font-bold leading-tight">{displayArticle.title}</h2>
         </div>
         
         <p class="text-muted-foreground leading-relaxed text-sm md:text-base">
-          {displayArticle.excerpt || 'Read the full editorial piece and discover the story behind the collection.'}
+          {message || displayArticle.excerpt || 'Read the full editorial piece and discover the story behind the collection.'}
         </p>
         
         <div class="pt-4">
@@ -60,7 +63,7 @@
             onclick={goToArticle}
             class="text-xs font-medium tracking-[0.2em] uppercase border-b-2 border-foreground pb-1 hover:text-muted-foreground transition-colors"
           >
-            Read Article
+            {cta || 'Read Article'}
           </button>
         </div>
       </div>

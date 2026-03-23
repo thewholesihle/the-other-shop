@@ -22,27 +22,27 @@
 >
   <!-- Image container -->
   <div class="relative aspect-[3/4] overflow-hidden bg-secondary mb-3">
-    <!-- Secondary Image (Backdrop Fade-In) -->
+    <!-- Primary Image (Static Base) -->
+    <img
+      src={getOptimizedUrl(primaryImage, 600)}
+      srcset={getSrcset(primaryImage)}
+      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+      alt={product.name}
+      class="w-full h-full object-cover object-center absolute inset-0"
+      loading="lazy"
+    />
+
+    <!-- Secondary Image (Fade-In Overlay) -->
     {#if primaryImage !== hoverImage}
       <img
         src={getOptimizedUrl(hoverImage, 600)}
         srcset={getSrcset(hoverImage)}
         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
         alt="{product.name} alternate view"
-        class="w-full h-full object-cover absolute inset-0 transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+        class="w-full h-full object-cover object-center absolute inset-0 transition-opacity duration-500 opacity-0 group-hover:opacity-100"
         loading="lazy"
       />
     {/if}
-
-    <!-- Primary Image (Foreground Fade-Out) -->
-    <img
-      src={getOptimizedUrl(primaryImage, 600)}
-      srcset={getSrcset(primaryImage)}
-      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-      alt={product.name}
-      class="w-full h-full object-cover absolute inset-0 transition-opacity duration-300 opacity-100 {primaryImage !== hoverImage ? 'group-hover:opacity-0' : ''}"
-      loading="lazy"
-    />
 
     {#if isOutOfStock}
       <span class="absolute top-3 left-3 bg-store-rust text-accent-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">Sold Out</span>
