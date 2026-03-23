@@ -75,7 +75,7 @@
     doc.text(`Customer: ${order.customer}`, 14, 32);
     doc.text(`Email: ${order.email}`, 14, 38);
     doc.text(`Address: ${order.address}`, 14, 44);
-    doc.text(`Date: ${new Date(order.createdAt || order.date || Date.now()).toLocaleDateString()}`, 14, 50);
+    doc.text(`Date: ${new Date(order.createdAt || order.date || Date.now()).toLocaleString()}`, 14, 50);
     doc.text(`Status: ${order.status.toUpperCase().replace('_', ' ')}`, 14, 56);
 
     const tableData = (order.items || []).map(item => [
@@ -139,7 +139,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <p class="font-medium tabular-nums text-foreground">{order.id} • {currency}{order.total.toFixed(2).replace('.', ',')}</p>
-            <p class="text-sm text-muted-foreground">{order.customer} · {new Date(order.createdAt || order.date || Date.now()).toLocaleDateString()}</p>
+            <p class="text-sm text-muted-foreground">{order.customer} · {new Date(order.createdAt || order.date || Date.now()).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
           </div>
         <div class="flex flex-wrap items-center gap-2">
             <!-- Status badge -->

@@ -62,6 +62,7 @@ const SettingsSchema = new mongoose.Schema({
     delivered: { type: String, default: 'Your order {orderId} has been delivered. We hope you enjoy your new pieces!' },
     cancelled: { type: String, default: 'Your order {orderId} has been cancelled. If you have any questions, please contact our support team.' },
   },
+  adminNotificationEmails: { type: String, default: 'othersworldwide@gmail.com' },
 }, { strict: true, _id: false, versionKey: false });
 
 // ── Category ──────────────────────────────────────────────────────────────────

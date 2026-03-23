@@ -65,6 +65,7 @@
         <thead>
           <tr class="border-b border-border">
             <th class="text-left text-label p-3">ORDER</th>
+            <th class="text-left text-label p-3">DATE</th>
             <th class="text-left text-label p-3">CUSTOMER</th>
             <th class="text-left text-label p-3">STATUS</th>
             <th class="text-right text-label p-3">TOTAL</th>
@@ -74,6 +75,7 @@
           {#each recentOrders as order}
             <tr class="border-b border-border/50 hover:bg-muted/50 transition-colors">
               <td class="p-3 font-medium tabular-nums">{order.id}</td>
+              <td class="p-3 text-muted-foreground text-[10px] tabular-nums">{new Date(order.createdAt || order.date || Date.now()).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</td>
               <td class="p-3 text-muted-foreground">{order.customer}</td>
               <td class="p-3">
                 <span class="inline-block text-[10px] tracking-[0.15em] uppercase px-2 py-0.5 font-medium {statusClass(order.status)}">{order.status}</span>

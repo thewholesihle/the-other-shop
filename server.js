@@ -84,8 +84,13 @@ const hardMaintenanceHTML = `
 `;
 
 app.use((req, res, next) => {
-  // If DB is down, intercept public routes (bypass admin and api so admin can still try to fix things/logs if server is up)
-  if (!getIsConnected() && !req.path.startsWith('/admin') && !req.path.startsWith('/api/')) {
+  // If DB is down, intercept public routes
+  // Bypass if: Admin route OR API route OR static asset
+  const isAsset = /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|json|woff2?|mp4|webm|map)$/i.test(req.path);
+  const isAdmin = req.path.startsWith('/admin') || req.path.startsWith('/api/admin');
+  const isApi = req.path.startsWith('/api/');
+
+  if (!getIsConnected() && !isAdmin && !isApi && !isAsset) {
     return res.status(503).send(hardMaintenanceHTML);
   }
   next();
@@ -564,20 +569,31 @@ app.post('/api/upload/multi', basicAuth, upload.array('images', 20), (req, res) 
 // ─── API: Admin Diagnostics ──────────────────────────────────────────────────
 app.get('/api/admin/status', basicAuth, async (req, res) => {
   try {
-    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'connecting';
+    const isConn = getIsConnected();
+    const dbStatus = isConn ? 'connected' : 'disconnected';
     const cloudinaryOk = !!(process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_CLOUD_NAME);
     let emailStatus = (process.env.SMTP_HOST && process.env.SMTP_USER) ? 'configured' : 'not_configured';
+
+    let stats = { orders: 0, products: 0, subscribers: 0, logs: 0 };
+    if (isConn) {
+      try {
+        stats = {
+          orders: await Order.countDocuments(),
+          products: await Product.countDocuments(),
+          subscribers: await Subscriber.countDocuments(),
+          logs: await Log.countDocuments({ type: 'error' }),
+        };
+      } catch (e) {
+        console.warn('Could not fetch DB stats:', e.message);
+      }
+    }
 
     res.json({
       db: dbStatus,
       email: emailStatus,
       cloudinary: cloudinaryOk ? 'configured' : 'missing',
-      stats: {
-        orders: await Order.countDocuments(),
-        products: await Product.countDocuments(),
-        subscribers: await Subscriber.countDocuments(),
-        logs: await Log.countDocuments({ type: 'error' }),
-      }
+      stats,
+      _db_offline: !isConn
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch diagnostics.' });
@@ -586,6 +602,14 @@ app.get('/api/admin/status', basicAuth, async (req, res) => {
 
 app.get('/api/admin/logs', basicAuth, async (req, res) => {
   try {
+    if (!getIsConnected()) {
+      return res.json([{ 
+        timestamp: new Date(), 
+        type: 'error', 
+        context: 'SYSTEM', 
+        message: 'DATABASE DISCONNECTED: Persistent logs are currently unavailable.' 
+      }]);
+    }
     const logs = await Log.find().sort({ timestamp: -1 }).limit(100).lean();
     res.json(logs);
   } catch (err) {
@@ -637,21 +661,20 @@ app.get('/manifest.json', async (req, res) => {
 });
 
 app.get('/api/data', async (req, res) => {
-  if (!getIsConnected()) {
-    // Return a minimal failsafe response if DB is down
-    return res.json({
-      site: {
-        name: 'Others.',
-        maintenance: { enabled: true, title: 'System Offline', message: 'The store database is currently unreachable. We are working to restore service.' }
-      },
-      products: [], categories: [], lookbooks: [], community: [], pages: {}, subscribers: []
-    });
-  }
   try {
-    res.json(await readData());
+    if (!getIsConnected()) {
+      return res.json({
+        site: { name: 'Others. (DATABASE OFFLINE)', logo: '', currency: 'R', navLogoSize: 40 },
+        categories: [], products: [], orders: [], lookbooks: [], community: [], subscribers: [],
+        pages: { shipping: { content: '' }, faq: { items: [] }, contact: { address: '', details: [] } },
+        _db_offline: true
+      });
+    }
+    const data = await readData();
+    res.json(data);
   } catch (err) {
-    console.error('GET /api/data', err);
-    res.status(500).json({ error: 'Database read failed.' });
+    console.error('API Error:', err);
+    res.status(500).json({ error: 'Failed to fetch data' });
   }
 });
 
@@ -1139,9 +1162,16 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
       secure: Number(process.env.SMTP_PORT) === 465,
     });
 
+    const site = await Settings.findOne({ _id: 'main' }).lean();
+    let recipients = site?.adminNotificationEmails 
+      ? site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean)
+      : (process.env.ADMIN_EMAIL ? [process.env.ADMIN_EMAIL] : ['othersworldwide@gmail.com']);
+
+    if (recipients.length === 0) return;
+
     await transporter.sendMail({
-      from: `"Others. System" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
-      to: process.env.ADMIN_EMAIL,
+      from: `"Others. System" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
+      to: recipients.join(', '),
       subject: `[ALERT] Site Error: ${err.message.slice(0, 50)}`,
       html: `
         <div style="font-family: sans-serif; padding: 20px; color: #111; max-width: 600px; border: 1px solid #eee;">
