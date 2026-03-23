@@ -49,6 +49,10 @@
   {#if product}
     <title>{product.name} — {data?.site?.name ?? 'Others.'}</title>
     <meta name="description" content={product.description} />
+    <meta property="og:title" content={product.name} />
+    <meta property="og:description" content={product.description} />
+    <meta property="og:image" content={images[0]} />
+    <meta property="og:type" content="product" />
   {:else}
     <title>Product — Others.</title>
   {/if}
@@ -66,14 +70,21 @@
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
     <div class="pt-24 pb-20 px-6 md:px-10 max-w-6xl mx-auto">
-      <!-- Breadcrumb -->
-      <nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2">
-        <a href="/" class="hover:text-foreground transition-colors">Home</a>
-        <span>/</span>
-        <a href="/shop" class="hover:text-foreground transition-colors">Shop</a>
-        <span>/</span>
-        <span class="text-foreground">{product.name}</span>
-      </nav>
+      <!-- Back button & Breadcrumb -->
+      <div class="mb-8 flex flex-col gap-6">
+        <button onclick={() => window.history.length > 1 ? window.history.back() : window.__navigate('/shop')} class="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase font-bold text-muted-foreground hover:text-foreground transition-colors group w-fit">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-hover:-translate-x-1 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
+          Back
+        </button>
+
+        <nav class="text-xs text-muted-foreground flex items-center gap-2">
+          <a href="/" class="hover:text-foreground transition-colors">Home</a>
+          <span>/</span>
+          <a href="/shop" class="hover:text-foreground transition-colors">Shop</a>
+          <span>/</span>
+          <span class="text-foreground">{product.name}</span>
+        </nav>
+      </div>
 
       <div class="grid md:grid-cols-2 gap-10 lg:gap-16">
         <!-- Image gallery -->

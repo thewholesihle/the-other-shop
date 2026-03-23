@@ -930,12 +930,22 @@ app.post('/api/payfast/itn', async (req, res) => {
   // Step 1 — Respond 200 immediately so PayFast does not retry
   res.status(200).send('OK');
 
+  await Log.create({
+    id: `log-${Date.now()}-itn-rx`,
+    type: 'info', message: 'ITN: Request received from PayFast',
+    context: 'PAYFAST_ITN', data: { body: req.body, ip: (req.headers['x-forwarded-for'] || req.socket.remoteAddress) }
+  }).catch(() => {});
+
   try {
     // Step 2 — IP allowlist check (skip in sandbox mode)
     if (!PF.sandbox) {
       const srcIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
       if (!PF_IPS.includes(srcIp)) {
-        console.warn(`ITN: rejected from untrusted IP ${srcIp}`);
+        await Log.create({
+          id: `log-${Date.now()}-itn-ip`,
+          type: 'warn', message: `ITN: rejected from untrusted IP ${srcIp}`,
+          context: 'PAYFAST_ITN', data: { ip: srcIp }
+        });
         return;
       }
     }
@@ -943,22 +953,33 @@ app.post('/api/payfast/itn', async (req, res) => {
     const itnData = req.body;
     const { m_payment_id: orderId, payment_status, pf_payment_id, amount_gross } = itnData;
 
-    // Step 3 — Validate signature
     const received = { ...itnData };
-    delete received.signature; // exclude from re-computation
-    if (pfSignature(received) !== itnData.signature) {
-      console.warn('ITN: invalid signature — possible tampering, ignoring.');
+    delete received.signature;
+    const computed = pfSignature(received);
+    if (computed !== itnData.signature) {
+      await Log.create({
+        id: `log-${Date.now()}-itn-sig`,
+        type: 'error', message: 'ITN: invalid signature (tampering check failed)',
+        context: 'PAYFAST_ITN', data: { received: itnData.signature, computed, orderId }
+      });
       return;
     }
 
-    // Step 4 — Compare amount against our DB record (prevent amount tampering)
     const dbOrder = await Order.findOne({ id: orderId }).lean();
     if (!dbOrder) {
-      console.warn(`ITN: order ${orderId} not found in DB.`);
+      await Log.create({
+        id: `log-${Date.now()}-itn-orphan`,
+        type: 'error', message: `ITN: received for unknown order ${orderId}`,
+        context: 'PAYFAST_ITN', data: { itnData }
+      });
       return;
     }
     if (Math.abs(parseFloat(amount_gross) - dbOrder.total) > 0.05) {
-      console.warn(`ITN: amount mismatch — ITN ${amount_gross} vs DB ${dbOrder.total}`);
+      await Log.create({
+        id: `log-${Date.now()}-itn-amt`,
+        type: 'error', message: `ITN: amount mismatch for #${orderId}`,
+        context: 'PAYFAST_ITN', data: { orderId, itnAmount: amount_gross, dbTotal: dbOrder.total }
+      });
       return;
     }
 
@@ -1025,6 +1046,44 @@ app.post('/api/payfast/itn', async (req, res) => {
     }
   } catch (err) {
     console.error('ITN processing error:', err.message);
+  }
+});
+
+// ─── Individual Product SEO (Dynamic OG Tags) ─────────────────────────────────
+app.get('/shop/:id', async (req, res) => {
+  try {
+    const product = await Product.findOne({ id: req.params.id });
+    const indexPath = path.resolve(__dirname, 'public', 'index.html');
+    let html = fs.readFileSync(indexPath, 'utf-8');
+
+    if (product) {
+      const title = `${product.name} — Others.`;
+      const desc = (product.description || '').replace(/"/g, '&quot;').slice(0, 200);
+      let img = product.image || (product.images && product.images[0]) || '';
+      
+      // Basic Cloudinary optimization for sharing
+      if (img.includes('res.cloudinary.com')) {
+        img = img.replace('/upload/', '/upload/c_limit,w_1200,q_auto,f_auto/');
+      }
+
+      const meta = `
+  <title>${title}</title>
+  <meta name="description" content="${desc}">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${desc}">
+  <meta property="og:image" content="${img}">
+  <meta property="og:url" content="${req.protocol}://${req.get('host')}${req.originalUrl}">
+  <meta property="og:type" content="product">
+  <meta name="twitter:card" content="summary_large_image">`;
+
+      // Inject into head (replace default title if present)
+      html = html.replace('<title>The Other Shop</title>', '');
+      html = html.replace('<head>', `<head>${meta}`);
+    }
+    res.send(html);
+  } catch (err) {
+    console.warn('Metadata injection failed:', err.message);
+    res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
   }
 });
 
