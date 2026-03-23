@@ -8,10 +8,20 @@
   
   let rejectingId = null;
   let rejectReason = '';
+  let searchQuery = '';
 
   // Sort orders newest first
   $: sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
-  $: filteredOrders = filter === 'all' ? sortedOrders : sortedOrders.filter(o => o.status === filter);
+  $: filteredOrders = sortedOrders.filter(o => {
+    const matchesStatus = filter === 'all' || o.status === filter;
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q || 
+      o.id.toLowerCase().includes(q) || 
+      (o.customer || '').toLowerCase().includes(q) || 
+      (o.email || '').toLowerCase().includes(q) || 
+      (o.phone || '').toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
 
   async function patchStatus(orderId, status, reason = '') {
     try {
@@ -104,12 +114,23 @@
       <h2 class="text-2xl font-display font-bold mb-1">Orders</h2>
       <p class="text-sm text-muted-foreground">{filteredOrders.length} orders total</p>
     </div>
-    <select bind:value={filter} class="bg-transparent border border-border px-4 py-2 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer">
-      <option value="all">All Orders</option>
-      {#each statusOptions as s}
-        <option value={s}>{s.replace('_', ' ').toUpperCase()}</option>
-      {/each}
-    </select>
+    <div class="flex items-center gap-3">
+      <div class="relative flex-1 max-w-xs">
+        <input 
+          type="text" 
+          bind:value={searchQuery} 
+          placeholder="Search name, email, phone or ID..." 
+          class="w-full bg-transparent border border-border pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"
+        />
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      </div>
+      <select bind:value={filter} class="bg-transparent border border-border px-4 py-2 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer">
+        <option value="all">All Orders</option>
+        {#each statusOptions as s}
+          <option value={s}>{s.replace('_', ' ').toUpperCase()}</option>
+        {/each}
+      </select>
+    </div>
   </div>
 
   <div class="space-y-4">

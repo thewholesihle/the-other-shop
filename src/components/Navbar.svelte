@@ -3,6 +3,7 @@
 
   export let siteName = "Others.";
   export let logo = null;
+  export let logoHeight = 28;
 
   const navLinks = [
     { label: "SHOP", href: "/products" },
@@ -32,7 +33,7 @@
       class="text-foreground font-display text-xl font-bold tracking-tight"
     >
       {#if logo}
-        <img src={logo} alt={siteName} class="h-7 w-auto object-contain" />
+        <img src={logo} alt={siteName} style="height: {logoHeight}px" class="w-auto object-contain" />
       {:else}
         {siteName}
       {/if}

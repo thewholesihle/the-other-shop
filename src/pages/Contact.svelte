@@ -3,6 +3,7 @@
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
+  import Loader from '../components/Loader.svelte';
 
   let data = null;
   let loading = true;
@@ -20,10 +21,10 @@
 </svelte:head>
 
 {#if loading || !data}
-  <div class="flex min-h-screen items-center justify-center bg-background"><div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div></div>
+  <Loader />
 {:else}
   <div class="min-h-screen">
-    <Navbar siteName={data.site.name} logo={data.site.logo} />
+    <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
     <div class="pt-28 pb-20 px-6 md:px-10 max-w-4xl mx-auto">
       <h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Contact</h1>
 

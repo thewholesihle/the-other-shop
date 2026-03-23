@@ -3,6 +3,8 @@
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
+  import Loader from '../components/Loader.svelte';
+  import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
 
   export let slug = '';
 
@@ -33,10 +35,8 @@
   {/if}
 </svelte:head>
 
-{#if loading}
-  <div class="flex min-h-screen items-center justify-center bg-background">
-    <div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div>
-  </div>
+{#if loading || !data}
+  <Loader />
 {:else if !post}
   <div class="flex min-h-screen items-center justify-center flex-col gap-4">
     <p class="text-muted-foreground">Article not found.</p>
@@ -44,7 +44,7 @@
   </div>
 {:else}
   <div class="min-h-screen">
-    <Navbar siteName={data.site.name} logo={data.site.logo} />
+    <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
     <div class="pt-24 pb-20 px-6 md:px-10 max-w-3xl mx-auto">
       <!-- Breadcrumb -->
@@ -58,7 +58,7 @@
 
       {#if post.image}
         <div class="aspect-[16/7] bg-secondary overflow-hidden mb-8">
-          <img src={post.image} alt={post.title} class="w-full h-full object-cover" />
+          <img src={getOptimizedUrl(post.image, 1600)} srcset={getSrcset(post.image)} sizes="100vw" alt={post.title} class="w-full h-full object-cover object-center" />
         </div>
       {/if}
 

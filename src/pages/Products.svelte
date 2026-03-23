@@ -3,7 +3,7 @@
   import Navbar from '../components/Navbar.svelte';
   import ProductCard from '../components/ProductCard.svelte';
   import Footer from '../components/Footer.svelte';
-
+  import Loader from '../components/Loader.svelte';
   import { loadStoreData } from '../lib/storeData.js';
 
   let data = null;
@@ -15,12 +15,12 @@
     try { 
       data = await loadStoreData(); 
       const query = new URLSearchParams(window.location.search || window.location.hash.split('?')[1]);
-      const catSlug = query.get('category');
+      const catId = query.get('category');
       const filter = query.get('filter');
       
       if (filter === 'new') activeCategory = 'new';
-      else if (catSlug && data.categories) {
-        const found = data.categories.find(c => c.slug === catSlug);
+      else if (catId && data.categories) {
+        const found = data.categories.find(c => c.id === catId);
         if (found) activeCategory = found.id;
       }
     }
@@ -50,12 +50,10 @@
 </svelte:head>
 
 {#if loading || !data}
-  <div class="flex min-h-screen items-center justify-center bg-background">
-    <div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div>
-  </div>
+  <Loader />
 {:else}
   <div class="min-h-screen">
-    <Navbar siteName={data.site.name} logo={data.site.logo} />
+    <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
     <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <div class="mb-10">

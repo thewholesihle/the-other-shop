@@ -52,7 +52,15 @@ const SettingsSchema = new mongoose.Schema({
   featuredEditorialType: { type: String, default: 'lookbook' }, // 'lookbook' | 'article'
   featuredEditorialHeading: { type: String, default: '' },
   featuredEditorialMessage: { type: String, default: '' },
-  featuredEditorialCta: { type: String, default: '' },
+  featuredEditorialCta:     { type: String, default: '' },
+  navLogoSize:    { type: Number, default: 28 },
+  favicon:       { type: String, default: '' },
+  emailTemplates: {
+    paid:      { type: String, default: 'Your payment for order {orderId} has been confirmed. We are now preparing your items for dispatch.' },
+    shipped:   { type: String, default: 'Great news! Your order {orderId} has been shipped and is on its way to you.' },
+    delivered: { type: String, default: 'Your order {orderId} has been delivered. We hope you enjoy your new pieces!' },
+    cancelled: { type: String, default: 'Your order {orderId} has been cancelled. If you have any questions, please contact our support team.' },
+  },
 }, { strict: true, _id: false, versionKey: false });
 
 // ── Category ──────────────────────────────────────────────────────────────────

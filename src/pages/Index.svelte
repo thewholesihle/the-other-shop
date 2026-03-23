@@ -7,6 +7,7 @@
   import LookbookSection from '../components/LookbookSection.svelte';
   import ArticleSection from '../components/ArticleSection.svelte';
   import Footer from '../components/Footer.svelte';
+  import Loader from '../components/Loader.svelte';
   import { loadStoreData } from '../lib/storeData.js';
 
   let data = null;
@@ -39,12 +40,10 @@
 </svelte:head>
 
 {#if loading || !data}
-  <div class="flex min-h-screen items-center justify-center bg-background">
-    <div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div>
-  </div>
+  <Loader />
 {:else}
   <div class="min-h-screen">
-    <Navbar siteName={data.site.name} logo={data.site.logo} />
+    <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
     <Hero hero={data.site.hero} />
     <AnnouncementBar text={data.site.announcement} />
     <ProductGrid products={data.products} currency={data.site.currency} />

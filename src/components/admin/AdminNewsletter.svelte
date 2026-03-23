@@ -10,6 +10,27 @@
   let errorMsg = '';
   let successMsg = '';
 
+  let selectedIds = new Set(subscribers.map(s => s._id || s.id));
+  
+  $: allSelected = selectedIds.size === subscribers.length && subscribers.length > 0;
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      selectedIds = new Set();
+    } else {
+      selectedIds = new Set(subscribers.map(s => s._id || s.id));
+    }
+  }
+
+  function toggleSubscriber(id) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+    } else {
+      selectedIds.add(id);
+    }
+    selectedIds = selectedIds; // trigger reactivity
+  }
+
   async function handleSend() {
     if (!subject.trim() || !htmlContent.trim()) {
       errorMsg = 'Subject and message are required.';
@@ -30,7 +51,11 @@
       const res = await fetch('/api/newsletter/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, html: htmlContent }),
+        body: JSON.stringify({ 
+          subject, 
+          html: htmlContent,
+          subscriberIds: Array.from(selectedIds)
+        }),
         credentials: 'include'
       });
       const data = await res.json();
@@ -75,13 +100,37 @@
       </div>
     </div>
     
+    <div>
+      <p class="text-label block mb-1.5">RECIPIENTS ({selectedIds.size})</p>
+      <div class="border border-border p-3 max-h-48 overflow-y-auto space-y-2 bg-muted/30">
+        <label class="flex items-center gap-2 text-xs font-medium cursor-pointer pb-2 border-b border-border/50 mb-2">
+          <input type="checkbox" checked={allSelected} onchange={toggleSelectAll} class="rounded border-border" />
+          SELECT ALL
+        </label>
+        {#each subscribers as sub}
+          <label class="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted p-1 transition-colors">
+            <input 
+              type="checkbox" 
+              checked={selectedIds.has(sub._id || sub.id)} 
+              onchange={() => toggleSubscriber(sub._id || sub.id)} 
+              class="rounded border-border text-foreground focus:ring-foreground" 
+            />
+            <span class="truncate">{sub.email}</span>
+          </label>
+        {/each}
+        {#if subscribers.length === 0}
+          <p class="text-xs text-muted-foreground italic">No subscribers found.</p>
+        {/if}
+      </div>
+    </div>
+
     <div class="pt-4 border-t border-border">
       <button 
         onclick={handleSend}
-        disabled={isSending || subscribers.length === 0}
+        disabled={isSending || selectedIds.size === 0}
         class="flex items-center gap-2 bg-foreground text-primary-foreground px-6 py-3 text-label tracking-[0.15em] hover:bg-foreground/90 transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class={isSending ? 'animate-bounce' : ''}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-        {isSending ? 'BROADCASTING...' : 'SEND TO SUBSCRIBERS'}
+        {isSending ? 'BROADCASTING...' : 'SEND TO SELECTED'}
       </button>
     </div>
   </div>

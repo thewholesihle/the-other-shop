@@ -27,6 +27,16 @@
   if (form.footerTagline === undefined) form.footerTagline = '';
   if (form.metaTitle === undefined) form.metaTitle = '';
   if (form.metaDescription === undefined) form.metaDescription = '';
+  if (form.navLogoSize === undefined) form.navLogoSize = 28;
+  if (form.favicon === undefined) form.favicon = '';
+  if (!form.emailTemplates) {
+    form.emailTemplates = {
+      paid: 'Your payment for order {orderId} has been confirmed. We are now preparing your items for dispatch.',
+      shipped: 'Great news! Your order {orderId} has been shipped and is on its way to you.',
+      delivered: 'Your order {orderId} has been delivered. We hope you enjoy your new pieces!',
+      cancelled: 'Your order {orderId} has been cancelled. If you have any questions, please contact our support team.'
+    };
+  }
   let saved = false;
 
   function handleSave() {
@@ -70,17 +80,35 @@
         <textarea id="s-desc" bind:value={form.description} rows={2} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
       </div>
       <!-- Logo -->
-      <div>
-        <p class="text-label block mb-1.5">LOGO IMAGE</p>
-        <p class="text-xs text-muted-foreground mb-2">Upload a logo image. If none, the store name text is shown.</p>
-        <div class="flex items-start gap-4">
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <p class="text-label block mb-1.5">LOGO IMAGE</p>
+          <p class="text-xs text-muted-foreground mb-2">Upload a logo image. If none, the store name text is shown.</p>
+          <div class="flex items-start gap-4">
+            {#if form.logo}
+              <div class="flex items-center gap-3">
+                <img src={form.logo} alt="Logo" class="h-10 w-auto max-w-[120px] object-contain bg-secondary p-1" />
+                <button onclick={() => (form.logo = null)} class="text-xs text-destructive hover:underline">Remove</button>
+              </div>
+            {/if}
+            <ImageUpload label="" value={form.logo || ''} onChange={(url) => (form.logo = url)} />
+          </div>
           {#if form.logo}
-            <div class="flex items-center gap-3">
-              <img src={form.logo} alt="Logo" class="h-10 w-auto max-w-[120px] object-contain bg-secondary p-1" />
-              <button onclick={() => (form.logo = null)} class="text-xs text-destructive hover:underline">Remove</button>
-            </div>
+            <button 
+              onclick={() => { form.favicon = form.logo; alert('Favicon updated to use brand logo.'); }}
+              class="mt-3 text-[10px] uppercase tracking-wider font-bold border border-border px-3 py-1.5 hover:bg-muted transition-colors active:scale-95"
+            >
+              USE LOGO AS FAVICON
+            </button>
           {/if}
-          <ImageUpload label="" value={form.logo || ''} onChange={(url) => (form.logo = url)} />
+        </div>
+        <div>
+          <label for="s-logo-size" class="text-label block mb-1.5">NAV LOGO SIZE (PX)</label>
+          <p class="text-xs text-muted-foreground mb-2">Adjust the height of your logo in the navigation bar.</p>
+          <div class="flex items-center gap-4">
+            <input id="s-logo-size" type="range" min="16" max="64" step="2" bind:value={form.navLogoSize} class="flex-1 accent-foreground" />
+            <span class="text-sm font-mono w-10 text-right">{form.navLogoSize}px</span>
+          </div>
         </div>
       </div>
     </div>
@@ -341,6 +369,26 @@
           <input id="social-{key}" bind:value={form.socials[key]} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
         </div>
       {/each}
+    </div>
+
+    <!-- Order Emails -->
+    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
+      <h2 class="text-2xl font-display font-bold tracking-tight">ORDER NOTIFICATIONS</h2>
+      <p class="text-xs text-muted-foreground mb-4">Customize the automated messages sent to customers when their order status changes. Use <code class="bg-muted px-1 rounded">{"{orderId}"}</code> to inject the order reference.</p>
+      
+      <div class="space-y-4">
+        {#each [
+          { key: 'paid', label: 'PAYMENT CONFIRMED (PAID)' },
+          { key: 'shipped', label: 'ORDER SHIPPED' },
+          { key: 'delivered', label: 'ORDER DELIVERED' },
+          { key: 'cancelled', label: 'ORDER CANCELLED' }
+        ] as template}
+          <div>
+            <label for="template-{template.key}" class="text-label block mb-1.5">{template.label}</label>
+            <textarea id="template-{template.key}" bind:value={form.emailTemplates[template.key]} rows={2} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
+          </div>
+        {/each}
+      </div>
     </div>
 
     <!-- Footer Content -->

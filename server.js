@@ -142,6 +142,24 @@ const upload = multer({
   },
 });
 
+// ─── Cloudinary Garbage Collector Helper ──────────────────────────────────────
+const deleteCloudinaryAsset = async (url) => {
+  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return;
+  try {
+    const parts = url.split('/');
+    const folderIndex = parts.indexOf('others-store');
+    if (folderIndex !== -1) {
+      const publicIdWithExt = parts.slice(folderIndex).join('/');
+      const publicId = publicIdWithExt.replace(/\.[^/.]+$/, "");
+      const isVideo = url.match(/\.(mp4|webm)$/i);
+      await cloudinary.uploader.destroy(publicId, { resource_type: isVideo ? 'video' : 'image' });
+      console.log(`[Cloudinary] Deleted asset: ${publicId}`);
+    }
+  } catch (err) {
+    console.warn(`[Cloudinary] Failed to delete asset: ${url}`, err.message);
+  }
+};
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -233,9 +251,16 @@ async function writeData(blob) {
 app.delete('/api/products/:id', basicAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await Product.deleteOne({ id });
-    if (result.deletedCount === 0)
-      return res.status(404).json({ error: 'Product not found.' });
+    const target = await Product.findOne({ id }).lean();
+    if (!target) return res.status(404).json({ error: 'Product not found.' });
+    
+    // Garbage collect assets
+    if (target.image) await deleteCloudinaryAsset(target.image);
+    if (target.images && target.images.length) {
+      for (const img of target.images) await deleteCloudinaryAsset(img);
+    }
+    
+    await Product.deleteOne({ id });
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/products/:id', err);
@@ -247,9 +272,13 @@ app.delete('/api/products/:id', basicAuth, async (req, res) => {
 app.delete('/api/community/:id', basicAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await Article.deleteOne({ id });
-    if (result.deletedCount === 0)
-      return res.status(404).json({ error: 'Post not found.' });
+    const target = await Article.findOne({ id }).lean();
+    if (!target) return res.status(404).json({ error: 'Post not found.' });
+
+    // Garbage collect asset
+    if (target.image) await deleteCloudinaryAsset(target.image);
+
+    await Article.deleteOne({ id });
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/community/:id', err);
@@ -261,9 +290,17 @@ app.delete('/api/community/:id', basicAuth, async (req, res) => {
 app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await Lookbook.deleteOne({ id });
-    if (result.deletedCount === 0)
-      return res.status(404).json({ error: 'Lookbook not found.' });
+    const target = await Lookbook.findOne({ id }).lean();
+    if (!target) return res.status(404).json({ error: 'Lookbook not found.' });
+
+    // Garbage collect assets
+    if (target.items && target.items.length) {
+      for (const item of target.items) {
+        if (item.url) await deleteCloudinaryAsset(item.url);
+      }
+    }
+
+    await Lookbook.deleteOne({ id });
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/lookbooks/:id', err);
@@ -275,6 +312,10 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
 async function sendCustomerStatusEmail(order) {
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !order.email) return;
   try {
+    const site = await Settings.findOne({ _id: 'main' }).lean();
+    const siteName = site?.name || 'Others.';
+    const templates = site?.emailTemplates || {};
+
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 587,
@@ -282,44 +323,61 @@ async function sendCustomerStatusEmail(order) {
       secure: Number(process.env.SMTP_PORT) === 465,
     });
 
-    const statuses = {
-      shipped: 'has formally shipped',
-      delivered: 'has been delivered',
-      cancelled: 'has been cancelled',
-      paid: 'has been paid'
+    const statusMap = {
+      shipped: 'shipped',
+      delivered: 'delivered',
+      cancelled: 'cancelled',
+      paid: 'confirmed'
     };
-    const friendlyStatus = statuses[order.status] || `status is now: ${order.status}`;
-    const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${i.size || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
+    
+    // Get custom template or fallback
+    let messageBody = templates[order.status] || `Your order status has been updated to: ${order.status}.`;
+    // Inject order ID
+    messageBody = messageBody.replace(/{orderId}/g, `<strong>#${order.id}</strong>`);
+
+    const itemsHtml = (order.items || []).map(i => `
+      <li style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 14px;">
+          ${i.image ? `<img src="${i.image}" style="width: 32px; height: 32px; object-fit: cover; margin-right: 12px; vertical-align: middle; background: #f5f5f5;" />` : ''}
+          ${i.quantity} &times; ${i.name} <span style="color:#888; font-size:11px; margin-left: 4px;">(${i.size || '-'})</span>
+        </span> 
+        <span style="font-weight: 600; font-size: 14px;">${site?.currency || 'R'}${(i.price * i.quantity).toFixed(2)}</span>
+      </li>`).join('');
 
     await transporter.sendMail({
-      from: `"Others. Store" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
+      from: `"${siteName}" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
       to: order.email,
-      subject: `Order Update: #${order.id} ${friendlyStatus}`,
+      subject: `Order Update: #${order.id} [${statusMap[order.status]?.toUpperCase() || order.status.toUpperCase()}]`,
       html: `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
-          <div style="text-align: center; margin-bottom: 40px;">
-            <h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">OTHERS.</h1>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 48px 24px; background-color: #ffffff; color: #111111; line-height: 1.6;">
+          <div style="text-align: center; margin-bottom: 48px;">
+            ${site?.logo ? `<img src="${site.logo}" alt="${siteName}" style="max-height: 48px; max-width: 200px; display: block; margin: 0 auto;" />` : `<h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">${siteName}</h1>`}
           </div>
           
-          <p style="font-size: 16px; margin-bottom: 20px;">Hi ${order.customer.split(' ')[0]},</p>
-          <p style="font-size: 16px; margin-bottom: 30px;">This is an update regarding your recent purchase. Your order <strong>#${order.id}</strong> ${friendlyStatus}.</p>
+          <p style="font-size: 16px; margin-bottom: 24px;">Hi ${order.customer.split(' ')[0] || 'there'},</p>
+          <p style="font-size: 16px; margin-bottom: 32px; color: #333;">${messageBody}</p>
           
           ${order.adminNote ? `
-          <div style="background-color: #f9f9f9; padding: 20px; border-left: 3px solid #111; margin-bottom: 30px;">
-            <p style="margin: 0; font-size: 15px; font-style: italic; color: #333;">"${order.adminNote}"</p>
+          <div style="background-color: #f7f7f7; padding: 24px; border-left: 2px solid #111; margin-bottom: 32px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 14px; font-style: italic; color: #444; line-height: 1.5;">"${order.adminNote}"</p>
           </div>
           ` : ''}
           
-          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #eaeaea; padding-bottom: 10px; margin-bottom: 15px;">Order Details</h3>
-          <ul style="list-style: none; padding: 0; margin: 0 0 30px; font-size: 15px;">
-            ${itemsHtml}
-          </ul>
+          <div style="margin-bottom: 40px; border: 1px solid #eee; padding: 24px; border-radius: 8px;">
+            <h3 style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #888; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-top:0; margin-bottom: 16px;">Order Details</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              ${itemsHtml}
+            </ul>
+            <div style="padding-top: 16px; text-align: right; font-size: 16px; font-weight: 700;">
+              Total: ${site?.currency || 'R'}${order.total.toFixed(2)}
+            </div>
+          </div>
           
-          <p style="font-size: 16px; margin-top: 45px; margin-bottom: 5px;">Thank you for shopping with us.</p>
-          <p style="font-size: 15px; color: #555; margin-top: 0;">&mdash; The Others. Team</p>
+          <p style="font-size: 16px; margin-top: 48px; margin-bottom: 8px; text-align: center; font-weight: 500;">Thank you for shopping with ${siteName}.</p>
           
-          <div style="text-align: center; margin-top: 50px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.1em;">
-            <p>&copy; ${new Date().getFullYear()} Others. All rights reserved.</p>
+          <div style="text-align: center; margin-top: 64px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid #f0f0f0; padding-top: 32px;">
+            ${site?.footerTagline ? `<p style="margin-bottom: 8px;">${site.footerTagline}</p>` : ''}
+            <p>&copy; ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
           </div>
         </div>
       `
@@ -413,6 +471,39 @@ app.post('/api/upload/multi', basicAuth, upload.array('images', 20), (req, res) 
 });
 
 // ─── API: Store Data ──────────────────────────────────────────────────────────
+
+// ─── PWA & Favicon Manifest ───────────────────────────────────────────────────
+app.get('/manifest.json', async (req, res) => {
+  try {
+    const site = await Settings.findOne({ _id: 'main' }).lean();
+    if (!site) return res.status(404).json({ error: 'Settings not found.' });
+
+    const name = site.name || 'Others.';
+    const iconBase = site.favicon || site.logo || '';
+    
+    let icons = [];
+    if (iconBase.includes('cloudinary.com')) {
+      icons = [
+        { src: iconBase.replace('/upload/', '/upload/c_pad,w_192,h_192/'), sizes: '192x192', type: 'image/png' },
+        { src: iconBase.replace('/upload/', '/upload/c_pad,w_512,h_512/'), sizes: '512x512', type: 'image/png' },
+        { src: iconBase.replace('/upload/', '/upload/c_pad,w_180,h_180/'), sizes: '180x180', type: 'image/png', purpose: 'apple-touch-icon' }
+      ];
+    }
+
+    res.json({
+      name,
+      short_name: name,
+      start_url: '/',
+      display: 'standalone',
+      background_color: site.colors?.background || '#ffffff',
+      theme_color: site.colors?.primary || '#111111',
+      icons
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate manifest.' });
+  }
+});
+
 app.get('/api/data', async (req, res) => {
   try {
     res.json(await readData());
@@ -462,13 +553,19 @@ app.post('/api/newsletter', async (req, res) => {
 
 // ─── API: Newsletter Broadcast (Admin Only) ──────────────────────────────────
 app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
-  const { subject, html } = req.body;
+  const { subject, html, subscriberIds } = req.body;
   if (!subject || !html) return res.status(400).json({ error: 'Subject and HTML body required.' });
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return res.status(500).json({ error: 'SMTP not configured on server.' });
 
   try {
-    const subscribers = await Subscriber.find().lean();
-    if (subscribers.length === 0) return res.status(400).json({ error: 'No active subscribers found.' });
+    let query = {};
+    if (subscriberIds && Array.isArray(subscriberIds) && subscriberIds.length > 0) {
+      query = { _id: { $in: subscriberIds } };
+    }
+
+    const subscribers = await Subscriber.find(query).lean();
+    if (subscribers.length === 0) return res.status(400).json({ error: 'No active recipients found matching selection.' });
+    
     const site = await Settings.findOne({ _id: 'main' }).lean();
     const siteName = site?.name || 'Others.';
 
@@ -479,32 +576,41 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
       secure: Number(process.env.SMTP_PORT) === 465,
     });
 
-    const bccList = subscribers.map(s => s.email).join(', ');
-
-    await transporter.sendMail({
-      from: `"${siteName}" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
-      bcc: bccList, 
-      subject: subject,
-      html: `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
-          <div style="text-align: center; margin-bottom: 40px;">
-            ${site?.logo ? `<img src="${site.logo}" alt="${siteName}" style="max-height: 45px; max-width: 200px; display: block; margin: 0 auto;" />` : `<h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">${siteName}</h1>`}
-          </div>
-          
-          <div style="font-size: 16px; margin-bottom: 30px;">
-            ${html}
-          </div>
-          
-          <div style="text-align: center; margin-top: 50px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid #eaeaea; padding-top: 30px;">
-            <p>${site?.footerTagline || ''}</p>
-            <p>&copy; ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
-          </div>
+    const emailHtml = `
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 40px;">
+          ${site?.logo ? `<img src="${site.logo}" alt="${siteName}" style="max-height: 45px; max-width: 200px; display: block; margin: 0 auto;" />` : `<h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">${siteName}</h1>`}
         </div>
-      `
-    });
+        
+        <div style="font-size: 16px; margin-bottom: 30px;">
+          ${html}
+        </div>
+        
+        <div style="text-align: center; margin-top: 50px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid #eaeaea; padding-top: 30px;">
+          <p>${site?.footerTagline || ''}</p>
+          <p>&copy; ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
+        </div>
+      </div>
+    `;
 
-    console.log(`[Broadcast] Delivered standard HTML newsletter to ${subscribers.length} recipients`);
-    res.json({ ok: true, sentCount: subscribers.length });
+    // Process individually for privacy and deliverability
+    let sentCount = 0;
+    for (const sub of subscribers) {
+      try {
+        await transporter.sendMail({
+          from: `"${siteName}" <${process.env.SMTP_FROM || process.env.ADMIN_EMAIL}>`,
+          to: sub.email,
+          subject: subject,
+          html: emailHtml
+        });
+        sentCount++;
+      } catch (mailErr) {
+        console.warn(`[Broadcast] Failed to send to ${sub.email}:`, mailErr.message);
+      }
+    }
+
+    console.log(`[Broadcast] Delivered ${sentCount}/${subscribers.length} individual emails`);
+    res.json({ ok: true, sentCount });
   } catch (err) {
     console.error('POST /api/newsletter/broadcast', err);
     res.status(500).json({ error: 'Mail delivery failed. Check your SMTP configurations.' });

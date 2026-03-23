@@ -67,7 +67,7 @@
           class="{getGridClass(showcase.length, i)} {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'}"
           style="animation-delay:{0.1 + i * 0.15}s"
         >
-          <img src={getOptimizedUrl(img, 800)} srcset={getSrcset(img)} sizes="(max-width: 768px) 50vw, 25vw" alt={lb.title} class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />
+          <img src={getOptimizedUrl(img, 1200)} srcset={getSrcset(img)} sizes="(max-width: 768px) 50vw, 25vw" alt={lb.title} class="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" loading="lazy" />
           <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500"></div>
           <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <span class="text-label text-white tracking-widest">{i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE'}</span>

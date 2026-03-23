@@ -3,6 +3,7 @@
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
+  import Loader from '../components/Loader.svelte';
   import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
 
   export let lookbookId = '';
@@ -43,10 +44,8 @@
   {/if}
 </svelte:head>
 
-{#if loading}
-  <div class="flex min-h-screen items-center justify-center bg-background">
-    <div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div>
-  </div>
+{#if loading || !data}
+  <Loader />
 {:else if !lb}
   <div class="flex min-h-screen items-center justify-center flex-col gap-4">
     <p class="text-muted-foreground">Lookbook not found.</p>
@@ -54,7 +53,7 @@
   </div>
 {:else}
   <div class="min-h-screen">
-    <Navbar siteName={data.site.name} logo={data.site.logo} />
+    <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
     <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <!-- Header -->
@@ -93,7 +92,7 @@
                 class="group w-full aspect-[4/5] overflow-hidden bg-secondary block"
               >
                 <!-- w-full h-full object-cover ensures the image perfectly crops the aspect ratio without stretching the actual pixels -->
-                <img src={getOptimizedUrl(item.url, 800)} srcset={getSrcset(item.url)} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" alt={item.caption || lb.title} class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700" loading="lazy" />
+                <img src={getOptimizedUrl(item.url, 1200)} srcset={getSrcset(item.url)} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" alt={item.caption || lb.title} class="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-700" loading="lazy" />
               </button>
             {/if}
             {#if item.caption}

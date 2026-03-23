@@ -34,7 +34,7 @@
     <a href="/products" onclick={shopAll} class="text-label hover:text-foreground transition-colors border-b border-current pb-0.5">VIEW ALL</a>
   </div>
 
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
     {#each featured as p, i}
       <div class={visible ? 'opacity-0 animate-fade-up' : 'opacity-0'} style="animation-delay:{i * 0.1}s">
         <ProductCard product={p} {currency} />

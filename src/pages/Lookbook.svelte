@@ -1,8 +1,9 @@
 <script>
   import { onMount } from 'svelte';
+  import Footer from '../components/Footer.svelte';
+  import Loader from '../components/Loader.svelte';
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
-  import Footer from '../components/Footer.svelte';
   import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
 
   let data = null;
@@ -25,12 +26,10 @@
 </svelte:head>
 
 {#if loading || !data}
-  <div class="flex min-h-screen items-center justify-center bg-background">
-    <div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div>
-  </div>
+  <Loader />
 {:else}
   <div class="min-h-screen">
-    <Navbar siteName={data.site.name} logo={data.site.logo} />
+    <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
     <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <div class="mb-12">
@@ -52,11 +51,11 @@
               <div class="aspect-[3/4] overflow-hidden bg-secondary mb-4 relative">
                 {#if cover}
                   <img
-                    src={getOptimizedUrl(cover, 800)}
+                    src={getOptimizedUrl(cover, 1200)}
                     srcset={getSrcset(cover)}
                     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     alt={lb.title}
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
                     loading="lazy"
                   />
                 {:else}

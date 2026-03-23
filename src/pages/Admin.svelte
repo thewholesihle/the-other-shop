@@ -10,6 +10,7 @@
   import AdminPages from '../components/admin/AdminPages.svelte';
   import AdminSubscribers from '../components/admin/AdminSubscribers.svelte';
   import AdminNewsletter from '../components/admin/AdminNewsletter.svelte';
+  import Loader from '../components/Loader.svelte';
 
   let data = null;
   let loading = true;
@@ -79,9 +80,7 @@
 </script>
 
 {#if loading}
-  <div class="flex min-h-screen items-center justify-center bg-background">
-    <div class="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin"></div>
-  </div>
+  <Loader />
 {:else if !data}
   <div class="flex min-h-screen items-center justify-center flex-col gap-4">
     <p class="text-muted-foreground">Could not connect to the database.</p>
