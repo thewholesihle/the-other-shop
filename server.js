@@ -2,6 +2,7 @@
 require('dotenv').config();
 
 const dns      = require('dns');
+const net      = require('net');
 const express  = require('express');
 const path     = require('path');
 const fs       = require('fs');
@@ -154,16 +155,48 @@ const PF_HOST = PF.sandbox
   : 'https://www.payfast.co.za/eng/process';
 
 // ─── Email Notifier ──────────────────────────────────────────────────────────
-function createTransporter() {
+// Nodemailer resolves SMTP hostnames itself — it ignores dns.setDefaultResultOrder
+// and any `family` option — by resolving both A and AAAA records and picking a
+// RANDOM address from the combined list (see nodemailer/lib/shared/index.js
+// resolveHostname). On hosts with no outbound IPv6 route (Render included) that
+// means requests intermittently get handed an unreachable IPv6 address. Nodemailer
+// only skips its own resolution when `host` is already a literal IP, so we resolve
+// the A record ourselves and connect by IP, with `servername` set so TLS SNI/cert
+// checks still validate against the real hostname.
+const SMTP_HOST_TTL_MS = 5 * 60 * 1000;
+let smtpHostCache = null;
+
+async function resolveSmtpHostIPv4(hostname) {
+  if (!hostname || net.isIP(hostname)) return hostname;
+  const now = Date.now();
+  if (smtpHostCache && smtpHostCache.hostname === hostname && now - smtpHostCache.resolvedAt < SMTP_HOST_TTL_MS) {
+    return smtpHostCache.ip;
+  }
+  try {
+    const addresses = await dns.promises.resolve4(hostname);
+    if (addresses?.length) {
+      const ip = addresses[Math.floor(Math.random() * addresses.length)];
+      smtpHostCache = { hostname, ip, resolvedAt: now };
+      return ip;
+    }
+  } catch (err) {
+    console.error(`[Mail] Could not resolve an IPv4 address for ${hostname}, connecting by hostname instead (may hit IPv6): ${err.message}`);
+  }
+  return hostname;
+}
+
+async function createTransporter() {
+  const hostname = process.env.SMTP_HOST;
+  const host = await resolveSmtpHostIPv4(hostname);
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+    host,
+    servername: hostname, // keep TLS validating against the real hostname since `host` is now a literal IP
     port: Number(process.env.SMTP_PORT) || 587,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
     secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for 587
-    family: 4, // force IPv4 — avoids connection timeouts on hosts with broken IPv6 SMTP routes
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 15_000,
@@ -194,7 +227,7 @@ async function sendOrderNotification(order) {
   if (recipients.length === 0 || !process.env.SMTP_HOST) return;
 
   try {
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
 
     console.log(`[Mail] Sending order notification for #${order.id} to ${recipients.join(', ')}...`);
 
@@ -481,7 +514,7 @@ async function sendCustomerStatusEmail(order) {
       }
     }
 
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
 
     const statusMap = {
       shipped: 'shipped',
@@ -798,7 +831,7 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
     const site = await Settings.findOne({ _id: 'main' }).lean();
     const siteName = site?.name || 'Others.';
 
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
 
     const emailHtml = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
@@ -1294,7 +1327,7 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
   
   lastErrorEmailTime = now;
   try {
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
 
     const isConnected = mongoose.connection.readyState === 1;
     let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
