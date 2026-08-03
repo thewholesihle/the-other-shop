@@ -74,6 +74,12 @@ const CategorySchema = new mongoose.Schema({
 }, { strict: true, versionKey: false });
 
 // ── Product ───────────────────────────────────────────────────────────────────
+const VariantSchema = new mongoose.Schema({
+  size:  { type: String, default: '' },
+  color: { type: String, default: '' },
+  stock: { type: Number, default: 0, min: 0 },
+}, { _id: false, strict: true });
+
 const ProductSchema = new mongoose.Schema({
   id:          { type: String, required: true, unique: true },
   name:        { type: String, required: true, trim: true },
@@ -84,7 +90,10 @@ const ProductSchema = new mongoose.Schema({
   description: { type: String, default: '' },
   sizes:       [{ type: String }],
   colors:      [{ type: String }],
+  // `stock` is a denormalized total kept in sync with `variants` (sum of all variant stock).
+  // `variants` is the source of truth for per size/color availability.
   stock:       { type: Number, default: 0, min: 0 },
+  variants:    [VariantSchema],
   isNew:       { type: Boolean, default: false },
   isFeatured:  { type: Boolean, default: false },
 }, { strict: true, versionKey: false, suppressReservedKeysWarning: true });
@@ -96,6 +105,7 @@ const OrderItemSchema = new mongoose.Schema({
   price:    Number,
   quantity: Number,
   size:     String,
+  color:    { type: String, default: '' },
   image:    String,
 }, { _id: false, strict: true });
 

@@ -16,6 +16,7 @@
 
   let data = null;
   let loading = true;
+  let saving = false;
   let saveError = null;
   let saveSuccess = false;
   let activeSection = 'dashboard';
@@ -30,20 +31,25 @@
   // ── Write to MongoDB (via POST /api/data) ──────────────────────────────────
   async function saveData(updated) {
     saveError = null;
-    const res = await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updated),
-      credentials: 'include',
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `Save failed: ${res.status}`);
+    saving = true;
+    try {
+      const res = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Save failed: ${res.status}`);
+      }
+      saveSuccess = true;
+      setTimeout(() => (saveSuccess = false), 2000);
+      // Re-fetch fresh data from DB to confirm what was persisted
+      data = await loadData();
+    } finally {
+      saving = false;
     }
-    saveSuccess = true;
-    setTimeout(() => (saveSuccess = false), 2000);
-    // Re-fetch fresh data from DB to confirm what was persisted
-    data = await loadData();
   }
 
   onMount(async () => {
@@ -62,17 +68,17 @@
     const updated = { ...data, [key]: value };
     data = updated; // optimistic update
     try { await saveData(updated); }
-    catch (e) { saveError = e.message; }
+    catch (e) { saveError = e.message; throw e; }
   }
 
-  function updateProducts(products)     { updateSection('products',    products);     }
-  function updateOrders(orders)         { updateSection('orders',      orders);       }
-  function updateSite(site)             { updateSection('site',        site);         }
-  function updateLookbooks(lookbooks)   { updateSection('lookbooks',   lookbooks);    }
-  function updateCommunity(community)   { updateSection('community',   community);    }
-  function updatePages(pages)           { updateSection('pages',       pages);        }
-  function updateSubscribers(subs)      { updateSection('subscribers', subs);         }
-  function updateCategories(cats)       { updateSection('categories',  cats);         }
+  function updateProducts(products)     { return updateSection('products',    products);     }
+  function updateOrders(orders)         { return updateSection('orders',      orders);       }
+  function updateSite(site)             { return updateSection('site',        site);         }
+  function updateLookbooks(lookbooks)   { return updateSection('lookbooks',   lookbooks);    }
+  function updateCommunity(community)   { return updateSection('community',   community);    }
+  function updatePages(pages)           { return updateSection('pages',       pages);        }
+  function updateSubscribers(subs)      { return updateSection('subscribers', subs);         }
+  function updateCategories(cats)       { return updateSection('categories',  cats);         }
 
   async function resetData() {
     if (!confirm('Reset ALL store data? This cannot be undone.')) return;
@@ -92,12 +98,17 @@
   </div>
 {:else}
   <!-- Global save/error toast -->
-  {#if saveError}
+  {#if saving}
+    <div class="fixed bottom-4 right-4 z-50 bg-foreground text-primary-foreground px-4 py-2 text-sm shadow-lg animate-fade-up flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      Saving…
+    </div>
+  {:else if saveError}
     <div class="fixed bottom-4 right-4 z-50 bg-destructive text-destructive-foreground px-4 py-2 text-sm shadow-lg animate-fade-up max-w-xs">
       {saveError}
     </div>
   {/if}
-  {#if saveSuccess}
+  {#if !saving && saveSuccess}
     <div class="fixed bottom-4 right-4 z-50 bg-foreground text-primary-foreground px-4 py-2 text-sm shadow-lg animate-fade-up flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
       Saved to database

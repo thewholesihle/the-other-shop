@@ -1,6 +1,7 @@
 'use strict';
 require('dotenv').config();
 
+const dns      = require('dns');
 const express  = require('express');
 const path     = require('path');
 const fs       = require('fs');
@@ -13,6 +14,11 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+
+// Some hosts (e.g. Render) resolve SMTP hostnames to an IPv6 address that has
+// no outbound route, which hangs until nodemailer's connection times out.
+// Preferring IPv4 avoids that dead-end entirely.
+dns.setDefaultResultOrder('ipv4first');
 
 const { connect, getIsConnected } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
@@ -148,6 +154,22 @@ const PF_HOST = PF.sandbox
   : 'https://www.payfast.co.za/eng/process';
 
 // ─── Email Notifier ──────────────────────────────────────────────────────────
+function createTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for 587
+    family: 4, // force IPv4 — avoids connection timeouts on hosts with broken IPv6 SMTP routes
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
+  });
+}
+
 async function sendOrderNotification(order) {
   let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
   
@@ -172,19 +194,11 @@ async function sendOrderNotification(order) {
   if (recipients.length === 0 || !process.env.SMTP_HOST) return;
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for 587
-    });
+    const transporter = createTransporter();
 
     console.log(`[Mail] Sending order notification for #${order.id} to ${recipients.join(', ')}...`);
 
-    const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${i.size || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
+    const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${[i.size, i.color].filter(Boolean).join(' / ') || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
     
     await transporter.sendMail({
       from: `"Others. Store" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
@@ -216,7 +230,7 @@ async function sendOrderNotification(order) {
     });
     console.log(`[Email] Notification sent for order ${order.id}`);
   } catch (err) {
-    console.error('[Email] Failed to send invoice email:', err.message);
+    console.error(`[Email] Failed to send invoice email: ${err.message} (code: ${err.code || 'n/a'})`);
   }
 }
 
@@ -271,6 +285,30 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ─── Variant Stock Helpers ──────────────────────────────────────────────────
+// Products track stock per size/color combination in `variants`; the top-level
+// `stock` field is a denormalized total kept in sync so existing aggregate
+// reads (dashboard alerts, sold-out badges) keep working unchanged.
+
+function findVariant(product, size, color) {
+  const s = size || '', c = color || '';
+  return (product.variants || []).find(v => (v.size || '') === s && (v.color || '') === c);
+}
+
+/** Adjust a specific variant's stock (and the product's aggregate total) by delta. */
+async function adjustVariantStock(query, size, color, delta) {
+  const s = size || '', c = color || '';
+  const result = await Product.updateOne(
+    { ...query, variants: { $elemMatch: { size: s, color: c } } },
+    { $inc: { 'variants.$[v].stock': delta, stock: delta } },
+    { arrayFilters: [{ 'v.size': s, 'v.color': c }] }
+  );
+  if (result.matchedCount === 0) {
+    // Legacy product with no matching variant — just adjust the aggregate so we don't lose the count.
+    await Product.updateOne(query, { $inc: { stock: delta } });
+  }
+}
+
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 
 /** Assemble the full store data shape expected by the frontend */
@@ -316,9 +354,13 @@ async function writeData(blob) {
   }
 
   if (blob.products) {
-    ops.push(...blob.products.map(p =>
-      Product.findOneAndUpdate({ id: p.id }, { $set: p }, { upsert: true })
-    ));
+    ops.push(...blob.products.map(p => {
+      // Keep the aggregate `stock` total in sync with per-variant stock entered in the admin UI.
+      if (Array.isArray(p.variants) && p.variants.length > 0) {
+        p = { ...p, stock: p.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0) };
+      }
+      return Product.findOneAndUpdate({ id: p.id }, { $set: p }, { upsert: true });
+    }));
   }
 
   if (blob.lookbooks) {
@@ -429,21 +471,17 @@ async function sendCustomerStatusEmail(order) {
   try {
     let siteName = 'Others.';
     let templates = {};
+    let site = null;
 
     if (mongoose.connection.readyState === 1) {
-      const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
+      site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
       if (site) {
         siteName = site.name || 'Others.';
         templates = site.emailTemplates || {};
       }
     }
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      secure: Number(process.env.SMTP_PORT) === 465,
-    });
+    const transporter = createTransporter();
 
     const statusMap = {
       shipped: 'shipped',
@@ -461,7 +499,7 @@ async function sendCustomerStatusEmail(order) {
       <li style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 14px;">
           ${i.image ? `<img src="${i.image}" style="width: 32px; height: 32px; object-fit: cover; margin-right: 12px; vertical-align: middle; background: #f5f5f5;" />` : ''}
-          ${i.quantity} &times; ${i.name} <span style="color:#888; font-size:11px; margin-left: 4px;">(${i.size || '-'})</span>
+          ${i.quantity} &times; ${i.name} <span style="color:#888; font-size:11px; margin-left: 4px;">(${[i.size, i.color].filter(Boolean).join(' / ') || '-'})</span>
         </span> 
         <span style="font-weight: 600; font-size: 14px;">${site?.currency || 'R'}${(i.price * i.quantity).toFixed(2)}</span>
       </li>`).join('');
@@ -506,7 +544,7 @@ async function sendCustomerStatusEmail(order) {
     });
     console.log(`[Email] Customer status update sent for order ${order.id}`);
   } catch (err) {
-    console.error('[Email] Failed to send customer email:', err.message);
+    console.error(`[Email] Failed to send customer email: ${err.message} (code: ${err.code || 'n/a'})`);
   }
 }
 
@@ -535,7 +573,7 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
           const pId = item.productId || item.id;
           let query = { id: pId };
           if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-          await Product.updateOne(query, { $inc: { stock: item.quantity } });
+          await adjustVariantStock(query, item.size, item.color, item.quantity);
         }
     }
 
@@ -567,8 +605,8 @@ app.delete('/api/orders/:id', basicAuth, async (req, res) => {
         const pId = item.productId || item.id;
         let query = { id: pId };
         if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-        const result = await Product.updateOne(query, { $inc: { stock: item.quantity } });
-        if (result.modifiedCount > 0) restorationCount++;
+        await adjustVariantStock(query, item.size, item.color, item.quantity);
+        restorationCount++;
       }
       console.log(`[Order API] Restored stock for ${restorationCount} items from deleted order ${id}`);
     }
@@ -760,12 +798,7 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
     const site = await Settings.findOne({ _id: 'main' }).lean();
     const siteName = site?.name || 'Others.';
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      secure: Number(process.env.SMTP_PORT) === 465,
-    });
+    const transporter = createTransporter();
 
     const emailHtml = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
@@ -864,36 +897,72 @@ app.post('/api/checkout', async (req, res) => {
   const grandTotal   = (subtotal + shippingCost).toFixed(2);
   const orderId      = `ORD-${Date.now()}`;
 
-  // ── Stock validation ──────────────────────────────────────────────────────
+  // ── Stock validation & deduction (per size/color variant) ──────────────────
   const orderItems = Array.isArray(order.items) ? order.items : [];
   const stockErrors = [];
-  const itemsToDeduct = [];
-  
+  const deducted = []; // successfully-deducted items, kept for rollback on partial failure
+
   for (const item of orderItems) {
     const pId = item.productId || item.id;
     let query = { id: pId };
     if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-    
+
     const product = await Product.findOne(query).lean();
     if (!product) {
       stockErrors.push(`"${item.name}" is no longer available.`);
-    } else if (product.stock < item.quantity) {
+      continue;
+    }
+
+    const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+    const size = item.size || '', color = item.color || '';
+    const variant = hasVariants ? findVariant(product, size, color) : null;
+    const available = hasVariants ? (variant?.stock ?? 0) : product.stock;
+    const variantLabel = [size, color].filter(Boolean).join(' / ');
+
+    if (hasVariants && !variant) {
+      stockErrors.push(`"${item.name}"${variantLabel ? ` (${variantLabel})` : ''} is no longer available in that size/color.`);
+      continue;
+    }
+    if (available < item.quantity) {
       stockErrors.push(
-        product.stock === 0
-          ? `"${item.name}" is sold out.`
-          : `"${item.name}" only has ${product.stock} unit${product.stock !== 1 ? 's' : ''} left (you requested ${item.quantity}).`
+        available === 0
+          ? `"${item.name}"${variantLabel ? ` (${variantLabel})` : ''} is sold out.`
+          : `"${item.name}"${variantLabel ? ` (${variantLabel})` : ''} only has ${available} unit${available !== 1 ? 's' : ''} left (you requested ${item.quantity}).`
+      );
+      continue;
+    }
+
+    // Deduct atomically and conditionally so two simultaneous checkouts can't both
+    // claim the last unit of the same size/color combination.
+    let result;
+    if (hasVariants) {
+      result = await Product.updateOne(
+        { ...query, variants: { $elemMatch: { size, color, stock: { $gte: item.quantity } } } },
+        { $inc: { 'variants.$[v].stock': -item.quantity, stock: -item.quantity } },
+        { arrayFilters: [{ 'v.size': size, 'v.color': color }] }
       );
     } else {
-      itemsToDeduct.push({ query, quantity: item.quantity });
+      result = await Product.updateOne(
+        { ...query, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } }
+      );
     }
-  }
-  if (stockErrors.length > 0) {
-    return res.status(400).json({ error: 'Some items are out of stock.', stockErrors });
+
+    if (result.modifiedCount === 0) {
+      stockErrors.push(`"${item.name}"${variantLabel ? ` (${variantLabel})` : ''} was just claimed by another order. Please try again.`);
+      continue;
+    }
+
+    deducted.push({ query, size, color, quantity: item.quantity, hasVariants });
   }
 
-  // Deduct stock safely now that we validated everything
-  for (const { query, quantity } of itemsToDeduct) {
-    await Product.updateOne(query, { $inc: { stock: -quantity } });
+  if (stockErrors.length > 0) {
+    // Roll back anything already deducted so a partial failure doesn't strand stock.
+    for (const d of deducted) {
+      if (d.hasVariants) await adjustVariantStock(d.query, d.size, d.color, d.quantity);
+      else await Product.updateOne(d.query, { $inc: { stock: d.quantity } });
+    }
+    return res.status(400).json({ error: 'Some items are out of stock.', stockErrors });
   }
 
   try {
@@ -967,9 +1036,9 @@ app.post('/api/payfast/cancel', async (req, res) => {
         const pId = item.productId || item.id;
         let query = { id: pId };
         if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-        await Product.updateOne(query, { $inc: { stock: item.quantity } });
+        await adjustVariantStock(query, item.size, item.color, item.quantity);
       }
-      
+
       console.log(`[PayFast] Order ${orderId} cancelled by user. Stock restored.`);
     }
 
@@ -1127,7 +1196,7 @@ app.post('/api/payfast/itn', async (req, res) => {
           const pId = item.productId || item.id;
           let query = { id: pId };
           if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-          await Product.updateOne(query, { $inc: { stock: item.quantity } });
+          await adjustVariantStock(query, item.size, item.color, item.quantity);
         }
       }
 
@@ -1225,15 +1294,7 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
   
   lastErrorEmailTime = now;
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      secure: Number(process.env.SMTP_PORT) === 465,
-    });
+    const transporter = createTransporter();
 
     const isConnected = mongoose.connection.readyState === 1;
     let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);

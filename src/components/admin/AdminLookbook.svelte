@@ -6,29 +6,40 @@
 
   let editing = null;
   let isNew = false;
+  let saving = false;
+  let deletingId = null;
 
   const empty = () => ({
     id: '', title: '', description: '', date: new Date().toISOString().slice(0,10),
     coverImage: '', items: []
   });
 
-  function handleSave() {
-    if (isNew) {
-      onUpdate([...lookbooks, { ...editing, id: `lb-${Date.now()}` }]);
-    } else {
-      onUpdate(lookbooks.map(l => l.id === editing.id ? editing : l));
+  async function handleSave() {
+    if (saving) return;
+    saving = true;
+    try {
+      if (isNew) {
+        await onUpdate([...lookbooks, { ...editing, id: `lb-${Date.now()}` }]);
+      } else {
+        await onUpdate(lookbooks.map(l => l.id === editing.id ? editing : l));
+      }
+      editing = null; isNew = false;
+    } finally {
+      saving = false;
     }
-    editing = null; isNew = false;
   }
 
   async function handleDelete(id) {
     if (!confirm('Are you sure you want to delete this lookbook?')) return;
+    deletingId = id;
     try {
       const res = await fetch('/api/lookbooks/' + id, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete lookbook.');
       onUpdate(lookbooks.filter(l => l.id !== id));
     } catch (err) {
       alert(err.message);
+    } finally {
+      deletingId = null;
     }
   }
 
@@ -85,8 +96,12 @@
           <button aria-label="Edit lookbook" onclick={() => { editing = { ...lb, items: lb.items ?? lb.images?.map(url => ({ type: 'image', url, caption: '' })) ?? [] }; isNew = false; }} class="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
           </button>
-          <button aria-label="Delete lookbook" onclick={() => handleDelete(lb.id)} class="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+          <button aria-label="Delete lookbook" onclick={() => handleDelete(lb.id)} disabled={deletingId === lb.id} class="p-1.5 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40 disabled:cursor-wait">
+            {#if deletingId === lb.id}
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            {:else}
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+            {/if}
           </button>
         </div>
       </div>
@@ -184,11 +199,16 @@
         </div>
 
         <div class="flex gap-3 pt-2">
-          <button onclick={handleSave} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
-            SAVE
+          <button onclick={handleSave} disabled={saving} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 disabled:cursor-wait">
+            {#if saving}
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              SAVING…
+            {:else}
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
+              SAVE
+            {/if}
           </button>
-          <button onclick={() => { editing = null; isNew = false; }} class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97]">CANCEL</button>
+          <button onclick={() => { editing = null; isNew = false; }} disabled={saving} class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] disabled:opacity-40">CANCEL</button>
         </div>
       </div>
     </div>

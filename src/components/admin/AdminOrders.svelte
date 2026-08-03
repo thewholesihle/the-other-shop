@@ -9,6 +9,7 @@
   let rejectingId = null;
   let rejectReason = '';
   let searchQuery = '';
+  let pendingId = null; // order id currently mid-request (status patch or delete)
 
   // Sort orders newest first
   $: sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
@@ -24,6 +25,7 @@
   });
 
   async function patchStatus(orderId, status, reason = '') {
+    pendingId = orderId;
     try {
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
@@ -35,6 +37,8 @@
       onUpdate(orders.map(o => o.id === orderId ? { ...o, status, adminNote: reason || o.adminNote } : o));
     } catch (e) {
       alert(`Failed to update order: ${e.message}`);
+    } finally {
+      pendingId = null;
     }
   }
 
@@ -55,12 +59,15 @@
 
   async function handleDelete(orderId) {
     if (!confirm('Are you sure you want to permanently delete this pending order?')) return;
+    pendingId = orderId;
     try {
       const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error((await res.json()).error);
       onUpdate(orders.filter(o => o.id !== orderId));
     } catch (e) {
       alert(`Failed to delete order: ${e.message}`);
+    } finally {
+      pendingId = null;
     }
   }
 
@@ -80,7 +87,7 @@
 
     const tableData = (order.items || []).map(item => [
       item.name,
-      item.size || '-',
+      [item.size, item.color].filter(Boolean).join(' / ') || '-',
       item.quantity.toString(),
       `${currency}${item.price.toFixed(2)}`,
       `${currency}${(item.price * item.quantity).toFixed(2)}`
@@ -88,7 +95,7 @@
 
     doc.autoTable({
       startY: 65,
-      head: [['Item', 'Size', 'Qty', 'Unit Price', 'Total']],
+      head: [['Item', 'Size/Color', 'Qty', 'Unit Price', 'Total']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [20, 20, 20] }
@@ -152,11 +159,14 @@
                order.status === 'pending_payment'? 'bg-yellow-100 text-yellow-700' :
                                                    'bg-muted text-muted-foreground'}"
             >{order.status.replace('_', ' ')}</span>
+            {#if pendingId === order.id}
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin text-muted-foreground"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            {/if}
 
             <!-- Delete pending order button -->
             {#if order.status.includes('pending')}
-              <button onclick={() => handleDelete(order.id)}
-                class="text-[10px] uppercase font-medium tracking-wider px-2 py-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors active:scale-95 ml-2"
+              <button onclick={() => handleDelete(order.id)} disabled={pendingId === order.id}
+                class="text-[10px] uppercase font-medium tracking-wider px-2 py-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors active:scale-95 ml-2 disabled:opacity-40 disabled:cursor-wait"
                 title="Delete Pending Order"
               >
                 ✕ DELETE
@@ -165,24 +175,24 @@
 
             <!-- Accept/Reject (shown for paid orders awaiting fulfillment decision) -->
             {#if order.status === 'paid'}
-              <button onclick={() => patchStatus(order.id, 'processing')}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-green-600 text-white hover:bg-green-700 transition-colors active:scale-95">
+              <button onclick={() => patchStatus(order.id, 'processing')} disabled={pendingId === order.id}
+                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-green-600 text-white hover:bg-green-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
                 ✓ MARK PROCESSING
               </button>
-              <button onclick={() => handleReject(order.id)}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95">
+              <button onclick={() => handleReject(order.id)} disabled={pendingId === order.id}
+                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
                 ✕ CANCEL
               </button>
             {/if}
 
             <!-- Move from processing to shipped -->
             {#if order.status === 'processing'}
-              <button onclick={() => patchStatus(order.id, 'shipped')}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 transition-colors active:scale-95">
+              <button onclick={() => patchStatus(order.id, 'shipped')} disabled={pendingId === order.id}
+                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
                 ✓ MARK SHIPPED
               </button>
-              <button onclick={() => handleReject(order.id)}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95">
+              <button onclick={() => handleReject(order.id)} disabled={pendingId === order.id}
+                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
                 ✕ CANCEL
               </button>
             {/if}
@@ -191,7 +201,8 @@
             <select
               value={order.status}
               onchange={(e) => patchStatus(order.id, e.target.value)}
-              class="bg-transparent border border-border px-2 py-1 text-[10px] uppercase font-medium tracking-[0.1em] focus:outline-none focus:border-foreground transition-colors cursor-pointer ml-auto"
+              disabled={pendingId === order.id}
+              class="bg-transparent border border-border px-2 py-1 text-[10px] uppercase font-medium tracking-[0.1em] focus:outline-none focus:border-foreground transition-colors cursor-pointer ml-auto disabled:opacity-40 disabled:cursor-wait"
             >
               {#each ['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] as s}
                 <option value={s}>{s.replace('_', ' ')}</option>
@@ -228,7 +239,7 @@
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted-foreground flex items-center gap-2">
                 {#if item.image}<img src={item.image} alt="" class="w-6 h-6 object-cover bg-secondary" />{/if}
-                <span>{item.quantity}× {item.name} <span class="text-xs">({item.size})</span></span>
+                <span>{item.quantity}× {item.name} <span class="text-xs">({[item.size, item.color].filter(Boolean).join(' / ') || '-'})</span></span>
               </span>
               <span class="tabular-nums">{currency}{(item.price * item.quantity).toFixed(2).replace('.', ',')}</span>
             </div>

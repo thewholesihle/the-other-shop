@@ -183,7 +183,7 @@
                   <img src={getOptimizedUrl(item.image, 200)} srcset={getSrcset(item.image)} sizes="80px" alt={item.name} class="w-20 h-24 object-cover bg-secondary flex-shrink-0" loading="lazy" />
                   <div class="flex-1 min-w-0">
                     <p class="font-medium">{item.name}</p>
-                    <p class="text-xs text-muted-foreground mt-0.5">Size: {item.size}</p>
+                    <p class="text-xs text-muted-foreground mt-0.5">{[item.size && `Size: ${item.size}`, item.color && `Color: ${item.color}`].filter(Boolean).join(' · ')}</p>
                     <p class="text-sm font-medium mt-1 tabular-nums">{currency}{item.price.toFixed(2)}</p>
                     <div class="flex items-center gap-2 mt-2">
                       <button aria-label="Decrease quantity" onclick={() => cart.updateQuantity(item.key, item.quantity - 1)} class="w-6 h-6 border border-border flex items-center justify-center hover:bg-muted transition-colors text-sm">−</button>
@@ -335,7 +335,7 @@
                 <img src={item.image} alt={item.name} class="w-12 h-12 object-cover bg-secondary flex-shrink-0" />
                 <div class="flex-1">
                   <p class="font-medium">{item.name}</p>
-                  <p class="text-xs text-muted-foreground">{item.size} × {item.quantity}</p>
+                  <p class="text-xs text-muted-foreground">{[item.size, item.color].filter(Boolean).join(' / ')} × {item.quantity}</p>
                 </div>
                 <span class="tabular-nums">{currency}{(item.price * item.quantity).toFixed(2)}</span>
               </div>

@@ -33,16 +33,41 @@
     if (!product) return;
     if (product.sizes?.length > 0 && !selectedSize) return;
     if (product.colors?.length > 0 && !selectedColor) return;
-    
+    if (currentVariantStock <= 0) return;
+
     cart.addItem(product, selectedSize, selectedColor);
     added = true;
     setTimeout(() => (added = false), 2000);
   }
 
+  function findVariant(size, color) {
+    return (product?.variants || []).find(v => (v.size || '') === (size || '') && (v.color || '') === (color || ''));
+  }
+
+  // Once both dimensions the product actually has are chosen, disable a size/color
+  // if the specific combination has no stock left — this is what prevents ordering
+  // a size/color pairing that's actually sold out while the product overall isn't.
+  function sizeHasStock(size) {
+    if (!hasVariants) return true;
+    if (product.colors?.length > 0 && !selectedColor) return true; // don't know yet
+    const v = findVariant(size, selectedColor);
+    return (v?.stock ?? 0) > 0;
+  }
+  function colorHasStock(color) {
+    if (!hasVariants) return true;
+    if (product.sizes?.length > 0 && !selectedSize) return true; // don't know yet
+    const v = findVariant(selectedSize, color);
+    return (v?.stock ?? 0) > 0;
+  }
+
   $: images = product ? (product.images?.length ? product.images : [product.image]) : [];
+  $: hasVariants = product?.variants?.length > 0;
   $: missingSize = product?.sizes?.length > 0 && !selectedSize;
   $: missingColor = product?.colors?.length > 0 && !selectedColor;
-  $: disabledAdd = product?.stock === 0 || missingSize || missingColor;
+  $: currentVariantStock = hasVariants
+    ? (missingSize || missingColor ? null : (findVariant(selectedSize, selectedColor)?.stock ?? 0))
+    : (product?.stock ?? 0);
+  $: disabledAdd = product?.stock === 0 || missingSize || missingColor || currentVariantStock === 0;
 </script>
 
 <svelte:head>
@@ -126,7 +151,8 @@
                 {#each product.colors as color}
                   <button
                     onclick={() => (selectedColor = color)}
-                    class="text-xs border transition-colors px-3 py-1.5 {selectedColor === color ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'}">
+                    disabled={!colorHasStock(color)}
+                    class="text-xs border transition-colors px-3 py-1.5 {selectedColor === color ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'} {!colorHasStock(color) ? 'opacity-40 cursor-not-allowed line-through' : ''}">
                     {color}
                   </button>
                 {/each}
@@ -142,8 +168,8 @@
                 {#each product.sizes as size}
                   <button
                     onclick={() => (selectedSize = size)}
-                    disabled={product.stock === 0}
-                    class="border px-4 py-2 text-sm transition-colors {selectedSize === size ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'} {product.stock === 0 ? 'opacity-40 cursor-not-allowed line-through' : ''}">
+                    disabled={product.stock === 0 || !sizeHasStock(size)}
+                    class="border px-4 py-2 text-sm transition-colors {selectedSize === size ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'} {product.stock === 0 || !sizeHasStock(size) ? 'opacity-40 cursor-not-allowed line-through' : ''}">
                     {size}
                   </button>
                 {/each}
@@ -167,6 +193,8 @@
                 SELECT SIZE
               {:else if missingColor}
                 SELECT COLOR
+              {:else if currentVariantStock === 0}
+                SOLD OUT IN THIS SIZE/COLOR
               {:else}
                 ADD TO CART
               {/if}
@@ -177,8 +205,8 @@
           </div>
 
           <!-- Stock note -->
-          {#if product.stock > 0 && product.stock <= 5}
-            <p class="text-xs text-store-rust font-medium">Only {product.stock} left in stock</p>
+          {#if currentVariantStock !== null && currentVariantStock > 0 && currentVariantStock <= 5}
+            <p class="text-xs text-store-rust font-medium">Only {currentVariantStock} left in stock</p>
           {/if}
         </div>
       </div>

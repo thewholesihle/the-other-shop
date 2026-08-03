@@ -7,11 +7,18 @@
   let faq = Array.isArray(pages.faq) ? JSON.parse(JSON.stringify(pages.faq)) : (pages.faq?.items ? JSON.parse(JSON.stringify(pages.faq.items)) : []);
   let contact = pages.contact ? JSON.parse(JSON.stringify(pages.contact)) : { address: '', details: [] };
   let saved = false;
+  let saving = false;
 
-  function save() {
-    onUpdate({ shipping: { content: shipping }, faq: { items: faq }, contact });
-    saved = true;
-    setTimeout(() => (saved = false), 2000);
+  async function save() {
+    if (saving) return;
+    saving = true;
+    try {
+      await onUpdate({ shipping: { content: shipping }, faq: { items: faq }, contact });
+      saved = true;
+      setTimeout(() => (saved = false), 2000);
+    } finally {
+      saving = false;
+    }
   }
 
   function addFaq() { faq = [...faq, { id: `faq-${Date.now()}`, question: '', answer: '' }]; }
@@ -85,8 +92,12 @@
     </div>
   {/if}
 
-  <button onclick={save} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
-    {saved ? 'SAVED!' : 'SAVE CHANGES'}
+  <button onclick={save} disabled={saving} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 disabled:cursor-wait">
+    {#if saving}
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+    {:else}
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
+    {/if}
+    {saving ? 'SAVING…' : saved ? 'SAVED!' : 'SAVE CHANGES'}
   </button>
 </div>
