@@ -447,20 +447,21 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="flex gap-3">
-      <button onclick={handleSave} disabled={saving} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 disabled:cursor-wait">
-        {#if saving}
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-        {:else}
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
-        {/if}
-        {saving ? 'SAVING…' : saved ? 'SAVED!' : 'SAVE CHANGES'}
-      </button>
-      <button onclick={onReset} class="flex items-center gap-2 px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] text-destructive">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-        RESET ALL DATA
-      </button>
-    </div>
+  <!-- Sticky so Save/Reset stay reachable while scrolling this long form -->
+  <div class="sticky bottom-0 py-4 mt-2 bg-background/95 backdrop-blur-sm border-t border-border flex gap-3 z-20">
+    <button onclick={handleSave} disabled={saving} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 disabled:cursor-wait">
+      {#if saving}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      {:else}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
+      {/if}
+      {saving ? 'SAVING…' : saved ? 'SAVED!' : 'SAVE CHANGES'}
+    </button>
+    <button onclick={onReset} class="flex items-center gap-2 px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] text-destructive">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      RESET ALL DATA
+    </button>
   </div>
 </div>

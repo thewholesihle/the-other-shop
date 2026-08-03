@@ -4,6 +4,7 @@
 
   export let community = [];
   export let onUpdate = () => {};
+  export let onLocalUpdate = onUpdate;
 
   let editing = null;
   let isNew = false;
@@ -41,7 +42,7 @@
     try {
       const res = await fetch('/api/community/' + id, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete post.');
-      onUpdate(community.filter(p => p.id !== id));
+      onLocalUpdate(community.filter(p => p.id !== id));
     } catch (err) {
       alert(err.message);
     } finally {

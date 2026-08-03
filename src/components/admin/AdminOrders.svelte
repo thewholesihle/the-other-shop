@@ -197,19 +197,15 @@
               </button>
             {/if}
 
-            <!-- Manual status override dropdown (advanced) -->
-            <select
-              value={order.status}
-              onchange={(e) => patchStatus(order.id, e.target.value)}
-              disabled={pendingId === order.id}
-              class="bg-transparent border border-border px-2 py-1 text-[10px] uppercase font-medium tracking-[0.1em] focus:outline-none focus:border-foreground transition-colors cursor-pointer ml-auto disabled:opacity-40 disabled:cursor-wait"
-            >
-              {#each ['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] as s}
-                <option value={s}>{s.replace('_', ' ')}</option>
-              {/each}
-            </select>
+            <!-- Move from shipped to delivered -->
+            {#if order.status === 'shipped'}
+              <button onclick={() => patchStatus(order.id, 'delivered')} disabled={pendingId === order.id}
+                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-cyan-600 text-white hover:bg-cyan-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
+                ✓ MARK DELIVERED
+              </button>
+            {/if}
 
-            <button onclick={() => exportPDF(order)} class="text-[10px] uppercase text-muted-foreground hover:text-foreground border border-border px-2 py-1 transition-colors">
+            <button onclick={() => exportPDF(order)} class="text-[10px] uppercase text-muted-foreground hover:text-foreground border border-border px-2 py-1 transition-colors ml-auto">
               PDF
             </button>
           </div>

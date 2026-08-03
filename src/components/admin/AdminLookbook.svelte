@@ -3,6 +3,7 @@
 
   export let lookbooks = [];
   export let onUpdate = () => {};
+  export let onLocalUpdate = onUpdate;
 
   let editing = null;
   let isNew = false;
@@ -35,7 +36,7 @@
     try {
       const res = await fetch('/api/lookbooks/' + id, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete lookbook.');
-      onUpdate(lookbooks.filter(l => l.id !== id));
+      onLocalUpdate(lookbooks.filter(l => l.id !== id));
     } catch (err) {
       alert(err.message);
     } finally {

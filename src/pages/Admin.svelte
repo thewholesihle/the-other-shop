@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import AdminLayout from '../components/admin/AdminLayout.svelte';
   import AdminDashboard from '../components/admin/AdminDashboard.svelte';
   import AdminProducts from '../components/admin/AdminProducts.svelte';
@@ -14,12 +14,19 @@
   import AdminCategories from '../components/admin/AdminCategories.svelte';
   import Loader from '../components/Loader.svelte';
 
+  const SECTIONS = ['dashboard', 'products', 'categories', 'orders', 'status', 'lookbook', 'community', 'pages', 'subscribers', 'newsletter', 'settings'];
+
+  function sectionFromPath(path) {
+    const seg = path.replace(/^\/admin\/?/, '').split('/').filter(Boolean)[0];
+    return SECTIONS.includes(seg) ? seg : 'dashboard';
+  }
+
   let data = null;
   let loading = true;
   let saving = false;
   let saveError = null;
   let saveSuccess = false;
-  let activeSection = 'dashboard';
+  let activeSection = sectionFromPath(window.location.pathname);
 
   // ── Read from MongoDB (via /api/data) ─────────────────────────────────────
   async function loadData() {
@@ -29,6 +36,9 @@
   }
 
   // ── Write to MongoDB (via POST /api/data) ──────────────────────────────────
+  // `updated` here is always merged against a freshly-fetched copy of the data
+  // (see updateSection), so this never re-persists a stale snapshot of
+  // sections it didn't intend to touch.
   async function saveData(updated) {
     saveError = null;
     saving = true;
@@ -45,30 +55,76 @@
       }
       saveSuccess = true;
       setTimeout(() => (saveSuccess = false), 2000);
-      // Re-fetch fresh data from DB to confirm what was persisted
-      data = await loadData();
+      // The blob we just sent IS what's now persisted — trust it instead of a
+      // second round-trip GET, so the UI doesn't flash/reset after every save.
+      data = updated;
     } finally {
       saving = false;
     }
   }
 
-  onMount(async () => {
-    try {
-      data = await loadData();
-    } catch (e) {
-      console.error('Admin load error:', e);
-      saveError = e.message;
-    } finally {
-      loading = false;
-    }
+  let pollTimer = null;
+
+  const handlePopState = () => { activeSection = sectionFromPath(window.location.pathname); };
+
+  onMount(() => {
+    window.addEventListener('popstate', handlePopState);
+
+    (async () => {
+      try {
+        data = await loadData();
+      } catch (e) {
+        console.error('Admin load error:', e);
+        saveError = e.message;
+      } finally {
+        loading = false;
+      }
+    })();
+
+    // Light polling so incoming orders / PayFast-driven status changes / stock
+    // movements show up on their own, without the admin needing to reload the
+    // page. Skipped while a save is in flight so it can never race a write.
+    pollTimer = setInterval(async () => {
+      if (saving || loading || !data) return;
+      try {
+        const fresh = await loadData();
+        data = { ...data, orders: fresh.orders, products: fresh.products };
+      } catch {
+        // Transient network hiccup — keep showing the last known-good data.
+      }
+    }, 20000);
   });
 
-  // ── Section update handlers — each calls saveData with the full merged object
+  onDestroy(() => {
+    window.removeEventListener('popstate', handlePopState);
+    clearInterval(pollTimer);
+  });
+
+  // ── Section update handlers — each fetches the latest data, merges the
+  // changed section on top of it, and saves that. Fetching fresh right before
+  // merging (rather than merging into whatever this tab loaded at mount time)
+  // avoids clobbering fields — like product stock — that another process
+  // (a customer checkout, an order cancellation) may have changed since.
   async function updateSection(key, value) {
-    const updated = { ...data, [key]: value };
-    data = updated; // optimistic update
-    try { await saveData(updated); }
-    catch (e) { saveError = e.message; throw e; }
+    try {
+      const fresh = await loadData();
+      const updated = { ...fresh, [key]: value };
+      data = updated; // optimistic update
+      await saveData(updated);
+    } catch (e) {
+      saveError = e.message;
+      throw e;
+    }
+  }
+
+  // ── Local-only state sync — for actions that already persisted themselves
+  // via a dedicated endpoint (order status/delete, product/lookbook/community
+  // delete). These must NOT also trigger a full-blob save: `data` here can be
+  // stale relative to what the dedicated endpoint just changed server-side
+  // (e.g. restored stock after a cancellation), and re-saving the whole blob
+  // would silently overwrite that with the stale in-memory value.
+  function updateLocal(key, value) {
+    data = { ...data, [key]: value };
   }
 
   function updateProducts(products)     { return updateSection('products',    products);     }
@@ -80,12 +136,23 @@
   function updateSubscribers(subs)      { return updateSection('subscribers', subs);         }
   function updateCategories(cats)       { return updateSection('categories',  cats);         }
 
+  function updateOrdersLocal(orders)       { updateLocal('orders',   orders); }
+  function updateProductsLocal(products)   { updateLocal('products', products); }
+  function updateLookbooksLocal(lookbooks) { updateLocal('lookbooks', lookbooks); }
+  function updateCommunityLocal(community) { updateLocal('community', community); }
+
   async function resetData() {
     if (!confirm('Reset ALL store data? This cannot be undone.')) return;
     data = await loadData();
   }
 
-  function navigate(section) { activeSection = section; }
+  function navigate(section) {
+    activeSection = section;
+    const path = section === 'dashboard' ? '/admin' : `/admin/${section}`;
+    if (window.location.pathname !== path) {
+      history.pushState({}, '', path);
+    }
+  }
 </script>
 
 {#if loading}
@@ -119,15 +186,15 @@
     {#if activeSection === 'dashboard'}
       <AdminDashboard {data} />
     {:else if activeSection === 'products'}
-      <AdminProducts products={data.products} categories={data.categories} currency={data.site.currency} onUpdate={updateProducts} />
+      <AdminProducts products={data.products} categories={data.categories} currency={data.site.currency} onUpdate={updateProducts} onLocalUpdate={updateProductsLocal} />
     {:else if activeSection === 'categories'}
       <AdminCategories categories={data.categories} onUpdate={updateCategories} />
     {:else if activeSection === 'orders'}
-      <AdminOrders orders={data.orders} currency={data.site.currency} onUpdate={updateOrders} />
+      <AdminOrders orders={data.orders} currency={data.site.currency} onUpdate={updateOrdersLocal} />
     {:else if activeSection === 'lookbook'}
-      <AdminLookbook lookbooks={data.lookbooks} onUpdate={updateLookbooks} />
+      <AdminLookbook lookbooks={data.lookbooks} onUpdate={updateLookbooks} onLocalUpdate={updateLookbooksLocal} />
     {:else if activeSection === 'community'}
-      <AdminCommunity community={data.community} onUpdate={updateCommunity} />
+      <AdminCommunity community={data.community} onUpdate={updateCommunity} onLocalUpdate={updateCommunityLocal} />
     {:else if activeSection === 'pages'}
       <AdminPages pages={data.pages} onUpdate={updatePages} />
     {:else if activeSection === 'subscribers'}

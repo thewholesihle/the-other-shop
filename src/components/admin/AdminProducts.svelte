@@ -5,6 +5,7 @@
   export let categories = [];
   export let currency = '€';
   export let onUpdate = () => {};
+  export let onLocalUpdate = onUpdate;
 
   let editing = null;
   let isNew = false;
@@ -78,7 +79,9 @@
         credentials: 'include',
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      onUpdate(products.filter(p => p.id !== id));
+      // Deletion (and its stock/asset cleanup) is already persisted server-side —
+      // sync local state only, don't trigger another full-blob save.
+      onLocalUpdate(products.filter(p => p.id !== id));
     } catch (e) {
       alert(`Failed to delete: ${e.message}`);
     } finally {

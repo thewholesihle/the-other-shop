@@ -381,9 +381,23 @@ async function writeData(blob) {
   }
 
   if (blob.categories) {
+    // The admin UI "deletes" a category by omitting it from this array, but a plain
+    // upsert of what's present never removes what's missing — the category kept
+    // reappearing after reload, and products that referenced it were left pointing
+    // at a dangling id. Diff against what's currently stored so a removal actually
+    // deletes the category and reassigns its products to "uncategorized".
+    const existingCategoryIds = (await Category.find().select('id').lean()).map(c => c.id);
+    const keptIds = new Set(blob.categories.map(c => c.id));
+    const removedIds = existingCategoryIds.filter(id => !keptIds.has(id));
+
     ops.push(...blob.categories.map(c =>
       Category.findOneAndUpdate({ id: c.id }, { $set: c }, { upsert: true })
     ));
+
+    if (removedIds.length) {
+      ops.push(Category.deleteMany({ id: { $in: removedIds } }));
+      ops.push(Product.updateMany({ category: { $in: removedIds } }, { $set: { category: '' } }));
+    }
   }
 
   if (blob.products) {
@@ -416,6 +430,12 @@ async function writeData(blob) {
   }
 
   if (blob.subscribers) {
+    // Same missing-deletion gap as categories: removing a row from this array must
+    // actually delete it, not just leave it unupserted (which reappears on reload).
+    const existingSubscriberIds = (await Subscriber.find().select('id').lean()).map(s => s.id);
+    const keptIds = new Set(blob.subscribers.map(s => s.id));
+    const removedIds = existingSubscriberIds.filter(id => !keptIds.has(id));
+
     ops.push(...blob.subscribers.map(s =>
       Subscriber.findOneAndUpdate(
         { email: s.email?.toLowerCase() },
@@ -423,6 +443,10 @@ async function writeData(blob) {
         { upsert: true }
       )
     ));
+
+    if (removedIds.length) {
+      ops.push(Subscriber.deleteMany({ id: { $in: removedIds } }));
+    }
   }
 
   await Promise.all(ops);

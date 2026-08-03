@@ -2,7 +2,11 @@
   export let data = { site: {}, categories: [] };
   
   $: site = data.site || {};
-  $: categories = data.categories || [];
+  $: products = data.products || [];
+  // Only list categories that currently have at least one product — keeps the
+  // footer in sync with what's actually browsable and avoids dead links after
+  // a category is deleted or emptied out.
+  $: categories = (data.categories || []).filter(c => products.some(p => p.category === c.id));
 
   $: footerLinks = {
     Shop: [

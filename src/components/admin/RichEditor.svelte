@@ -25,6 +25,67 @@
     onChange(editor.innerHTML);
   }
 
+  // ── Paste sanitization ───────────────────────────────────────────────────
+  // Pasting from Word, Google Docs, or a random webpage drags in bloated markup
+  // (inline styles, <span>/<font> wrappers, comments, whole class names) that
+  // would otherwise get baked straight into the stored article HTML. Rebuild
+  // pasted content from a small tag whitelist so only clean, semantic HTML
+  // ever lands in the editor — the admin never has to see or touch a tag.
+  const ALLOWED_TAGS = new Set(['P', 'H2', 'H3', 'UL', 'OL', 'LI', 'A', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'STRIKE', 'BLOCKQUOTE', 'IMG', 'VIDEO', 'IFRAME', 'BR', 'HR']);
+  const UNWRAP_TAGS = new Set(['DIV', 'SPAN', 'FONT', 'SECTION', 'ARTICLE', 'O:P']);
+  const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'META', 'LINK', 'HEAD', 'TITLE']);
+  const ALLOWED_ATTRS = {
+    A: ['href', 'target', 'rel'],
+    IMG: ['src', 'alt', 'style'],
+    VIDEO: ['src', 'controls', 'style'],
+    IFRAME: ['src', 'style', 'frameborder', 'allowfullscreen'],
+  };
+
+  function sanitizeInto(sourceNode, target) {
+    for (const child of Array.from(sourceNode.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        target.appendChild(child.cloneNode());
+        continue;
+      }
+      if (child.nodeType !== Node.ELEMENT_NODE) continue; // drop comments etc.
+      const tag = child.tagName;
+      if (SKIP_TAGS.has(tag)) continue;
+      if (UNWRAP_TAGS.has(tag) || !ALLOWED_TAGS.has(tag)) {
+        sanitizeInto(child, target); // drop the wrapper, keep its content
+        continue;
+      }
+      const el = document.createElement(tag);
+      for (const attr of ALLOWED_ATTRS[tag] || []) {
+        if (child.hasAttribute(attr)) el.setAttribute(attr, child.getAttribute(attr));
+      }
+      sanitizeInto(child, el);
+      target.appendChild(el);
+    }
+  }
+
+  function sanitizeHtml(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const container = document.createElement('div');
+    sanitizeInto(doc.body, container);
+    return container.innerHTML;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function handlePaste(e) {
+    e.preventDefault();
+    const html = e.clipboardData?.getData('text/html');
+    const text = e.clipboardData?.getData('text/plain') || '';
+    const clean = html
+      ? sanitizeHtml(html)
+      : text.split(/\n{2,}/).map(p => `<p>${escapeHtml(p)}</p>`).join('');
+    editor.focus();
+    document.execCommand('insertHTML', false, clean);
+    emit();
+  }
+
   function handleDoubleClick(e) {
     const el = e.target;
     if (el.tagName === 'IMG' || el.tagName === 'VIDEO' || el.tagName === 'IFRAME') {
@@ -98,14 +159,22 @@
   const tools = [
     { label: 'B',  title: 'Bold',          action: () => exec('bold') },
     { label: 'I',  title: 'Italic',        action: () => exec('italic') },
+    { label: 'U',  title: 'Underline',     action: () => exec('underline') },
+    { label: 'S',  title: 'Strikethrough', action: () => exec('strikeThrough') },
+    { label: '—',  title: 'Divider',       action: null },
     { label: 'H2', title: 'Heading 2',     action: () => exec('formatBlock', 'h2') },
     { label: 'H3', title: 'Heading 3',     action: () => exec('formatBlock', 'h3') },
     { label: '¶',  title: 'Paragraph',     action: () => exec('formatBlock', 'p') },
+    { label: '❝',  title: 'Quote',         action: () => exec('formatBlock', 'blockquote') },
     { label: '—',  title: 'Divider',       action: null },
     { label: '≡',  title: 'Bullet list',   action: () => exec('insertUnorderedList') },
     { label: '1.', title: 'Numbered list', action: () => exec('insertOrderedList') },
     { label: '—',  title: 'Divider',       action: null },
     { label: '🔗', title: 'Link',          action: insertLink },
+    { label: '⌫',  title: 'Clear formatting', action: () => exec('removeFormat') },
+    { label: '—',  title: 'Divider',       action: null },
+    { label: '↶',  title: 'Undo',          action: () => exec('undo') },
+    { label: '↷',  title: 'Redo',          action: () => exec('redo') },
   ];
 </script>
 
@@ -153,7 +222,8 @@
     bind:this={editor}
     contenteditable="true"
     ondblclick={handleDoubleClick}
-    class="min-h-[280px] p-4 text-sm focus:outline-none prose prose-sm max-w-none [&_h2]:font-display [&_h2]:font-bold [&_h2]:text-xl [&_h2]:my-3 [&_h3]:font-display [&_h3]:font-semibold [&_h3]:text-lg [&_h3]:my-2 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_a]:underline [&_a]:text-foreground [&_img]:max-w-full [&_img]:rounded [&_video]:max-w-full"
+    onpaste={handlePaste}
+    class="min-h-[280px] p-4 text-sm focus:outline-none prose prose-sm max-w-none [&_h2]:font-display [&_h2]:font-bold [&_h2]:text-xl [&_h2]:my-3 [&_h3]:font-display [&_h3]:font-semibold [&_h3]:text-lg [&_h3]:my-2 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_a]:underline [&_a]:text-foreground [&_img]:max-w-full [&_img]:rounded [&_video]:max-w-full [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_u]:underline [&_s]:line-through"
     oninput={emit}
   ></div>
 </div>
