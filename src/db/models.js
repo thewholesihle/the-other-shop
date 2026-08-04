@@ -7,6 +7,10 @@ const SettingsSchema = new mongoose.Schema({
   name:         { type: String, default: 'Others.' },
   metaTitle:    { type: String, default: '' },
   metaDescription: { type: String, default: '' },
+  // Default social share thumbnail — used whenever a page (or product/article/
+  // lookbook) doesn't have a more specific image of its own. Distinct from `logo`,
+  // which is usually a wordmark/icon and rarely a good 1200x630 share thumbnail.
+  ogImage:      { type: String, default: '' },
   tagline:      { type: String, default: '' },
   description:  { type: String, default: '' },
   announcement: { type: String, default: '' },

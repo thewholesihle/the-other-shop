@@ -27,6 +27,7 @@
   if (form.footerTagline === undefined) form.footerTagline = '';
   if (form.metaTitle === undefined) form.metaTitle = '';
   if (form.metaDescription === undefined) form.metaDescription = '';
+  if (form.ogImage === undefined) form.ogImage = '';
   if (form.navLogoSize === undefined) form.navLogoSize = 28;
   if (form.favicon === undefined) form.favicon = '';
   if (!form.emailTemplates) {
@@ -82,6 +83,19 @@
         <label for="s-meta-desc" class="text-label block mb-1.5">META DESCRIPTION (SEO)</label>
         <p class="text-xs text-muted-foreground mb-1.5">The snippet shown under your website in Google and social previews.</p>
         <textarea id="s-meta-desc" bind:value={form.metaDescription} rows={2} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
+      </div>
+      <div>
+        <p class="text-label block mb-1.5">DEFAULT SHARE IMAGE (SEO)</p>
+        <p class="text-xs text-muted-foreground mb-2">The thumbnail shown when your home page, shop, lookbook or community pages are shared on social media / iMessage / Slack. Individual products, articles and lookbooks use their own image instead when they have one. A wide image (1200×630) works best — the logo usually doesn't.</p>
+        <div class="flex items-start gap-4">
+          {#if form.ogImage}
+            <div class="space-y-2">
+              <img src={form.ogImage} alt="Share preview" class="h-20 w-auto max-w-[200px] object-cover bg-secondary" />
+              <button onclick={() => (form.ogImage = '')} class="text-xs text-destructive hover:underline">Remove</button>
+            </div>
+          {/if}
+          <ImageUpload label="" value={form.ogImage || ''} onChange={(url) => (form.ogImage = url)} />
+        </div>
       </div>
       <div>
         <label for="s-desc" class="text-label block mb-1.5">ABOUT DESCRIPTION</label>

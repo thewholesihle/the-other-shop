@@ -420,7 +420,9 @@ const deleteCloudinaryAsset = async (url) => {
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+// `index: false` — otherwise this would auto-serve the bare index.html for GET /
+// before the SEO-meta-injecting route below ever gets a chance to run.
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // ─── Variant Stock Helpers ──────────────────────────────────────────────────
 // Products track stock per size/color combination in `variants`; the top-level
@@ -1406,42 +1408,201 @@ app.post('/api/payfast/itn', async (req, res) => {
     console.error('ITN processing error:', err.message);
   }
 });
-// ─── Individual Product SEO (Dynamic OG Tags) ─────────────────────────────────
-app.get('/shop/:id', async (req, res) => {
+// ─── SEO / Social Sharing Meta Tags ────────────────────────────────────────────
+// This is a client-rendered SPA with one static index.html shell, so the
+// <svelte:head> tags each page sets only ever exist after JavaScript runs.
+// Link-unfurlers (Facebook, Twitter/X, Slack, Discord, WhatsApp, iMessage,
+// LinkedIn) fetch the raw HTML and never execute JS, so they only ever saw the
+// bare shell — every shared link showed a generic/blank preview. These routes
+// render real <title>/description/og:*/twitter:* tags into the HTML server-side,
+// before it's sent, so previews actually work. Client-side <svelte:head> tags
+// still run on top for real visitors navigating the SPA; this is what crawlers see.
+function escapeHtmlAttr(str) {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Resize/compress a Cloudinary image for a ~1200x630 share thumbnail; leave other URLs untouched. */
+function optimizeShareImage(url) {
+  if (!url || !url.includes('res.cloudinary.com')) return url || '';
+  return url.replace('/upload/', '/upload/c_fill,g_auto,w_1200,h_630,q_auto,f_auto/');
+}
+
+function renderMetaTags({ siteName, title, description, image, url, type = 'website', extra = '' }) {
+  const safeTitle = escapeHtmlAttr(title);
+  const safeDesc = escapeHtmlAttr((description || '').replace(/<[^>]*>/g, '').slice(0, 200));
+  const safeImage = escapeHtmlAttr(optimizeShareImage(image));
+  const safeUrl = escapeHtmlAttr(url);
+
+  return `
+  <title>${safeTitle}</title>
+  <meta name="description" content="${safeDesc}">
+  <meta property="og:site_name" content="${escapeHtmlAttr(siteName)}">
+  <meta property="og:type" content="${type}">
+  <meta property="og:title" content="${safeTitle}">
+  <meta property="og:description" content="${safeDesc}">
+  <meta property="og:url" content="${safeUrl}">
+  ${safeImage ? `<meta property="og:image" content="${safeImage}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">` : ''}
+  <meta name="twitter:card" content="${safeImage ? 'summary_large_image' : 'summary'}">
+  <meta name="twitter:title" content="${safeTitle}">
+  <meta name="twitter:description" content="${safeDesc}">
+  ${safeImage ? `<meta name="twitter:image" content="${safeImage}">` : ''}
+  ${extra}`;
+}
+
+function serveWithMeta(res, metaOptions) {
   try {
-    const product = await Product.findOne({ id: req.params.id });
     const indexPath = path.resolve(__dirname, 'public', 'index.html');
     let html = fs.readFileSync(indexPath, 'utf-8');
-
-    if (product) {
-      const title = `${product.name} — Others.`;
-      const desc = (product.description || '').replace(/"/g, '&quot;').slice(0, 200);
-      let img = product.image || (product.images && product.images[0]) || '';
-      
-      // Basic Cloudinary optimization for sharing
-      if (img.includes('res.cloudinary.com')) {
-        img = img.replace('/upload/', '/upload/c_limit,w_1200,q_auto,f_auto/');
-      }
-
-      const meta = `
-  <title>${title}</title>
-  <meta name="description" content="${desc}">
-  <meta property="og:title" content="${title}">
-  <meta property="og:description" content="${desc}">
-  <meta property="og:image" content="${img}">
-  <meta property="og:url" content="${req.protocol}://${req.get('host')}${req.originalUrl}">
-  <meta property="og:type" content="product">
-  <meta name="twitter:card" content="summary_large_image">`;
-
-      // Inject into head (replace default title if present)
-      html = html.replace('<title>The Other Shop</title>', '');
-      html = html.replace('<head>', `<head>${meta}`);
-    }
+    html = html.replace('<title>The Other Shop</title>', '');
+    html = html.replace('<head>', `<head>${renderMetaTags(metaOptions)}`);
     res.send(html);
   } catch (err) {
     console.warn('Metadata injection failed:', err.message);
     res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
   }
+}
+
+/** Site-wide fallbacks used whenever a specific page has nothing more specific of its own. */
+async function getSeoDefaults() {
+  try {
+    const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
+    return {
+      siteName: site?.name || 'Others.',
+      title: site?.metaTitle || site?.name || 'Others.',
+      description: site?.metaDescription || site?.description || site?.tagline || '',
+      image: site?.ogImage || site?.logo || '',
+    };
+  } catch {
+    return { siteName: 'Others.', title: 'Others.', description: '', image: '' };
+  }
+}
+
+app.get('/', async (req, res) => {
+  const d = await getSeoDefaults();
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: d.title,
+    description: d.description,
+    image: d.image,
+    url: `${req.protocol}://${req.get('host')}/`,
+  });
+});
+
+app.get('/shop', async (req, res) => {
+  const d = await getSeoDefaults();
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: `Shop All — ${d.siteName}`,
+    description: d.description || `Browse the full ${d.siteName} collection.`,
+    image: d.image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+  });
+});
+
+app.get('/shop/:id', async (req, res) => {
+  const [d, product] = await Promise.all([
+    getSeoDefaults(),
+    Product.findOne({ id: req.params.id }).lean().catch(() => null),
+  ]);
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: product ? `${product.name} — ${d.siteName}` : `Product — ${d.siteName}`,
+    description: product?.description || d.description,
+    image: product?.image || product?.images?.[0] || d.image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+    type: 'product',
+  });
+});
+
+app.get('/lookbook', async (req, res) => {
+  const d = await getSeoDefaults();
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: `Lookbook — ${d.siteName}`,
+    description: d.description || `Editorial photography and campaign imagery from ${d.siteName}.`,
+    image: d.image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+  });
+});
+
+app.get('/lookbook/:id', async (req, res) => {
+  const [d, lookbook] = await Promise.all([
+    getSeoDefaults(),
+    Lookbook.findOne({ id: req.params.id }).lean().catch(() => null),
+  ]);
+  const image = lookbook?.coverImage || lookbook?.items?.find(i => i.type === 'image')?.url || d.image;
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: lookbook ? `${lookbook.title} — ${d.siteName} Lookbook` : `Lookbook — ${d.siteName}`,
+    description: lookbook?.description || d.description,
+    image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+  });
+});
+
+app.get('/community', async (req, res) => {
+  const d = await getSeoDefaults();
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: `Community — ${d.siteName}`,
+    description: d.description || `Stories, news and culture from the ${d.siteName} community.`,
+    image: d.image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+  });
+});
+
+app.get('/community/:slug', async (req, res) => {
+  const [d, article] = await Promise.all([
+    getSeoDefaults(),
+    Article.findOne({ slug: req.params.slug, published: true }).lean().catch(() => null),
+  ]);
+  const extra = article
+    ? `<meta property="article:published_time" content="${escapeHtmlAttr(article.date)}">\n  <meta property="article:author" content="${escapeHtmlAttr(article.author)}">`
+    : '';
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: article ? `${article.title} — ${d.siteName}` : `Community — ${d.siteName}`,
+    description: article?.excerpt || d.description,
+    image: article?.image || d.image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+    type: article ? 'article' : 'website',
+    extra,
+  });
+});
+
+app.get('/contact', async (req, res) => {
+  const d = await getSeoDefaults();
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: `Contact — ${d.siteName}`,
+    description: `Get in touch with the ${d.siteName} team. Enquiries, returns, press and collaborations.`,
+    image: d.image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+  });
+});
+
+app.get('/faq', async (req, res) => {
+  const d = await getSeoDefaults();
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: `FAQ — ${d.siteName}`,
+    description: `Frequently asked questions about ${d.siteName} products, shipping, returns and more.`,
+    image: d.image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+  });
+});
+
+app.get('/shipping-returns', async (req, res) => {
+  const d = await getSeoDefaults();
+  serveWithMeta(res, {
+    siteName: d.siteName,
+    title: `Shipping & Returns — ${d.siteName}`,
+    description: `${d.siteName} shipping policy, return information and delivery times.`,
+    image: d.image,
+    url: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+  });
 });
 
 // ─── Admin Routes (Basic Auth protected) ─────────────────────────────────────

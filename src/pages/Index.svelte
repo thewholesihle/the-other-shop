@@ -37,6 +37,12 @@
 <svelte:head>
   <title>{data ? (data.site.metaTitle || data.site.name) : 'Others.'}</title>
   <meta name="description" content={data ? (data.site.metaDescription || data.site.description || 'Streetwear rooted in culture, built for everyone else.') : 'Streetwear rooted in culture, built for everyone else.'} />
+  {#if data}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={data.site.metaTitle || data.site.name} />
+    <meta property="og:description" content={data.site.metaDescription || data.site.description || 'Streetwear rooted in culture, built for everyone else.'} />
+    {#if data.site.ogImage || data.site.logo}<meta property="og:image" content={data.site.ogImage || data.site.logo} />{/if}
+  {/if}
 </svelte:head>
 
 {#if loading || !data}
