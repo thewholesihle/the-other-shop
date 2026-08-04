@@ -1,8 +1,6 @@
 'use strict';
 require('dotenv').config();
 
-const dns      = require('dns');
-const net      = require('net');
 const express  = require('express');
 const path     = require('path');
 const fs       = require('fs');
@@ -10,16 +8,10 @@ const multer   = require('multer');
 const md5      = require('md5');
 const morgan   = require('morgan');
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-
-// Some hosts (e.g. Render) resolve SMTP hostnames to an IPv6 address that has
-// no outbound route, which hangs until nodemailer's connection times out.
-// Preferring IPv4 avoids that dead-end entirely.
-dns.setDefaultResultOrder('ipv4first');
 
 const { connect, getIsConnected } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
@@ -155,52 +147,37 @@ const PF_HOST = PF.sandbox
   : 'https://www.payfast.co.za/eng/process';
 
 // ─── Email Notifier ──────────────────────────────────────────────────────────
-// Nodemailer resolves SMTP hostnames itself — it ignores dns.setDefaultResultOrder
-// and any `family` option — by resolving both A and AAAA records and picking a
-// RANDOM address from the combined list (see nodemailer/lib/shared/index.js
-// resolveHostname). On hosts with no outbound IPv6 route (Render included) that
-// means requests intermittently get handed an unreachable IPv6 address. Nodemailer
-// only skips its own resolution when `host` is already a literal IP, so we resolve
-// the A record ourselves and connect by IP, with `servername` set so TLS SNI/cert
-// checks still validate against the real hostname.
-const SMTP_HOST_TTL_MS = 5 * 60 * 1000;
-let smtpHostCache = null;
+// Raw SMTP sockets kept failing on Render — first IPv6 routes with no egress
+// (ENETUNREACH), then, even pinned to a resolved IPv4 address, silent TCP
+// timeouts (ETIMEDOUT) — consistent with the platform or the mail provider
+// blocking outbound SMTP connections outright. Sending over Resend's HTTPS API
+// sidesteps that entirely: it's the same kind of outbound HTTPS call the app
+// already makes successfully to Cloudinary and PayFast.
+const RESEND_API_URL = 'https://api.resend.com/emails';
+const EMAIL_FROM = process.env.SMTP_FROM || 'onboarding@resend.dev';
 
-async function resolveSmtpHostIPv4(hostname) {
-  if (!hostname || net.isIP(hostname)) return hostname;
-  const now = Date.now();
-  if (smtpHostCache && smtpHostCache.hostname === hostname && now - smtpHostCache.resolvedAt < SMTP_HOST_TTL_MS) {
-    return smtpHostCache.ip;
+async function sendEmail({ from, to, subject, html }) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not set');
   }
-  try {
-    const addresses = await dns.promises.resolve4(hostname);
-    if (addresses?.length) {
-      const ip = addresses[Math.floor(Math.random() * addresses.length)];
-      smtpHostCache = { hostname, ip, resolvedAt: now };
-      return ip;
-    }
-  } catch (err) {
-    console.error(`[Mail] Could not resolve an IPv4 address for ${hostname}, connecting by hostname instead (may hit IPv6): ${err.message}`);
-  }
-  return hostname;
-}
-
-async function createTransporter() {
-  const hostname = process.env.SMTP_HOST;
-  const host = await resolveSmtpHostIPv4(hostname);
-  return nodemailer.createTransport({
-    host,
-    servername: hostname, // keep TLS validating against the real hostname since `host` is now a literal IP
-    port: Number(process.env.SMTP_PORT) || 587,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+  const res = await fetch(RESEND_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
     },
-    secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for 587
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 15_000,
+    body: JSON.stringify({
+      from,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+    }),
   });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || `Resend API error: ${res.status}`);
+  }
+  return res.json();
 }
 
 async function sendOrderNotification(order) {
@@ -224,18 +201,16 @@ async function sendOrderNotification(order) {
     }
   }
 
-  if (recipients.length === 0 || !process.env.SMTP_HOST) return;
+  if (recipients.length === 0 || !process.env.RESEND_API_KEY) return;
 
   try {
-    const transporter = await createTransporter();
-
     console.log(`[Mail] Sending order notification for #${order.id} to ${recipients.join(', ')}...`);
 
     const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${[i.size, i.color].filter(Boolean).join(' / ') || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
-    
-    await transporter.sendMail({
-      from: `"Others. Store" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
-      to: recipients.join(', '),
+
+    await sendEmail({
+      from: `Others. Store <${EMAIL_FROM}>`,
+      to: recipients,
       subject: `New Order Paid: #${order.id}`,
       html: `
         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
@@ -515,7 +490,7 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
 
 // ─── Email Notifier Helper for Customers ──────────────────────────────────────
 async function sendCustomerStatusEmail(order) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !order.email) return;
+  if (!process.env.RESEND_API_KEY || !order.email) return;
   
   if (mongoose.connection.readyState === 1) {
     await Log.create({
@@ -538,8 +513,6 @@ async function sendCustomerStatusEmail(order) {
       }
     }
 
-    const transporter = await createTransporter();
-
     const statusMap = {
       shipped: 'shipped',
       delivered: 'delivered',
@@ -561,8 +534,8 @@ async function sendCustomerStatusEmail(order) {
         <span style="font-weight: 600; font-size: 14px;">${site?.currency || 'R'}${(i.price * i.quantity).toFixed(2)}</span>
       </li>`).join('');
 
-    await transporter.sendMail({
-      from: `"${siteName}" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
+    await sendEmail({
+      from: `${siteName} <${EMAIL_FROM}>`,
       to: order.email,
       subject: `Order Update: #${order.id} [${statusMap[order.status]?.toUpperCase() || order.status.toUpperCase()}]`,
       html: `
@@ -693,7 +666,7 @@ app.get('/api/admin/status', basicAuth, async (req, res) => {
     const isConn = getIsConnected();
     const dbStatus = isConn ? 'connected' : 'disconnected';
     const cloudinaryOk = !!(process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_CLOUD_NAME);
-    let emailStatus = (process.env.SMTP_HOST && process.env.SMTP_USER) ? 'configured' : 'not_configured';
+    let emailStatus = process.env.RESEND_API_KEY ? 'configured' : 'not_configured';
 
     let stats = { orders: 0, products: 0, subscribers: 0, logs: 0 };
     if (isConn) {
@@ -841,7 +814,7 @@ app.post('/api/newsletter', async (req, res) => {
 app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
   const { subject, html, subscriberIds } = req.body;
   if (!subject || !html) return res.status(400).json({ error: 'Subject and HTML body required.' });
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return res.status(500).json({ error: 'SMTP not configured on server.' });
+  if (!process.env.RESEND_API_KEY) return res.status(500).json({ error: 'RESEND_API_KEY not configured on server.' });
 
   try {
     let query = {};
@@ -854,8 +827,6 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
     
     const site = await Settings.findOne({ _id: 'main' }).lean();
     const siteName = site?.name || 'Others.';
-
-    const transporter = await createTransporter();
 
     const emailHtml = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
@@ -878,8 +849,8 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
     let sentCount = 0;
     for (const sub of subscribers) {
       try {
-        await transporter.sendMail({
-          from: `"${siteName}" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
+        await sendEmail({
+          from: `${siteName} <${EMAIL_FROM}>`,
           to: sub.email,
           subject: subject,
           html: emailHtml
@@ -894,7 +865,7 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
     res.json({ ok: true, sentCount });
   } catch (err) {
     console.error('POST /api/newsletter/broadcast', err);
-    res.status(500).json({ error: 'Mail delivery failed. Check your SMTP configurations.' });
+    res.status(500).json({ error: 'Mail delivery failed. Check your Resend configuration.' });
   }
 });
 
@@ -1345,14 +1316,12 @@ let lastErrorEmailTime = 0;
 const ERROR_EMAIL_THROTTLE = 15 * 60 * 1000; // 15 minutes
 
 async function notifyAdminOfError(err, req = null, customMsg = null) {
-  if (!process.env.ADMIN_EMAIL || !process.env.SMTP_HOST) return;
+  if (!process.env.ADMIN_EMAIL || !process.env.RESEND_API_KEY) return;
   const now = Date.now();
   if (now - lastErrorEmailTime < ERROR_EMAIL_THROTTLE) return;
-  
+
   lastErrorEmailTime = now;
   try {
-    const transporter = await createTransporter();
-
     const isConnected = mongoose.connection.readyState === 1;
     let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
 
@@ -1369,9 +1338,9 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
 
     if (recipients.length === 0) return;
 
-    await transporter.sendMail({
-      from: `"Others. System" <${process.env.SMTP_USER || process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com'}>`,
-      to: recipients.join(', '),
+    await sendEmail({
+      from: `Others. System <${EMAIL_FROM}>`,
+      to: recipients,
       subject: `[ALERT] Site Error: ${err.message.slice(0, 50)}`,
       html: `
         <div style="font-family: sans-serif; padding: 20px; color: #111; max-width: 600px; border: 1px solid #eee;">
