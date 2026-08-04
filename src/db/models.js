@@ -120,6 +120,13 @@ const OrderSchema = new mongoose.Schema({
   shippingCost: { type: Number, default: 0 },
   status:       { type: String, default: 'pending', enum: ['pending', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] },
   payfastId:    { type: String, default: '' },
+  adminNote:    { type: String, default: '' },
+  // Shipment details — set by admin when marking an order 'shipped', surfaced in the
+  // customer status email (tracking number/carrier/CTA link, estimated delivery date).
+  carrier:           { type: String, default: '' },
+  trackingNumber:    { type: String, default: '' },
+  trackingUrl:       { type: String, default: '' },
+  estimatedDelivery: { type: String, default: '' },
   createdAt:    { type: Date, default: Date.now },
 }, { strict: true, versionKey: false });
 

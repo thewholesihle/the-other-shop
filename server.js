@@ -180,7 +180,68 @@ async function sendEmail({ from, to, subject, html }) {
   return res.json();
 }
 
-async function sendOrderNotification(order) {
+// ─── Shared Email Branding & Layout ──────────────────────────────────────────
+/** Fetch site settings + the public contact address once, for building consistent email chrome. */
+async function getEmailBranding() {
+  if (mongoose.connection.readyState !== 1) return { site: null, contactAddress: '' };
+  try {
+    const [site, pages] = await Promise.all([
+      Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean(),
+      Pages.findOne({ _id: 'main' }).maxTimeMS(1000).lean(),
+    ]);
+    return { site, contactAddress: pages?.contact?.address || '' };
+  } catch {
+    return { site: null, contactAddress: '' };
+  }
+}
+
+const EMAIL_SOCIAL_PLATFORMS = [
+  { key: 'instagram', label: 'IG' },
+  { key: 'twitter',   label: 'TW' },
+  { key: 'tiktok',    label: 'TT' },
+  { key: 'youtube',   label: 'YT' },
+];
+
+function emailSocialLinks(socials) {
+  const active = EMAIL_SOCIAL_PLATFORMS.filter(p => socials?.[p.key]?.trim());
+  if (!active.length) return '';
+  return active.map(p => `<a href="${socials[p.key]}" style="display:inline-block; width:34px; height:34px; line-height:34px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); color:#ffffff; text-decoration:none; font-size:10px; font-weight:700; letter-spacing:0.02em; text-align:center; margin:0 5px;">${p.label}</a>`).join('');
+}
+
+function formatDateLabel(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/** Wraps email body content in the shared branded header/footer chrome used by every template. */
+function emailLayout({ siteName, logoUrl, bodyHtml, socials, contactAddress, contactUrl }) {
+  const socialLinksHtml = emailSocialLinks(socials);
+  return `
+    <div style="background:#f4f4f4; padding:32px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <div style="max-width:600px; margin:0 auto; background:#ffffff;">
+        <div style="background:#111111; padding:28px 24px; text-align:center;">
+          ${logoUrl
+            ? `<img src="${logoUrl}" alt="${siteName}" style="max-height:36px; max-width:180px;" />`
+            : `<span style="color:#ffffff; font-size:18px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;">${siteName}</span>`}
+        </div>
+        <div style="padding:40px 32px; color:#111111;">
+          ${bodyHtml}
+        </div>
+        <div style="background:#111111; padding:32px 24px; text-align:center;">
+          ${socialLinksHtml ? `
+            <p style="color:rgba(255,255,255,0.5); font-size:11px; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 16px;">Want updates through more platforms?</p>
+            <div style="margin-bottom:24px;">${socialLinksHtml}</div>
+          ` : ''}
+          ${contactAddress ? `<p style="color:rgba(255,255,255,0.4); font-size:11px; margin:0 0 12px; line-height:1.5;">${contactAddress}</p>` : ''}
+          ${contactUrl ? `<a href="${contactUrl}" style="color:rgba(255,255,255,0.6); font-size:11px; text-decoration:underline;">Contact us</a>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function sendOrderNotification(order, baseUrl = '') {
   let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
   
   // Try to get custom emails from DB if connected
@@ -206,35 +267,58 @@ async function sendOrderNotification(order) {
   try {
     console.log(`[Mail] Sending order notification for #${order.id} to ${recipients.join(', ')}...`);
 
-    const itemsHtml = (order.items || []).map(i => `<li style="padding: 10px 0; border-bottom: 1px solid #eaeaea; display: flex; justify-content: space-between;"><span>${i.quantity} &times; ${i.name} <span style="color:#666; font-size:12px;">(${[i.size, i.color].filter(Boolean).join(' / ') || '-'})</span></span> <span>R${(i.price * i.quantity).toFixed(2)}</span></li>`).join('');
+    const { site, contactAddress } = await getEmailBranding();
+    const siteName = site?.name || 'Others.';
+    const currency = site?.currency || 'R';
+
+    const itemsHtml = (order.items || []).map(i => `
+      <div style="display:flex; align-items:center; border:1px solid #eee; padding:12px; margin-bottom:8px;">
+        ${i.image ? `<img src="${i.image}" alt="" style="width:48px; height:48px; object-fit:cover; margin-right:14px; background:#f5f5f5;" />` : ''}
+        <div style="flex:1;">
+          <p style="margin:0; font-size:13px; font-weight:600;">${i.name}</p>
+          ${[i.size, i.color].filter(Boolean).length ? `<p style="margin:2px 0 0; font-size:11px; color:#888;">${[i.size, i.color].filter(Boolean).join(' / ')}</p>` : ''}
+        </div>
+        <p style="margin:0 16px 0 0; font-size:12px; color:#666; white-space:nowrap;">×${i.quantity}</p>
+        <p style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">${currency}${(i.price * i.quantity).toFixed(2)}</p>
+      </div>
+    `).join('');
+
+    const bodyHtml = `
+      <h1 style="font-size:22px; font-weight:800; margin:0 0 8px;">New order paid</h1>
+      <p style="font-size:14px; color:#666; margin:0 0 32px;">#${order.id} &middot; ${order.customer || 'Customer'} (${order.email || '—'})</p>
+
+      <div style="margin-bottom:24px;">
+        <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888; margin:0 0 4px;">Delivery address</p>
+        <p style="font-size:14px; margin:0;">${order.address || '—'}</p>
+      </div>
+
+      <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:#888; margin:0 0 12px;">Items</p>
+      ${itemsHtml}
+
+      <div style="display:flex; justify-content:space-between; font-weight:700; border-top:1px solid #111; padding-top:16px; margin-top:16px; margin-bottom:32px; font-size:16px;">
+        <span>Total paid</span>
+        <span>${currency}${order.total.toFixed(2)}</span>
+      </div>
+
+      ${baseUrl ? `
+        <div style="text-align:center;">
+          <a href="${baseUrl}/admin" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:14px 32px; font-size:12px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase;">Open Admin Dashboard</a>
+        </div>
+      ` : ''}
+    `;
 
     await sendEmail({
-      from: `Others. Store <${EMAIL_FROM}>`,
+      from: `${siteName} Store <${EMAIL_FROM}>`,
       to: recipients,
       subject: `New Order Paid: #${order.id}`,
-      html: `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
-          <div style="text-align: center; margin-bottom: 40px;">
-            <h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">OTHERS.</h1>
-          </div>
-          <div style="background-color: #f9f9f9; padding: 30px; border-radius: 4px;">
-            <h2 style="font-size: 18px; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #eaeaea; padding-bottom: 10px;">New Order Paid</h2>
-            <p style="margin: 0 0 10px; font-size: 15px;"><strong>Order ID:</strong> #${order.id}</p>
-            <p style="margin: 0 0 10px; font-size: 15px;"><strong>Customer:</strong> ${order.customer} <span style="color: #666;">(${order.email})</span></p>
-            <p style="margin: 0 0 20px; font-size: 15px;"><strong>Address:</strong> ${order.address}</p>
-            
-            <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 30px; border-bottom: 1px solid #eaeaea; padding-bottom: 10px;">Order Summary</h3>
-            <ul style="list-style: none; padding: 0; margin: 0 0 20px; font-size: 15px;">
-              ${itemsHtml}
-            </ul>
-            <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 1px solid #111; padding-top: 15px; margin-top: 15px; font-size: 16px;">
-              <span>Total Paid:</span>
-              <span>R${order.total.toFixed(2)}</span>
-            </div>
-          </div>
-          <p style="text-align: center; margin-top: 40px; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.1em;">Log into the Admin Panel to fulfill this order.</p>
-        </div>
-      `
+      html: emailLayout({
+        siteName,
+        logoUrl: site?.emailLogo || site?.logo,
+        bodyHtml,
+        socials: site?.socials,
+        contactAddress,
+        contactUrl: baseUrl ? `${baseUrl}/contact` : '',
+      }),
     });
     console.log(`[Email] Notification sent for order ${order.id}`);
   } catch (err) {
@@ -489,9 +573,9 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
 });
 
 // ─── Email Notifier Helper for Customers ──────────────────────────────────────
-async function sendCustomerStatusEmail(order) {
+async function sendCustomerStatusEmail(order, baseUrl = '') {
   if (!process.env.RESEND_API_KEY || !order.email) return;
-  
+
   if (mongoose.connection.readyState === 1) {
     await Log.create({
       id: `log-${Date.now()}-cus-mail`,
@@ -501,76 +585,113 @@ async function sendCustomerStatusEmail(order) {
   }
 
   try {
-    let siteName = 'Others.';
-    let templates = {};
-    let site = null;
+    const { site, contactAddress } = await getEmailBranding();
+    const siteName = site?.name || 'Others.';
+    const currency = site?.currency || 'R';
+    const templates = site?.emailTemplates || {};
+    const firstName = (order.customer || '').split(' ')[0] || 'there';
 
-    if (mongoose.connection.readyState === 1) {
-      site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
-      if (site) {
-        siteName = site.name || 'Others.';
-        templates = site.emailTemplates || {};
-      }
-    }
+    const statusMap = { shipped: 'shipped', delivered: 'delivered', cancelled: 'cancelled', paid: 'confirmed' };
 
-    const statusMap = {
-      shipped: 'shipped',
-      delivered: 'delivered',
-      cancelled: 'cancelled',
-      paid: 'confirmed'
+    // A shipping update and a payment receipt need different information — a
+    // shipped/delivered email is a logistics update (tracking, ETA, address) and
+    // has no reason to repeat pricing; a paid/cancelled email is financial and
+    // has no tracking info to show yet. Pick what's actually relevant per status.
+    const headlineMap = {
+      paid: `${firstName}, thank you for your order.`,
+      processing: `${firstName}, your order is being prepared.`,
+      shipped: `${firstName}, your order is on its way.`,
+      delivered: `${firstName}, your order has arrived.`,
+      cancelled: `${firstName}, your order has been cancelled.`,
     };
-    
-    // Get custom template or fallback
+    const headline = headlineMap[order.status] || `${firstName}, your order has been updated.`;
+
     let messageBody = templates[order.status] || `Your order status has been updated to: ${order.status}.`;
-    // Inject order ID
     messageBody = messageBody.replace(/{orderId}/g, `<strong>#${order.id}</strong>`);
 
+    const addressLines = (order.address || '').split(',').map(s => s.trim()).filter(Boolean);
+    const showTracking = ['shipped', 'delivered'].includes(order.status) && (order.trackingNumber || order.carrier);
+    const showFinancials = ['paid', 'cancelled'].includes(order.status);
+
+    const detailRow = (label, value) => value ? `
+      <div style="margin-bottom:20px;">
+        <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888; margin:0 0 4px;">${label}</p>
+        <p style="font-size:15px; font-weight:700; margin:0; line-height:1.4;">${value}</p>
+      </div>` : '';
+
+    const orderDetailsHtml = `
+      <div style="border:1px solid #eee; padding:24px; margin-bottom:24px;">
+        ${detailRow('Order number', `#${order.id}`)}
+        ${showTracking ? detailRow('Carrier', order.carrier) : ''}
+        ${showTracking ? detailRow('Tracking number', order.trackingNumber) : ''}
+        ${order.estimatedDelivery ? detailRow('Estimated delivery', formatDateLabel(order.estimatedDelivery)) : ''}
+        ${addressLines.length ? detailRow('Delivery address', addressLines.join('<br>')) : ''}
+      </div>
+    `;
+
     const itemsHtml = (order.items || []).map(i => `
-      <li style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 14px;">
-          ${i.image ? `<img src="${i.image}" style="width: 32px; height: 32px; object-fit: cover; margin-right: 12px; vertical-align: middle; background: #f5f5f5;" />` : ''}
-          ${i.quantity} &times; ${i.name} <span style="color:#888; font-size:11px; margin-left: 4px;">(${[i.size, i.color].filter(Boolean).join(' / ') || '-'})</span>
-        </span> 
-        <span style="font-weight: 600; font-size: 14px;">${site?.currency || 'R'}${(i.price * i.quantity).toFixed(2)}</span>
-      </li>`).join('');
+      <div style="display:flex; align-items:center; border:1px solid #eee; border-radius:4px; padding:14px; margin-bottom:10px;">
+        ${i.image ? `<img src="${i.image}" alt="" style="width:56px; height:56px; object-fit:cover; border-radius:4px; margin-right:16px; background:#f5f5f5;" />` : ''}
+        <div style="flex:1;">
+          <p style="margin:0; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.02em;">${i.name}</p>
+          ${[i.size, i.color].filter(Boolean).length ? `<p style="margin:3px 0 0; font-size:12px; color:#888;">${[i.size, i.color].filter(Boolean).join(' / ')}</p>` : ''}
+        </div>
+        <p style="margin:0; font-size:11px; color:#666; text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap;">Qty: ${i.quantity}</p>
+      </div>`).join('');
+
+    const financialsHtml = showFinancials ? `
+      <div style="border-top:1px solid #eee; padding-top:16px; margin-bottom:32px;">
+        <div style="display:flex; justify-content:space-between; font-size:14px; color:#666; margin-bottom:8px;">
+          <span>Subtotal</span><span>${currency}${(order.total - (order.shippingCost || 0)).toFixed(2)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:14px; color:#666; margin-bottom:16px;">
+          <span>Shipping</span><span>${order.shippingCost ? `${currency}${order.shippingCost.toFixed(2)}` : 'Free'}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:17px; font-weight:800; border-top:1px solid #111; padding-top:14px;">
+          <span>Total</span><span>${currency}${order.total.toFixed(2)}</span>
+        </div>
+      </div>
+    ` : '';
+
+    const trackingCta = order.trackingUrl ? `
+      <div style="text-align:center; margin-bottom:8px;">
+        <a href="${order.trackingUrl}" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:16px 44px; font-size:12px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase;">Track Your Order</a>
+      </div>
+    ` : '';
+
+    const bodyHtml = `
+      <h1 style="font-size:24px; font-weight:800; margin:0 0 16px; line-height:1.3;">${headline}</h1>
+      <p style="font-size:15px; color:#333; line-height:1.6; margin:0 0 32px;">${messageBody}</p>
+
+      ${order.adminNote ? `
+        <div style="background:#f7f7f7; padding:20px; border-left:2px solid #111; margin-bottom:32px;">
+          <p style="margin:0; font-size:14px; font-style:italic; color:#444; line-height:1.5;">"${order.adminNote}"</p>
+        </div>
+      ` : ''}
+
+      ${orderDetailsHtml}
+
+      <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:#888; margin:0 0 12px;">Items</p>
+      ${itemsHtml}
+
+      ${financialsHtml}
+      ${trackingCta}
+
+      <p style="text-align:center; font-size:14px; color:#666; margin-top:${trackingCta ? '32px' : '8px'};">Thank you for shopping with ${siteName}.</p>
+    `;
 
     await sendEmail({
       from: `${siteName} <${EMAIL_FROM}>`,
       to: order.email,
       subject: `Order Update: #${order.id} [${statusMap[order.status]?.toUpperCase() || order.status.toUpperCase()}]`,
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 48px 24px; background-color: #ffffff; color: #111111; line-height: 1.6;">
-          <div style="text-align: center; margin-bottom: 48px;">
-            ${(site?.emailLogo || site?.logo) ? `<img src="${site.emailLogo || site.logo}" alt="${siteName}" style="max-height: 48px; max-width: 200px; display: block; margin: 0 auto;" />` : `<h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">${siteName}</h1>`}
-          </div>
-          
-          <p style="font-size: 16px; margin-bottom: 24px;">Hi ${order.customer.split(' ')[0] || 'there'},</p>
-          <p style="font-size: 16px; margin-bottom: 32px; color: #333;">${messageBody}</p>
-          
-          ${order.adminNote ? `
-          <div style="background-color: #f7f7f7; padding: 24px; border-left: 2px solid #111; margin-bottom: 32px; border-radius: 4px;">
-            <p style="margin: 0; font-size: 14px; font-style: italic; color: #444; line-height: 1.5;">"${order.adminNote}"</p>
-          </div>
-          ` : ''}
-          
-          <div style="margin-bottom: 40px; border: 1px solid #eee; padding: 24px; border-radius: 8px;">
-            <h3 style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #888; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-top:0; margin-bottom: 16px;">Order Details</h3>
-            <ul style="list-style: none; padding: 0; margin: 0;">
-              ${itemsHtml}
-            </ul>
-            <div style="padding-top: 16px; text-align: right; font-size: 16px; font-weight: 700;">
-              Total: ${site?.currency || 'R'}${order.total.toFixed(2)}
-            </div>
-          </div>
-          
-          <p style="font-size: 16px; margin-top: 48px; margin-bottom: 8px; text-align: center; font-weight: 500;">Thank you for shopping with ${siteName}.</p>
-          
-          <div style="text-align: center; margin-top: 64px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid #f0f0f0; padding-top: 32px;">
-            ${site?.footerTagline ? `<p style="margin-bottom: 8px;">${site.footerTagline}</p>` : ''}
-            <p>&copy; ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
-          </div>
-        </div>
-      `
+      html: emailLayout({
+        siteName,
+        logoUrl: site?.emailLogo || site?.logo,
+        bodyHtml,
+        socials: site?.socials,
+        contactAddress,
+        contactUrl: baseUrl ? `${baseUrl}/contact` : '',
+      }),
     });
     console.log(`[Email] Customer status update sent for order ${order.id}`);
   } catch (err) {
@@ -581,7 +702,7 @@ async function sendCustomerStatusEmail(order) {
 // ─── API: Update Order Status (accept / reject) ─────────────────────────────────
 app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
   const allowed = ['processing', 'shipped', 'delivered', 'cancelled', 'paid', 'pending_payment'];
-  const { status, reason } = req.body;
+  const { status, reason, carrier, trackingNumber, trackingUrl, estimatedDelivery } = req.body;
   if (!allowed.includes(status))
     return res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` });
   try {
@@ -590,6 +711,10 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
 
     const update = { status };
     if (reason) update.adminNote = reason;
+    if (carrier !== undefined) update.carrier = carrier;
+    if (trackingNumber !== undefined) update.trackingNumber = trackingNumber;
+    if (trackingUrl !== undefined) update.trackingUrl = trackingUrl;
+    if (estimatedDelivery !== undefined) update.estimatedDelivery = estimatedDelivery;
     const order = await Order.findOneAndUpdate(
       { id: req.params.id },
       { $set: update },
@@ -609,7 +734,7 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
 
     // Email customer if status explicitly changed
     if (status !== oldOrder.status) {
-        sendCustomerStatusEmail(order).catch(console.error);
+        sendCustomerStatusEmail(order, `${req.protocol}://${req.get('host')}`).catch(console.error);
     }
 
     res.json({ ok: true, order });
@@ -824,26 +949,19 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
 
     const subscribers = await Subscriber.find(query).lean();
     if (subscribers.length === 0) return res.status(400).json({ error: 'No active recipients found matching selection.' });
-    
-    const site = await Settings.findOne({ _id: 'main' }).lean();
-    const siteName = site?.name || 'Others.';
 
-    const emailHtml = `
-      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff; color: #111111; line-height: 1.6;">
-        <div style="text-align: center; margin-bottom: 40px;">
-          ${site?.logo ? `<img src="${site.logo}" alt="${siteName}" style="max-height: 45px; max-width: 200px; display: block; margin: 0 auto;" />` : `<h1 style="font-size: 24px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; color: #000;">${siteName}</h1>`}
-        </div>
-        
-        <div style="font-size: 16px; margin-bottom: 30px;">
-          ${html}
-        </div>
-        
-        <div style="text-align: center; margin-top: 50px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid #eaeaea; padding-top: 30px;">
-          <p>${site?.footerTagline || ''}</p>
-          <p>&copy; ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
-        </div>
-      </div>
-    `;
+    const { site, contactAddress } = await getEmailBranding();
+    const siteName = site?.name || 'Others.';
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    const emailHtml = emailLayout({
+      siteName,
+      logoUrl: site?.logo,
+      bodyHtml: `<div style="font-size:16px; line-height:1.6;">${html}</div>`,
+      socials: site?.socials,
+      contactAddress,
+      contactUrl: `${baseUrl}/contact`,
+    });
 
     // Process individually for privacy and deliverability
     let sentCount = 0;
@@ -1185,10 +1303,11 @@ app.post('/api/payfast/itn', async (req, res) => {
         }).catch(() => {});
 
         // Trigger admin notifications for the newly paid order
-        sendOrderNotification(updated).catch(e => console.error('Error sending ITN admin notification:', e));
-        
+        const itnBaseUrl = `${req.protocol}://${req.get('host')}`;
+        sendOrderNotification(updated, itnBaseUrl).catch(e => console.error('Error sending ITN admin notification:', e));
+
         // Also send customer success email
-        sendCustomerStatusEmail(updated).catch(e => console.error('Error sending ITN customer email:', e));
+        sendCustomerStatusEmail(updated, itnBaseUrl).catch(e => console.error('Error sending ITN customer email:', e));
       } else {
         // DB is offline or findOneAndUpdate failed/timed out
         console.warn(`ITN: Payment COMPLETE for ${orderId} but DB is OFFLINE. Sending emergency email.`);
@@ -1200,7 +1319,7 @@ app.post('/api/payfast/itn', async (req, res) => {
           address: 'Check PayFast dashboard for details (DB is currently offline)',
           items: []
         };
-        sendOrderNotification(emergencyOrder).catch(e => console.error('Error sending ITN emergency admin notification:', e));
+        sendOrderNotification(emergencyOrder, `${req.protocol}://${req.get('host')}`).catch(e => console.error('Error sending ITN emergency admin notification:', e));
       }
       console.log(`✓ ITN: order ${orderId} marked PAID (PayFast ID: ${pf_payment_id})`);
     } else {

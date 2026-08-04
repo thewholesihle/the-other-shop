@@ -11,6 +11,9 @@
   let searchQuery = '';
   let pendingId = null; // order id currently mid-request (status patch or delete)
 
+  let shippingModalId = null;
+  let shippingForm = { carrier: '', trackingNumber: '', trackingUrl: '', estimatedDelivery: '' };
+
   // Sort orders newest first
   $: sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
   $: filteredOrders = sortedOrders.filter(o => {
@@ -24,22 +27,32 @@
     return matchesStatus && matchesSearch;
   });
 
-  async function patchStatus(orderId, status, reason = '') {
+  async function patchStatus(orderId, status, reason = '', extra = {}) {
     pendingId = orderId;
     try {
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, reason }),
+        body: JSON.stringify({ status, reason, ...extra }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      onUpdate(orders.map(o => o.id === orderId ? { ...o, status, adminNote: reason || o.adminNote } : o));
+      onUpdate(orders.map(o => o.id === orderId ? { ...o, status, adminNote: reason || o.adminNote, ...extra } : o));
     } catch (e) {
       alert(`Failed to update order: ${e.message}`);
     } finally {
       pendingId = null;
     }
+  }
+
+  function openShippingModal(orderId) {
+    shippingModalId = orderId;
+    shippingForm = { carrier: '', trackingNumber: '', trackingUrl: '', estimatedDelivery: '' };
+  }
+
+  async function confirmShipped(orderId) {
+    await patchStatus(orderId, 'shipped', '', { ...shippingForm });
+    shippingModalId = null;
   }
 
   function handleAccept(orderId) {
@@ -187,7 +200,7 @@
 
             <!-- Move from processing to shipped -->
             {#if order.status === 'processing'}
-              <button onclick={() => patchStatus(order.id, 'shipped')} disabled={pendingId === order.id}
+              <button onclick={() => openShippingModal(order.id)} disabled={pendingId === order.id}
                 class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
                 ✓ MARK SHIPPED
               </button>
@@ -228,6 +241,49 @@
               </button>
             </div>
           {/if}
+
+          <!-- Shipping details, sent to the customer in the "shipped" email -->
+          {#if shippingModalId === order.id}
+            <div class="mt-1 p-3 border border-blue-200 bg-blue-50 space-y-2">
+              <p class="text-[10px] uppercase tracking-wider font-medium text-blue-900">Shipping details (optional — included in the customer email)</p>
+              <div class="grid grid-cols-2 gap-2">
+                <input
+                  bind:value={shippingForm.carrier}
+                  placeholder="Carrier (e.g. UPS, DHL)"
+                  class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground"
+                />
+                <input
+                  bind:value={shippingForm.trackingNumber}
+                  placeholder="Tracking number"
+                  class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground"
+                />
+              </div>
+              <input
+                bind:value={shippingForm.trackingUrl}
+                placeholder="Tracking URL (paste the courier's tracking link)"
+                class="w-full bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground"
+              />
+              <div class="flex items-center gap-2">
+                <label for="est-delivery-{order.id}" class="text-xs text-muted-foreground whitespace-nowrap">Est. delivery</label>
+                <input
+                  id="est-delivery-{order.id}"
+                  type="date"
+                  bind:value={shippingForm.estimatedDelivery}
+                  class="bg-white border border-border px-2 py-1 text-xs focus:outline-none focus:border-foreground"
+                />
+              </div>
+              <div class="flex gap-2 pt-1">
+                <button onclick={() => confirmShipped(order.id)} disabled={pendingId === order.id}
+                  class="bg-blue-600 text-white text-[10px] uppercase tracking-wider px-3 py-1.5 hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-wait">
+                  Confirm Shipped
+                </button>
+                <button onclick={() => shippingModalId = null}
+                  class="text-xs text-muted-foreground hover:text-foreground px-2 transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          {/if}
         </div>
 
         <div class="border-t border-border/50 pt-3 space-y-2">
@@ -250,6 +306,14 @@
              <button onclick={() => exportPDF(order)} class="text-[10px] uppercase text-muted-foreground hover:text-foreground underline transition-colors">Download PDF</button>
           </div>
         </div>
+
+        {#if order.trackingNumber || order.carrier}
+          <div class="text-xs text-muted-foreground flex flex-col sm:flex-row gap-4 sm:items-center border-t border-border/50 pt-3">
+            {#if order.carrier}<div><span class="text-label">CARRIER:</span> {order.carrier}</div>{/if}
+            {#if order.trackingNumber}<div><span class="text-label">TRACKING #:</span> {order.trackingNumber}</div>{/if}
+            {#if order.estimatedDelivery}<div><span class="text-label">EST. DELIVERY:</span> {order.estimatedDelivery}</div>{/if}
+          </div>
+        {/if}
       </div>
     {/each}
 
