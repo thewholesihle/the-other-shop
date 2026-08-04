@@ -70,6 +70,15 @@ app.use('/api/', apiLimiter);
 // coming from a browser tab in the first place.
 function verifySameOrigin(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  // PayFast's ITN webhook is a server-to-server POST from PayFast's own infrastructure,
+  // not a browser tab — "same origin" doesn't apply to it, and there's no guarantee
+  // it sends no Origin/Referer at all (assuming so previously broke payment
+  // confirmation — PayFast's notifier apparently does send one, so every ITN got
+  // rejected here before ever reaching the handler that marks orders paid, leaving
+  // them stuck on pending_payment). It's independently verified via IP allowlist,
+  // signature check, and a server-to-server confirmation call back to PayFast —
+  // exempt it explicitly instead of guessing at header behavior.
+  if (req.path === '/api/payfast/itn') return next();
   const origin = req.headers.origin || req.headers.referer;
   if (!origin) return next();
   try {
