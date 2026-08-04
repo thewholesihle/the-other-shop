@@ -4,26 +4,30 @@
   export let onUpdate = () => {};
 
   let filter = 'all';
-  const statusOptions = ['all', 'pending_payment', 'paid', 'shipped', 'delivered', 'cancelled'];
-  
+  // 'processing' was missing here, which meant there was no way to filter down to
+  // just orders being prepared for shipment even though that's a real order status.
+  const statusOptions = ['all', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
+
   let rejectingId = null;
   let rejectReason = '';
   let searchQuery = '';
   let pendingId = null; // order id currently mid-request (status patch or delete)
 
   let shippingModalId = null;
-  let shippingForm = { carrier: '', trackingNumber: '', trackingUrl: '', estimatedDelivery: '' };
+  let shippingForm = { carrier: '', trackingNumber: '', estimatedDelivery: '' };
 
   // Sort orders newest first
   $: sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+  $: statusCounts = Object.fromEntries(statusOptions.map(s => [s, s === 'all' ? orders.length : orders.filter(o => o.status === s).length]));
   $: filteredOrders = sortedOrders.filter(o => {
     const matchesStatus = filter === 'all' || o.status === filter;
     const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q || 
-      o.id.toLowerCase().includes(q) || 
-      (o.customer || '').toLowerCase().includes(q) || 
-      (o.email || '').toLowerCase().includes(q) || 
-      (o.phone || '').toLowerCase().includes(q);
+    const matchesSearch = !q ||
+      o.id.toLowerCase().includes(q) ||
+      (o.customer || '').toLowerCase().includes(q) ||
+      (o.email || '').toLowerCase().includes(q) ||
+      (o.phone || '').toLowerCase().includes(q) ||
+      (o.trackingNumber || '').toLowerCase().includes(q);
     return matchesStatus && matchesSearch;
   });
 
@@ -47,7 +51,7 @@
 
   function openShippingModal(orderId) {
     shippingModalId = orderId;
-    shippingForm = { carrier: '', trackingNumber: '', trackingUrl: '', estimatedDelivery: '' };
+    shippingForm = { carrier: '', trackingNumber: '', estimatedDelivery: '' };
   }
 
   async function confirmShipped(orderId) {
@@ -136,18 +140,17 @@
     </div>
     <div class="flex items-center gap-3">
       <div class="relative flex-1 max-w-xs">
-        <input 
-          type="text" 
-          bind:value={searchQuery} 
-          placeholder="Search name, email, phone or ID..." 
+        <input
+          type="text"
+          bind:value={searchQuery}
+          placeholder="Search name, email, phone, ID or tracking #..."
           class="w-full bg-transparent border border-border pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"
         />
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       </div>
       <select bind:value={filter} class="bg-transparent border border-border px-4 py-2 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer">
-        <option value="all">All Orders</option>
         {#each statusOptions as s}
-          <option value={s}>{s.replace('_', ' ').toUpperCase()}</option>
+          <option value={s}>{s === 'all' ? 'All Orders' : s.replace('_', ' ').toUpperCase()} ({statusCounts[s]})</option>
         {/each}
       </select>
     </div>
@@ -258,11 +261,6 @@
                   class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground"
                 />
               </div>
-              <input
-                bind:value={shippingForm.trackingUrl}
-                placeholder="Tracking URL (paste the courier's tracking link)"
-                class="w-full bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground"
-              />
               <div class="flex items-center gap-2">
                 <label for="est-delivery-{order.id}" class="text-xs text-muted-foreground whitespace-nowrap">Est. delivery</label>
                 <input

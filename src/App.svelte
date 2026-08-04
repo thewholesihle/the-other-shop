@@ -110,9 +110,10 @@
     {@const iconBase = site.favicon || site.logo}
     <link rel="icon" type="image/png" sizes="32x32" href={iconBase.includes('cloudinary.com') ? iconBase.replace('/upload/', '/upload/c_pad,w_32,h_32/') : iconBase} />
     <link rel="icon" type="image/png" sizes="16x16" href={iconBase.includes('cloudinary.com') ? iconBase.replace('/upload/', '/upload/c_pad,w_16,h_16/') : iconBase} />
+    <link rel="shortcut icon" href={iconBase.includes('cloudinary.com') ? iconBase.replace('/upload/', '/upload/c_pad,w_32,h_32/') : iconBase} />
     <link rel="apple-touch-icon" sizes="180x180" href={iconBase.includes('cloudinary.com') ? iconBase.replace('/upload/', '/upload/c_pad,w_180,h_180/') : iconBase} />
     <link rel="manifest" href="/manifest.json" />
-    <meta property="og:image" content={site.logo} />
+    <meta property="og:image" content={site.logo || site.favicon} />
   {/if}
   {#if site?.colors && route.page !== 'admin'}
     {@html `

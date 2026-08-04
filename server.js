@@ -35,11 +35,10 @@ app.use(helmet({
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // 300 requests per IP
+  max: 300, // 300 requests per IP — plenty for normal admin panel polling (~45/15min)
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
-  skip: (req) => req.path.startsWith('/admin') // Don't limit admin if same IP
 });
 
 const checkoutLimiter = rateLimit({
@@ -48,8 +47,41 @@ const checkoutLimiter = rateLimit({
   message: { error: 'Too many checkouts. Please wait an hour.' }
 });
 
+// The admin page itself (where Basic Auth is challenged) previously had no rate
+// limiting at all — apiLimiter only covers /api/*, and the /admin route was never
+// mounted under it — leaving credential brute-forcing completely unthrottled.
+const adminAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // 20 attempts per 15 minutes per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Please try again later.' },
+});
+
 app.use('/api/checkout', checkoutLimiter);
 app.use('/api/', apiLimiter);
+
+// ─── CSRF Guard ───────────────────────────────────────────────────────────────
+// Basic Auth credentials are cached and auto-resent by browsers on same-origin
+// requests, similar to cookies — a malicious page could still trigger a
+// state-changing request against this API from a logged-in admin's browser.
+// Reject cross-origin mutations; requests with no Origin/Referer at all (e.g.
+// PayFast's server-to-server ITN webhook) are left alone since they're not
+// coming from a browser tab in the first place.
+function verifySameOrigin(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  const origin = req.headers.origin || req.headers.referer;
+  if (!origin) return next();
+  try {
+    if (new URL(origin).host !== req.get('host')) {
+      return res.status(403).json({ error: 'Cross-origin request blocked.' });
+    }
+  } catch {
+    // Malformed header — fall through rather than false-positive block a real request.
+  }
+  next();
+}
+app.use(verifySameOrigin);
 
 // ─── Admin Auth ───────────────────────────────────────────────────────────────
 const ADMIN_USER = process.env.ADMIN_USER;
@@ -195,17 +227,30 @@ async function getEmailBranding() {
   }
 }
 
+// Small monochrome glyphs, inlined as base64 data-URI <img> sources rather than live
+// <svg> (email clients — Outlook especially — render inline SVG unreliably, but a
+// data-URI image degrades gracefully everywhere image loading is supported).
+const EMAIL_SOCIAL_ICONS = {
+  instagram: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>',
+  twitter: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"><path d="M4 4l16 16M20 4L4 20"/></svg>',
+  tiktok: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6c0-1 1-2 3-2 1.5 3 3 4 6 4"/><circle cx="9" cy="18" r="3"/></svg>',
+  youtube: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="none"><path d="M21.6 7.2a2.7 2.7 0 0 0-1.9-1.9C18 5 12 5 12 5s-6 0-7.7.3a2.7 2.7 0 0 0-1.9 1.9A28 28 0 0 0 2 12a28 28 0 0 0 .4 4.8 2.7 2.7 0 0 0 1.9 1.9C6 19 12 19 12 19s6 0 7.7-.3a2.7 2.7 0 0 0 1.9-1.9A28 28 0 0 0 22 12a28 28 0 0 0-.4-4.8zM10 15.5v-7l6 3.5-6 3.5z"/></svg>',
+};
+
 const EMAIL_SOCIAL_PLATFORMS = [
-  { key: 'instagram', label: 'IG' },
-  { key: 'twitter',   label: 'TW' },
-  { key: 'tiktok',    label: 'TT' },
-  { key: 'youtube',   label: 'YT' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'twitter',   label: 'Twitter' },
+  { key: 'tiktok',    label: 'TikTok' },
+  { key: 'youtube',   label: 'YouTube' },
 ];
 
 function emailSocialLinks(socials) {
   const active = EMAIL_SOCIAL_PLATFORMS.filter(p => socials?.[p.key]?.trim());
   if (!active.length) return '';
-  return active.map(p => `<a href="${socials[p.key]}" style="display:inline-block; width:34px; height:34px; line-height:34px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); color:#ffffff; text-decoration:none; font-size:10px; font-weight:700; letter-spacing:0.02em; text-align:center; margin:0 5px;">${p.label}</a>`).join('');
+  return active.map(p => {
+    const iconSrc = `data:image/svg+xml;base64,${Buffer.from(EMAIL_SOCIAL_ICONS[p.key]).toString('base64')}`;
+    return `<a href="${socials[p.key]}" style="display:inline-block; width:34px; height:34px; line-height:34px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); text-align:center; margin:0 5px;"><img src="${iconSrc}" width="16" height="16" alt="${p.label}" style="vertical-align:middle;" /></a>`;
+  }).join('');
 }
 
 function formatDateLabel(dateStr) {
@@ -653,12 +698,6 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
       </div>
     ` : '';
 
-    const trackingCta = order.trackingUrl ? `
-      <div style="text-align:center; margin-bottom:8px;">
-        <a href="${order.trackingUrl}" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:16px 44px; font-size:12px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase;">Track Your Order</a>
-      </div>
-    ` : '';
-
     const bodyHtml = `
       <h1 style="font-size:24px; font-weight:800; margin:0 0 16px; line-height:1.3;">${headline}</h1>
       <p style="font-size:15px; color:#333; line-height:1.6; margin:0 0 32px;">${messageBody}</p>
@@ -675,9 +714,8 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
       ${itemsHtml}
 
       ${financialsHtml}
-      ${trackingCta}
 
-      <p style="text-align:center; font-size:14px; color:#666; margin-top:${trackingCta ? '32px' : '8px'};">Thank you for shopping with ${siteName}.</p>
+      <p style="text-align:center; font-size:14px; color:#666; margin-top:8px;">Thank you for shopping with ${siteName}.</p>
     `;
 
     await sendEmail({
@@ -702,7 +740,7 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
 // ─── API: Update Order Status (accept / reject) ─────────────────────────────────
 app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
   const allowed = ['processing', 'shipped', 'delivered', 'cancelled', 'paid', 'pending_payment'];
-  const { status, reason, carrier, trackingNumber, trackingUrl, estimatedDelivery } = req.body;
+  const { status, reason, carrier, trackingNumber, estimatedDelivery } = req.body;
   if (!allowed.includes(status))
     return res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` });
   try {
@@ -713,7 +751,6 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
     if (reason) update.adminNote = reason;
     if (carrier !== undefined) update.carrier = carrier;
     if (trackingNumber !== undefined) update.trackingNumber = trackingNumber;
-    if (trackingUrl !== undefined) update.trackingUrl = trackingUrl;
     if (estimatedDelivery !== undefined) update.estimatedDelivery = estimatedDelivery;
     const order = await Order.findOneAndUpdate(
       { id: req.params.id },
@@ -910,6 +947,14 @@ app.post('/api/data', basicAuth, async (req, res) => {
 // ─── API: Products (granular) ─────────────────────────────────────────────────
 app.get('/api/products', async (_req, res) => {
   try { res.json(await Product.find().lean()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Lean endpoint for the admin panel's background refresh — pulling just orders +
+// products (not the whole /api/data blob, which also fetches categories, lookbooks,
+// community, pages, and subscribers on every 20s poll for data that rarely changes).
+app.get('/api/orders', basicAuth, async (_req, res) => {
+  try { res.json(await Order.find().sort({ createdAt: -1 }).lean()); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -1400,7 +1445,7 @@ app.get('/shop/:id', async (req, res) => {
 });
 
 // ─── Admin Routes (Basic Auth protected) ─────────────────────────────────────
-app.get(/^\/admin(\/.*)?$/, basicAuth, (_req, res) => {
+app.get(/^\/admin(\/.*)?$/, adminAuthLimiter, basicAuth, (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
 });
 

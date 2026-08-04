@@ -3,7 +3,9 @@
 
   $: totalRevenue = data.orders.filter(o => ['paid', 'shipped', 'delivered'].includes(o.status)).reduce((sum, o) => sum + o.total, 0);
   $: totalProducts = data.products.length;
-  $: totalOrders = data.orders.length;
+  // Cancelled/rejected orders had their stock returned and aren't real order volume — don't count them here.
+  $: totalOrders = data.orders.filter(o => o.status !== 'cancelled').length;
+  $: cancelledOrders = data.orders.filter(o => o.status === 'cancelled').length;
   $: lowStock = data.products.filter(p => p.stock > 0 && p.stock <= 10).length;
   $: outOfStock = data.products.filter(p => p.stock === 0).length;
   $: pendingOrders = data.orders.filter(o => o.status === 'pending_payment').length;
@@ -38,7 +40,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
       </div>
       <p class="text-2xl font-display font-bold text-foreground tabular-nums">{totalOrders}</p>
-      <p class="text-xs text-muted-foreground mt-1">{pendingOrders} pending</p>
+      <p class="text-xs text-muted-foreground mt-1">{pendingOrders} pending{cancelledOrders ? ` · ${cancelledOrders} cancelled (excluded)` : ''}</p>
     </div>
     <div class="bg-card border border-border p-5 hover:shadow-md transition-shadow duration-200">
       <div class="flex items-start justify-between mb-3">

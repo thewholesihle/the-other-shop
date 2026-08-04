@@ -3,6 +3,7 @@
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
+  import Loader from '../components/Loader.svelte';
 
   let data = null;
   let loading = true;

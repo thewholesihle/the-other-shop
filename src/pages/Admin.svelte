@@ -84,11 +84,17 @@
     // Light polling so incoming orders / PayFast-driven status changes / stock
     // movements show up on their own, without the admin needing to reload the
     // page. Skipped while a save is in flight so it can never race a write.
+    // Uses the lean /api/orders + /api/products endpoints rather than the full
+    // /api/data blob — no need to refetch categories/lookbooks/community/pages/
+    // subscribers every 20 seconds just to pick up order and stock changes.
     pollTimer = setInterval(async () => {
       if (saving || loading || !data) return;
       try {
-        const fresh = await loadData();
-        data = { ...data, orders: fresh.orders, products: fresh.products };
+        const [orders, products] = await Promise.all([
+          fetch('/api/orders', { credentials: 'include' }).then(r => r.ok ? r.json() : Promise.reject()),
+          fetch('/api/products').then(r => r.ok ? r.json() : Promise.reject()),
+        ]);
+        data = { ...data, orders, products };
       } catch {
         // Transient network hiccup — keep showing the last known-good data.
       }

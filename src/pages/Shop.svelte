@@ -6,26 +6,46 @@
   import Loader from '../components/Loader.svelte';
   import { loadStoreData } from '../lib/storeData.js';
 
+  const SORT_MODES = ['newest', 'price-asc', 'price-desc'];
+
   let data = null;
   let loading = true;
   let activeCategory = 'all';
   let sortMode = 'newest';
+  let urlSynced = false; // guards against overwriting the just-parsed URL before the user interacts
 
   onMount(async () => {
-    try { 
-      data = await loadStoreData(); 
+    try {
+      data = await loadStoreData();
       const query = new URLSearchParams(window.location.search || window.location.hash.split('?')[1]);
       const catId = query.get('category');
       const filter = query.get('filter');
-      
+      const sortParam = query.get('sort');
+
       if (filter === 'new') activeCategory = 'new';
       else if (catId && data.categories) {
         const found = data.categories.find(c => c.id === catId);
         if (found) activeCategory = found.id;
       }
+      if (SORT_MODES.includes(sortParam)) sortMode = sortParam;
     }
-    finally { loading = false; }
+    finally {
+      loading = false;
+      urlSynced = true;
+    }
   });
+
+  // Keep the URL in sync with the active filter/sort so the current view is
+  // shareable/bookmarkable and survives a refresh. replaceState (not pushState)
+  // so clicking through filters doesn't spam browser history.
+  $: if (urlSynced) {
+    const params = new URLSearchParams();
+    if (activeCategory === 'new') params.set('filter', 'new');
+    else if (activeCategory !== 'all') params.set('category', activeCategory);
+    if (sortMode !== 'newest') params.set('sort', sortMode);
+    const qs = params.toString();
+    history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+  }
 
   $: filtered = data
     ? data.products

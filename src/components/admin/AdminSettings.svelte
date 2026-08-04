@@ -102,14 +102,6 @@
             {/if}
             <ImageUpload label="" value={form.logo || ''} onChange={(url) => (form.logo = url)} />
           </div>
-          {#if form.logo}
-            <button 
-              onclick={() => { form.favicon = form.logo; alert('Favicon updated to use brand logo.'); }}
-              class="mt-3 text-[10px] uppercase tracking-wider font-bold border border-border px-3 py-1.5 hover:bg-muted transition-colors active:scale-95"
-            >
-              USE LOGO AS FAVICON
-            </button>
-          {/if}
         </div>
         <div>
           <label for="s-logo-size" class="text-label block mb-1.5">NAV LOGO SIZE (PX)</label>
@@ -132,6 +124,28 @@
             {/if}
             <ImageUpload label="" value={form.emailLogo || ''} onChange={(url) => (form.emailLogo = url)} />
           </div>
+        </div>
+
+        <div>
+          <p class="text-label block mb-1.5">FAVICON</p>
+          <p class="text-xs text-muted-foreground mb-2">Browser tab icon, shown across the entire site. A square image works best — the logo is usually too wide. Fallback is the main logo.</p>
+          <div class="flex items-start gap-4">
+            {#if form.favicon}
+              <div class="space-y-2">
+                <img src={form.favicon} alt="Favicon" class="h-10 w-10 object-contain bg-secondary p-1" />
+                <button onclick={() => (form.favicon = '')} class="text-xs text-destructive hover:underline">Remove</button>
+              </div>
+            {/if}
+            <ImageUpload label="" value={form.favicon || ''} onChange={(url) => (form.favicon = url)} />
+          </div>
+          {#if form.logo && !form.favicon}
+            <button
+              onclick={() => (form.favicon = form.logo)}
+              class="mt-3 text-[10px] uppercase tracking-wider font-bold border border-border px-3 py-1.5 hover:bg-muted transition-colors active:scale-95"
+            >
+              USE LOGO AS FAVICON
+            </button>
+          {/if}
         </div>
       </div>
     </div>
