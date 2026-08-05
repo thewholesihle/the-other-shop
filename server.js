@@ -79,6 +79,10 @@ function verifySameOrigin(req, res, next) {
   // signature check, and a server-to-server confirmation call back to PayFast —
   // exempt it explicitly instead of guessing at header behavior.
   if (req.path === '/api/payfast/itn') return next();
+  // RFC 8058 one-click unsubscribe: mailbox providers (Gmail/Yahoo/etc.) POST this
+  // endpoint directly from the List-Unsubscribe-Post header, server-to-server, with
+  // no Origin/Referer guarantee — same reasoning as the ITN exemption above.
+  if (req.path === '/api/newsletter/unsubscribe') return next();
   const origin = req.headers.origin || req.headers.referer;
   if (!origin) return next();
   try {
@@ -197,28 +201,101 @@ const PF_HOST = PF.sandbox
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const EMAIL_FROM = process.env.SMTP_FROM || 'onboarding@resend.dev';
 
-async function sendEmail({ from, to, subject, html }) {
+async function sendEmail({ from, to, subject, html, text, replyTo, headers }) {
   if (!process.env.RESEND_API_KEY) {
     throw new Error('RESEND_API_KEY is not set');
   }
+  const payload = { from, to: Array.isArray(to) ? to : [to], subject, html };
+  // `text` gives every send a multipart/alternative plain-text part — better spam-filter
+  // scoring and the only thing some accessibility/text-only clients render at all.
+  if (text) payload.text = text;
+  // Customer/marketing mail goes out "from" a no-reply sandbox address (see EMAIL_FROM);
+  // reply-to points hit-reply at an inbox someone actually reads instead of bouncing.
+  if (replyTo) payload.reply_to = replyTo;
+  // Used for List-Unsubscribe / List-Unsubscribe-Post on marketing sends (RFC 8058).
+  if (headers) payload.headers = headers;
   const res = await fetch(RESEND_API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      from,
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      html,
-    }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message || `Resend API error: ${res.status}`);
   }
   return res.json();
+}
+
+/** Best-effort plain-text derivation of an email's HTML, preserving link URLs.
+ * Every send gets this as the `text` part alongside `html` — some clients render
+ * text-only, and having one at all measurably helps spam-filter scoring. */
+function htmlToText(html) {
+  return String(html || '')
+    // Outlook conditional comments (<!--[if mso]>...<![endif]-->) are valid HTML
+    // comments end to end, and emailLayout() uses them for its width-table fallback
+    // and MSO-only <head> block — left unstripped, their raw contents (stray "96"
+    // from <o:PixelsPerInch>, duplicate wrapper markup) leaked straight into the
+    // plain-text part. Drop <head> and all comments before anything else runs.
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    // Keep link destinations instead of dropping them with the rest of the tags —
+    // a plain-text "Unsubscribe" with no URL next to it is useless. Icon links
+    // wrap an <img> with no text, so fall back to its alt text as the label.
+    .replace(/<a\s+[^>]*href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => {
+      let text = label.replace(/<[^>]+>/g, '').trim();
+      if (!text) {
+        const alt = label.match(/alt=["']([^"']*)["']/i);
+        if (alt) text = alt[1];
+      }
+      return href && !href.startsWith('#') ? `${text} (${href})` : text;
+    })
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|table|h[1-6]|li)>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '- ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&zwnj;/gi, '') // zero-width joiner — invisible padding, not real text
+    .replace(/&middot;/gi, '·')
+    .replace(/&times;/gi, '×')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** First usable "reply to a human" address for a site — customer/marketing mail is
+ * sent "from" a no-reply sandbox address (see EMAIL_FROM), so without this, hitting
+ * reply on any customer-facing email goes nowhere. */
+function primaryContactEmail(site) {
+  const raw = site?.adminNotificationEmails || process.env.ADMIN_EMAIL || '';
+  return raw.split(',').map(s => s.trim()).filter(Boolean)[0] || undefined;
+}
+
+// ─── Unsubscribe tokens ───────────────────────────────────────────────────────
+// One-click unsubscribe links must not let anyone unsubscribe an arbitrary address
+// just by guessing/editing the query string — sign each link with an HMAC so only
+// a link this server actually generated (i.e. sent to that address) is honored.
+function unsubscribeSecret() {
+  return process.env.UNSUBSCRIBE_SECRET || process.env.ADMIN_PASS || 'others-unsubscribe-fallback-secret';
+}
+function unsubscribeToken(email) {
+  return crypto.createHmac('sha256', unsubscribeSecret()).update(String(email).toLowerCase().trim()).digest('hex').slice(0, 32);
+}
+function verifyUnsubscribeToken(email, token) {
+  if (!email || !token) return false;
+  const expected = Buffer.from(unsubscribeToken(email));
+  const given = Buffer.from(String(token));
+  return expected.length === given.length && crypto.timingSafeEqual(expected, given);
 }
 
 // ─── Shared Email Branding & Layout ──────────────────────────────────────────
@@ -256,10 +333,18 @@ const EMAIL_SOCIAL_PLATFORMS = [
 function emailSocialLinks(socials) {
   const active = EMAIL_SOCIAL_PLATFORMS.filter(p => socials?.[p.key]?.trim());
   if (!active.length) return '';
-  return active.map(p => {
+  // Table cells, not inline-block <a> tags side by side — Outlook's Word rendering
+  // engine supports inline-block inconsistently and can stack these instead of
+  // rowing them; a <table> row is the one layout primitive every client agrees on.
+  const cells = active.map(p => {
     const iconSrc = `data:image/svg+xml;base64,${Buffer.from(EMAIL_SOCIAL_ICONS[p.key]).toString('base64')}`;
-    return `<a href="${socials[p.key]}" style="display:inline-block; width:34px; height:34px; line-height:34px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); text-align:center; margin:0 5px;"><img src="${iconSrc}" width="16" height="16" alt="${p.label}" style="vertical-align:middle;" /></a>`;
+    return `<td style="padding:0 5px;">
+      <a href="${socials[p.key]}" style="display:inline-block; width:34px; height:34px; line-height:34px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); text-align:center;">
+        <img src="${iconSrc}" width="16" height="16" alt="${p.label}" style="display:inline; vertical-align:middle;" />
+      </a>
+    </td>`;
   }).join('');
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr>${cells}</tr></table>`;
 }
 
 function formatDateLabel(dateStr) {
@@ -268,31 +353,120 @@ function formatDateLabel(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/** Wraps email body content in the shared branded header/footer chrome used by every template. */
-function emailLayout({ siteName, logoUrl, bodyHtml, socials, contactAddress, contactUrl }) {
+/** Wraps email body content in the shared branded header/footer chrome used by every
+ * template. Produces a full standalone HTML document (doctype/head/body), not a
+ * fragment — Resend forwards `html` verbatim to the mailbox, and clients like
+ * Outlook (Word rendering engine) and Windows Mail need the real document
+ * structure, an explicit charset, and an Outlook conditional-comment width table
+ * to render a fixed-width layout reliably; a bare `<div>` soup degrades badly.
+ *
+ * `preheader` sets the hidden preview snippet shown next to the subject line in
+ * the inbox list. `unsubscribeUrl` is only passed for marketing sends (the
+ * newsletter broadcast) — transactional order emails have nothing to unsubscribe
+ * from, so the footer link is conditional rather than always present. */
+function emailLayout({ siteName, logoUrl, bodyHtml, socials, contactAddress, contactUrl, preheader = '', unsubscribeUrl = '' }) {
   const socialLinksHtml = emailSocialLinks(socials);
+  const safeSiteName = escapeHtmlAttr(siteName);
+  // Invisible preview text + zero-width joiners to pad it past the boilerplate the
+  // client would otherwise pull into the inbox preview snippet (e.g. "View this
+  // email in your browser..."). mso-hide keeps Outlook's preview pane from showing it.
+  const preheaderHtml = preheader
+    ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#ffffff; opacity:0;">${escapeHtmlAttr(preheader)}${'&nbsp;&zwnj;'.repeat(10)}</div>`
+    : '';
+
+  return `<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="format-detection" content="telephone=no" />
+<!-- Locks light mode: this template's dark header/footer against a light body is
+     an intentional contrast, not a light-mode default — letting Gmail/Apple Mail/
+     Outlook.com auto-dark-mode invert it flattens that and can make text unreadable. -->
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>${safeSiteName}</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<![endif]-->
+<style>
+  body, table, td { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+  table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
+  img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
+  a { text-decoration:none; }
+  @media only screen and (max-width:600px) {
+    .email-container { width:100% !important; }
+    .email-padded { padding-left:20px !important; padding-right:20px !important; }
+  }
+</style>
+</head>
+<body style="margin:0; padding:0; width:100%; background:#f4f4f4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+${preheaderHtml}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f4;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <!--[if mso]>
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" align="center"><tr><td>
+      <![endif]-->
+      <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; margin:0 auto; background:#ffffff;">
+        <tr>
+          <td align="center" style="background:#111111; padding:28px 24px;">
+            ${logoUrl
+              ? `<img src="${logoUrl}" width="180" height="36" alt="${safeSiteName}" style="max-height:36px; max-width:180px; width:auto; height:auto; display:block; margin:0 auto;" />`
+              : `<span style="color:#ffffff; font-size:18px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;">${safeSiteName}</span>`}
+          </td>
+        </tr>
+        <tr>
+          <td class="email-padded" style="padding:40px 32px; color:#111111;">
+            ${bodyHtml}
+          </td>
+        </tr>
+        <tr>
+          <td align="center" class="email-padded" style="background:#111111; padding:32px 24px;">
+            ${socialLinksHtml ? `
+              <p style="color:rgba(255,255,255,0.5); font-size:11px; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 16px;">Want updates through more platforms?</p>
+              <div style="margin-bottom:24px;">${socialLinksHtml}</div>
+            ` : ''}
+            ${contactAddress ? `<p style="color:rgba(255,255,255,0.4); font-size:11px; margin:0 0 12px; line-height:1.5;">${contactAddress}</p>` : ''}
+            <p style="margin:0;">
+              ${contactUrl ? `<a href="${contactUrl}" style="color:rgba(255,255,255,0.6); font-size:11px;">Contact us</a>` : ''}
+              ${contactUrl && unsubscribeUrl ? `<span style="color:rgba(255,255,255,0.3); font-size:11px;">&nbsp;&middot;&nbsp;</span>` : ''}
+              ${unsubscribeUrl ? `<a href="${unsubscribeUrl}" style="color:rgba(255,255,255,0.6); font-size:11px;">Unsubscribe</a>` : ''}
+            </p>
+          </td>
+        </tr>
+      </table>
+      <!--[if mso]>
+      </td></tr></table>
+      <![endif]-->
+    </td>
+  </tr>
+</table>
+</body>
+</html>`;
+}
+
+/** One order-line-item row, shared by the admin notification and customer status
+ * emails. A <table> row, not the flexbox div this used to be — Outlook's Word
+ * rendering engine ignores `display:flex` entirely, which collapsed the image,
+ * name and quantity into an unreadable stack in that one client. */
+function emailItemRow(item, { showPrice = false, currency = 'R' } = {}) {
+  const meta = [item.size, item.color].filter(Boolean).join(' / ');
   return `
-    <div style="background:#f4f4f4; padding:32px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-      <div style="max-width:600px; margin:0 auto; background:#ffffff;">
-        <div style="background:#111111; padding:28px 24px; text-align:center;">
-          ${logoUrl
-            ? `<img src="${logoUrl}" alt="${siteName}" style="max-height:36px; max-width:180px;" />`
-            : `<span style="color:#ffffff; font-size:18px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;">${siteName}</span>`}
-        </div>
-        <div style="padding:40px 32px; color:#111111;">
-          ${bodyHtml}
-        </div>
-        <div style="background:#111111; padding:32px 24px; text-align:center;">
-          ${socialLinksHtml ? `
-            <p style="color:rgba(255,255,255,0.5); font-size:11px; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 16px;">Want updates through more platforms?</p>
-            <div style="margin-bottom:24px;">${socialLinksHtml}</div>
-          ` : ''}
-          ${contactAddress ? `<p style="color:rgba(255,255,255,0.4); font-size:11px; margin:0 0 12px; line-height:1.5;">${contactAddress}</p>` : ''}
-          ${contactUrl ? `<a href="${contactUrl}" style="color:rgba(255,255,255,0.6); font-size:11px; text-decoration:underline;">Contact us</a>` : ''}
-        </div>
-      </div>
-    </div>
-  `;
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eee; margin-bottom:8px;">
+      <tr>
+        ${item.image ? `<td width="48" valign="top" style="padding:12px 0 12px 12px;"><img src="${item.image}" width="48" height="48" alt="" style="width:48px; height:48px; object-fit:cover; background:#f5f5f5;" /></td>` : ''}
+        <td valign="middle" style="padding:12px;">
+          <p style="margin:0; font-size:13px; font-weight:600;">${item.name}</p>
+          ${meta ? `<p style="margin:2px 0 0; font-size:11px; color:#888;">${meta}</p>` : ''}
+        </td>
+        <td valign="middle" align="right" style="padding:12px; white-space:nowrap;">
+          <p style="margin:0; font-size:12px; color:#666;">${showPrice ? `&times;${item.quantity}` : `Qty: ${item.quantity}`}</p>
+          ${showPrice ? `<p style="margin:2px 0 0; font-size:13px; font-weight:600;">${currency}${(item.price * item.quantity).toFixed(2)}</p>` : ''}
+        </td>
+      </tr>
+    </table>`;
 }
 
 async function sendOrderNotification(order, baseUrl = '') {
@@ -325,17 +499,16 @@ async function sendOrderNotification(order, baseUrl = '') {
     const siteName = site?.name || 'Others.';
     const currency = site?.currency || 'R';
 
-    const itemsHtml = (order.items || []).map(i => `
-      <div style="display:flex; align-items:center; border:1px solid #eee; padding:12px; margin-bottom:8px;">
-        ${i.image ? `<img src="${i.image}" alt="" style="width:48px; height:48px; object-fit:cover; margin-right:14px; background:#f5f5f5;" />` : ''}
-        <div style="flex:1;">
-          <p style="margin:0; font-size:13px; font-weight:600;">${i.name}</p>
-          ${[i.size, i.color].filter(Boolean).length ? `<p style="margin:2px 0 0; font-size:11px; color:#888;">${[i.size, i.color].filter(Boolean).join(' / ')}</p>` : ''}
-        </div>
-        <p style="margin:0 16px 0 0; font-size:12px; color:#666; white-space:nowrap;">×${i.quantity}</p>
-        <p style="margin:0; font-size:13px; font-weight:600; white-space:nowrap;">${currency}${(i.price * i.quantity).toFixed(2)}</p>
-      </div>
-    `).join('');
+    const itemsHtml = (order.items || []).map(i => emailItemRow(i, { showPrice: true, currency })).join('');
+
+    const totalHtml = `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #111; margin-top:16px; margin-bottom:32px;">
+        <tr>
+          <td style="padding-top:16px; font-weight:700; font-size:16px;">Total paid</td>
+          <td align="right" style="padding-top:16px; font-weight:700; font-size:16px;">${currency}${order.total.toFixed(2)}</td>
+        </tr>
+      </table>
+    `;
 
     const bodyHtml = `
       <h1 style="font-size:22px; font-weight:800; margin:0 0 8px;">New order paid</h1>
@@ -349,10 +522,7 @@ async function sendOrderNotification(order, baseUrl = '') {
       <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:#888; margin:0 0 12px;">Items</p>
       ${itemsHtml}
 
-      <div style="display:flex; justify-content:space-between; font-weight:700; border-top:1px solid #111; padding-top:16px; margin-top:16px; margin-bottom:32px; font-size:16px;">
-        <span>Total paid</span>
-        <span>${currency}${order.total.toFixed(2)}</span>
-      </div>
+      ${totalHtml}
 
       ${baseUrl ? `
         <div style="text-align:center;">
@@ -361,18 +531,24 @@ async function sendOrderNotification(order, baseUrl = '') {
       ` : ''}
     `;
 
+    const html = emailLayout({
+      siteName,
+      logoUrl: site?.emailLogo || site?.logo,
+      bodyHtml,
+      socials: site?.socials,
+      contactAddress,
+      contactUrl: baseUrl ? `${baseUrl}/contact` : '',
+      preheader: `New order #${order.id} — ${currency}${order.total.toFixed(2)} from ${order.customer || 'a customer'}.`,
+    });
+
     await sendEmail({
       from: `${siteName} Store <${EMAIL_FROM}>`,
       to: recipients,
       subject: `New Order Paid: #${order.id}`,
-      html: emailLayout({
-        siteName,
-        logoUrl: site?.emailLogo || site?.logo,
-        bodyHtml,
-        socials: site?.socials,
-        contactAddress,
-        contactUrl: baseUrl ? `${baseUrl}/contact` : '',
-      }),
+      html,
+      text: htmlToText(html),
+      // Admin hits reply and it goes straight to the customer, not into the void.
+      replyTo: order.email || undefined,
     });
     console.log(`[Email] Notification sent for order ${order.id}`);
   } catch (err) {
@@ -689,28 +865,23 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
       </div>
     `;
 
-    const itemsHtml = (order.items || []).map(i => `
-      <div style="display:flex; align-items:center; border:1px solid #eee; border-radius:4px; padding:14px; margin-bottom:10px;">
-        ${i.image ? `<img src="${i.image}" alt="" style="width:56px; height:56px; object-fit:cover; border-radius:4px; margin-right:16px; background:#f5f5f5;" />` : ''}
-        <div style="flex:1;">
-          <p style="margin:0; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.02em;">${i.name}</p>
-          ${[i.size, i.color].filter(Boolean).length ? `<p style="margin:3px 0 0; font-size:12px; color:#888;">${[i.size, i.color].filter(Boolean).join(' / ')}</p>` : ''}
-        </div>
-        <p style="margin:0; font-size:11px; color:#666; text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap;">Qty: ${i.quantity}</p>
-      </div>`).join('');
+    const itemsHtml = (order.items || []).map(i => emailItemRow(i, { showPrice: false })).join('');
 
     const financialsHtml = showFinancials ? `
-      <div style="border-top:1px solid #eee; padding-top:16px; margin-bottom:32px;">
-        <div style="display:flex; justify-content:space-between; font-size:14px; color:#666; margin-bottom:8px;">
-          <span>Subtotal</span><span>${currency}${(order.total - (order.shippingCost || 0)).toFixed(2)}</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:14px; color:#666; margin-bottom:16px;">
-          <span>Shipping</span><span>${order.shippingCost ? `${currency}${order.shippingCost.toFixed(2)}` : 'Free'}</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:17px; font-weight:800; border-top:1px solid #111; padding-top:14px;">
-          <span>Total</span><span>${currency}${order.total.toFixed(2)}</span>
-        </div>
-      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #eee; margin-bottom:32px;">
+        <tr>
+          <td style="padding-top:16px; font-size:14px; color:#666;">Subtotal</td>
+          <td align="right" style="padding-top:16px; font-size:14px; color:#666;">${currency}${(order.total - (order.shippingCost || 0)).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0 16px; font-size:14px; color:#666;">Shipping</td>
+          <td align="right" style="padding:8px 0 16px; font-size:14px; color:#666;">${order.shippingCost ? `${currency}${order.shippingCost.toFixed(2)}` : 'Free'}</td>
+        </tr>
+        <tr>
+          <td style="padding-top:14px; border-top:1px solid #111; font-size:17px; font-weight:800;">Total</td>
+          <td align="right" style="padding-top:14px; border-top:1px solid #111; font-size:17px; font-weight:800;">${currency}${order.total.toFixed(2)}</td>
+        </tr>
+      </table>
     ` : '';
 
     const bodyHtml = `
@@ -733,18 +904,24 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
       <p style="text-align:center; font-size:14px; color:#666; margin-top:8px;">Thank you for shopping with ${siteName}.</p>
     `;
 
+    const html = emailLayout({
+      siteName,
+      logoUrl: site?.emailLogo || site?.logo,
+      bodyHtml,
+      socials: site?.socials,
+      contactAddress,
+      contactUrl: baseUrl ? `${baseUrl}/contact` : '',
+      preheader: headline,
+    });
+
     await sendEmail({
       from: `${siteName} <${EMAIL_FROM}>`,
       to: order.email,
       subject: `Order Update: #${order.id} [${statusMap[order.status]?.toUpperCase() || order.status.toUpperCase()}]`,
-      html: emailLayout({
-        siteName,
-        logoUrl: site?.emailLogo || site?.logo,
-        bodyHtml,
-        socials: site?.socials,
-        contactAddress,
-        contactUrl: baseUrl ? `${baseUrl}/contact` : '',
-      }),
+      html,
+      text: htmlToText(html),
+      // Customer hits reply and it lands in the store's real inbox, not the no-reply sandbox address.
+      replyTo: primaryContactEmail(site),
     });
     console.log(`[Email] Customer status update sent for order ${order.id}`);
     return { sent: true, type: order.status, to: order.email };
@@ -1016,27 +1193,46 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
     if (subscribers.length === 0) return res.status(400).json({ error: 'No active recipients found matching selection.' });
 
     const { site, contactAddress } = await getEmailBranding();
+    // CAN-SPAM (and most anti-spam law generally) requires every commercial/marketing
+    // email carry the sender's real physical postal address — unlike the transactional
+    // order-status emails, this route can't send without one.
+    if (!contactAddress) {
+      return res.status(400).json({ error: 'Add a physical mailing address on the Contact page before sending a newsletter — required by anti-spam law (CAN-SPAM) for marketing email.' });
+    }
     const siteName = site?.name || 'Others.';
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-
-    const emailHtml = emailLayout({
-      siteName,
-      logoUrl: site?.logo,
-      bodyHtml: `<div style="font-size:16px; line-height:1.6;">${html}</div>`,
-      socials: site?.socials,
-      contactAddress,
-      contactUrl: `${baseUrl}/contact`,
-    });
+    const replyTo = primaryContactEmail(site);
 
     // Process individually for privacy and deliverability
     let sentCount = 0;
     for (const sub of subscribers) {
       try {
+        const token = unsubscribeToken(sub.email);
+        const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(sub.email)}&token=${token}`;
+        const emailHtml = emailLayout({
+          siteName,
+          logoUrl: site?.logo,
+          bodyHtml: `<div style="font-size:16px; line-height:1.6;">${html}</div>`,
+          socials: site?.socials,
+          contactAddress,
+          contactUrl: `${baseUrl}/contact`,
+          preheader: subject,
+          unsubscribeUrl,
+        });
         await sendEmail({
           from: `${siteName} <${EMAIL_FROM}>`,
           to: sub.email,
           subject: subject,
-          html: emailHtml
+          html: emailHtml,
+          text: htmlToText(emailHtml),
+          replyTo,
+          headers: {
+            // RFC 8058 one-click unsubscribe — Gmail/Yahoo/Outlook.com show a native
+            // "Unsubscribe" affordance next to the sender and hit this without the
+            // user ever opening the email, when both headers are present.
+            'List-Unsubscribe': `<${unsubscribeUrl}>, <mailto:${replyTo || EMAIL_FROM}?subject=unsubscribe>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
         });
         sentCount++;
       } catch (mailErr) {
@@ -1050,6 +1246,41 @@ app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
     console.error('POST /api/newsletter/broadcast', err);
     res.status(500).json({ error: 'Mail delivery failed. Check your Resend configuration.' });
   }
+});
+
+// ─── API: Newsletter Unsubscribe ──────────────────────────────────────────────
+// GET is what a human clicks from their inbox — show a small confirmation page.
+app.get('/api/newsletter/unsubscribe', async (req, res) => {
+  const email = String(req.query.email || '').toLowerCase().trim();
+  const valid = verifyUnsubscribeToken(email, req.query.token);
+  if (valid) {
+    try { await Subscriber.deleteOne({ email }); } catch (e) { console.error('Unsubscribe delete failed:', e.message); }
+  }
+  res.status(valid ? 200 : 400).send(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${valid ? 'Unsubscribed' : 'Link invalid'}</title>
+<style>
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#f4f4f4; margin:0; padding:60px 20px; text-align:center; color:#111; }
+  .card { max-width:420px; margin:0 auto; background:#fff; padding:40px 32px; border:1px solid #eee; }
+  h1 { font-size:20px; margin:0 0 12px; }
+  p { font-size:14px; color:#666; line-height:1.6; margin:0; }
+</style></head>
+<body><div class="card">
+${valid
+  ? `<h1>You've been unsubscribed</h1><p>${escapeHtmlAttr(email)} won't receive any more newsletter emails from us.</p>`
+  : `<h1>Link invalid or expired</h1><p>We couldn't verify this unsubscribe link. If you keep receiving emails you don't want, contact us directly.</p>`}
+</div></body></html>`);
+});
+
+// POST is RFC 8058's one-click endpoint: mailbox providers ping this directly from
+// the List-Unsubscribe-Post header, server-to-server, with no human involved — it
+// must respond quickly with a plain success status, not an HTML page.
+app.post('/api/newsletter/unsubscribe', async (req, res) => {
+  const email = String(req.query.email || '').toLowerCase().trim();
+  if (verifyUnsubscribeToken(email, req.query.token)) {
+    try { await Subscriber.deleteOne({ email }); } catch (e) { console.error('Unsubscribe delete failed:', e.message); }
+  }
+  res.sendStatus(200);
 });
 
 // ─── PayFast Helpers ─────────────────────────────────────────────────────────
@@ -1681,12 +1912,10 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
 
     if (recipients.length === 0) return;
 
-    await sendEmail({
-      from: `Others. System <${EMAIL_FROM}>`,
-      to: recipients,
-      subject: `[ALERT] Site Error: ${err.message.slice(0, 50)}`,
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; color: #111; max-width: 600px; border: 1px solid #eee;">
+    const alertHtml = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>System Alert</title></head>
+<body style="margin:0; padding:0; background:#f4f4f4;">
+        <div style="font-family: sans-serif; padding: 20px; color: #111; max-width: 600px; margin: 20px auto; background:#fff; border: 1px solid #eee;">
           <h2 style="color: #d32f2f; text-transform: uppercase; letter-spacing: 0.1em;">${customMsg ? 'System Alert' : 'Critical Site Error'}</h2>
           <p>${customMsg || 'The system detected an internal error that might require your attention.'}</p>
           <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;">
@@ -1694,7 +1923,7 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
             <p style="margin: 0;"><strong>Message:</strong> ${err.message}</p>
           </div>
           <p style="margin-top: 30px;">
-            <a href="${req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:' + port}/admin" 
+            <a href="${req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:' + port}/admin"
                style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; font-weight: bold; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;">
                Open Admin Dashboard
             </a>
@@ -1702,7 +1931,14 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
           <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;" />
           <p style="font-size: 12px; color: #888;">This alert is throttled to once every 15 minutes.</p>
         </div>
-      `
+</body></html>`;
+
+    await sendEmail({
+      from: `Others. System <${EMAIL_FROM}>`,
+      to: recipients,
+      subject: `[ALERT] Site Error: ${err.message.slice(0, 50)}`,
+      html: alertHtml,
+      text: htmlToText(alertHtml),
     });
   } catch (e) {
     console.error('Failed to send error notification email:', e);
