@@ -48,17 +48,19 @@
 {#if loading || !data}
   <Loader />
 {:else}
-  <div class="min-h-screen">
+  <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
-    <Hero hero={data.site.hero} />
-    <AnnouncementBar text={data.site.announcement} />
-    <ProductGrid products={data.products} currency={data.site.currency} />
-    
-    {#if editorialType === 'article'}
-      <ArticleSection article={featuredArticle} {allArticles} heading={data.site.featuredEditorialHeading} message={data.site.featuredEditorialMessage} cta={data.site.featuredEditorialCta} />
-    {:else}
-      <LookbookSection lookbook={featuredLookbook} {allLookbooks} />
-    {/if}
+    <div class="flex-1">
+      <Hero hero={data.site.hero} />
+      <AnnouncementBar text={data.site.announcement} />
+      <ProductGrid products={data.products} currency={data.site.currency} />
+
+      {#if editorialType === 'article'}
+        <ArticleSection article={featuredArticle} {allArticles} heading={data.site.featuredEditorialHeading} message={data.site.featuredEditorialMessage} cta={data.site.featuredEditorialCta} />
+      {:else}
+        <LookbookSection lookbook={featuredLookbook} {allLookbooks} />
+      {/if}
+    </div>
 
     <Footer {data} />
   </div>

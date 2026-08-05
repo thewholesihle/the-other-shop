@@ -24,9 +24,9 @@
 {#if loading || !data}
   <Loader />
 {:else}
-  <div class="min-h-screen">
+  <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
-    <div class="pt-28 pb-20 px-6 md:px-10 max-w-3xl mx-auto">
+    <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-3xl mx-auto">
       <h1 class="text-3xl md:text-4xl font-display font-bold mb-10">Frequently Asked Questions</h1>
       <div class="space-y-0 divide-y divide-border">
         {#each faqItems as item}

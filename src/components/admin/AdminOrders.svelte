@@ -161,7 +161,7 @@
       <div class="bg-card border border-border p-5 space-y-4 animate-fade-in relative">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p class="font-medium tabular-nums text-foreground">{order.id} • {currency}{order.total.toFixed(2).replace('.', ',')}</p>
+            <p class="font-medium tabular-nums text-foreground">{order.id} • {currency}{order.total.toFixed(2)}</p>
             <p class="text-sm text-muted-foreground">{order.customer} · {new Date(order.createdAt || order.date || Date.now()).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
           </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -291,7 +291,7 @@
                 {#if item.image}<img src={item.image} alt="" class="w-6 h-6 object-cover bg-secondary" />{/if}
                 <span>{item.quantity}× {item.name} <span class="text-xs">({[item.size, item.color].filter(Boolean).join(' / ') || '-'})</span></span>
               </span>
-              <span class="tabular-nums">{currency}{(item.price * item.quantity).toFixed(2).replace('.', ',')}</span>
+              <span class="tabular-nums">{currency}{(item.price * item.quantity).toFixed(2)}</span>
             </div>
           {/each}
         </div>

@@ -28,10 +28,10 @@
 {#if loading || !data}
   <Loader />
 {:else}
-  <div class="min-h-screen">
+  <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
-    <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
+    <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <div class="mb-12">
         <p class="text-label mb-2">Editorial</p>
         <h1 class="text-4xl md:text-5xl font-display font-bold">Lookbook</h1>

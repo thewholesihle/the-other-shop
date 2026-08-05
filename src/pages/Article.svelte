@@ -43,10 +43,10 @@
     <a href="/community" class="text-label border-b border-current">← Back to Community</a>
   </div>
 {:else}
-  <div class="min-h-screen">
+  <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
-    <div class="pt-24 pb-20 px-6 md:px-10 max-w-3xl mx-auto">
+    <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-3xl mx-auto">
       <!-- Breadcrumb -->
       <nav class="mb-8 text-xs text-muted-foreground flex items-center gap-2">
         <a href="/" class="hover:text-foreground transition-colors">Home</a>

@@ -60,7 +60,15 @@
     return (v?.stock ?? 0) > 0;
   }
 
-  $: images = product ? (product.images?.length ? product.images : [product.image]) : [];
+  // A selected color with its own dedicated photos takes over the gallery;
+  // otherwise fall back to the product's general image set.
+  $: activeColorImages = product?.colorImages?.find(ci => ci.color === selectedColor)?.images;
+  $: images = product
+    ? (activeColorImages?.length ? activeColorImages : (product.images?.length ? product.images : [product.image]))
+    : [];
+  // Jump back to the first shot whenever the gallery itself changes (new color
+  // picked) — otherwise selectedImage can point past the end of a shorter gallery.
+  $: images, (selectedImage = 0);
   $: hasVariants = product?.variants?.length > 0;
   $: missingSize = product?.sizes?.length > 0 && !selectedSize;
   $: missingColor = product?.colors?.length > 0 && !selectedColor;
@@ -91,10 +99,10 @@
     <a href="/shop" class="text-label border-b border-current">← Back to Shop</a>
   </div>
 {:else}
-  <div class="min-h-screen">
+  <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
-    <div class="pt-24 pb-20 px-6 md:px-10 max-w-6xl mx-auto">
+    <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-6xl mx-auto">
       <!-- Back button & Breadcrumb -->
       <div class="mb-8 flex flex-col gap-6">
         <button onclick={() => window.history.length > 1 ? window.history.back() : window.__navigate('/shop')} class="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase font-bold text-muted-foreground hover:text-foreground transition-colors group w-fit">

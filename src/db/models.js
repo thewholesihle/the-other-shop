@@ -84,16 +84,24 @@ const VariantSchema = new mongoose.Schema({
   stock: { type: Number, default: 0, min: 0 },
 }, { _id: false, strict: true });
 
+const ColorImageSchema = new mongoose.Schema({
+  color:  { type: String, required: true },
+  images: [{ type: String }],
+}, { _id: false, strict: true });
+
 const ProductSchema = new mongoose.Schema({
   id:          { type: String, required: true, unique: true },
   name:        { type: String, required: true, trim: true },
   category:    { type: String, required: true },
   price:       { type: Number, required: true, min: 0 },
   image:       { type: String, default: '' },
-  images:      [{ type: String }],
+  images:      [{ type: String }], // default/fallback gallery, shown when a color has no images of its own
   description: { type: String, default: '' },
   sizes:       [{ type: String }],
   colors:      [{ type: String }],
+  // Per-color product photos — e.g. a "Black" gallery vs a "White" gallery — shown
+  // on the product page once that color is selected, falling back to `images`.
+  colorImages: [ColorImageSchema],
   // `stock` is a denormalized total kept in sync with `variants` (sum of all variant stock).
   // `variants` is the source of truth for per size/color availability.
   stock:       { type: Number, default: 0, min: 0 },

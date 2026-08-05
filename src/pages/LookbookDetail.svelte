@@ -52,10 +52,10 @@
     <a href="/lookbook" class="text-label border-b border-current">← Back to Lookbook</a>
   </div>
 {:else}
-  <div class="min-h-screen">
+  <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
-    <div class="pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
+    <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <!-- Header -->
       <nav class="mb-6 text-xs text-muted-foreground flex items-center gap-2">
         <a href="/" onclick={(e) => { e.preventDefault(); window.__navigate('/'); }} class="hover:text-foreground transition-colors">Home</a>

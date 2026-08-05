@@ -15,7 +15,7 @@
 
   const emptyProduct = {
     id: '', name: '', category: '', price: 0,
-    image: '', images: [],
+    image: '', images: [], colorImages: [],
     description: '',
     sizes: ['S', 'M', 'L', 'XL'], colors: [], stock: 0, variants: [],
     isNew: false, isFeatured: false,
@@ -50,6 +50,15 @@
   }
 
   $: totalStock = (editing?.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0);
+
+  function colorImages(color) {
+    return (editing?.colorImages || []).find(ci => ci.color === color)?.images || [];
+  }
+  function updateColorImages(color, urls) {
+    const list = (editing.colorImages || []).filter(ci => ci.color !== color);
+    if (urls.length) list.push({ color, images: urls });
+    editing = { ...editing, colorImages: list };
+  }
 
   async function handleSave() {
     if (!editing || saving) return;
@@ -89,7 +98,7 @@
     }
   }
   function handleAdd() {
-    editing = { ...emptyProduct, images: [], variants: buildVariants(emptyProduct.sizes, emptyProduct.colors, []) };
+    editing = { ...emptyProduct, images: [], colorImages: [], variants: buildVariants(emptyProduct.sizes, emptyProduct.colors, []) };
     isNew = true;
   }
 
@@ -113,7 +122,9 @@
   }
   function updateColors(e) {
     const colors = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-    editing = { ...editing, colors, variants: buildVariants(editing.sizes, colors, editing.variants) };
+    // Drop per-color image sets for colors that no longer exist on this product.
+    const colorImages = (editing.colorImages || []).filter(ci => colors.includes(ci.color));
+    editing = { ...editing, colors, colorImages, variants: buildVariants(editing.sizes, colors, editing.variants) };
   }
 </script>
 
@@ -164,7 +175,7 @@
                 <button aria-label="Edit product" onclick={() => {
                     const sizes = p.sizes || [];
                     const colors = p.colors || [];
-                    editing = { ...p, images: [...(p.images || [p.image].filter(Boolean))], sizes, colors, variants: buildVariants(sizes, colors, p.variants || []) };
+                    editing = { ...p, images: [...(p.images || [p.image].filter(Boolean))], colorImages: [...(p.colorImages || [])], sizes, colors, variants: buildVariants(sizes, colors, p.variants || []) };
                     isNew = false;
                   }} class="p-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-90">
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
@@ -234,6 +245,26 @@
               <input id="edit-colors" value={colorsStr} oninput={updateColors} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
             </div>
           </div>
+
+          <!-- Per-color image galleries -->
+          {#if editing.colors.length}
+            <div>
+              <p class="text-label mb-1.5">PER-COLOR IMAGES (optional)</p>
+              <p class="text-xs text-muted-foreground mb-3">Give a color its own photos, shown on the product page once a shopper picks that color. A color left empty just uses the general product images above.</p>
+              <div class="space-y-4">
+                {#each editing.colors as color}
+                  <div class="border border-border p-3">
+                    <ImageUpload
+                      multi
+                      label={color.toUpperCase()}
+                      values={colorImages(color)}
+                      onChange={(urls) => updateColorImages(color, urls)}
+                    />
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
 
           <!-- Stock per size/color variant -->
           <div>

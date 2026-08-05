@@ -128,9 +128,9 @@
 {#if loading || !data}
   <Loader />
 {:else}
-  <div class="min-h-screen">
+  <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
-    <div class="pt-24 pb-20 px-6 md:px-10 max-w-5xl mx-auto">
+    <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-5xl mx-auto">
 
       {#if processingPayment}
         <div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
