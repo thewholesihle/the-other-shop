@@ -6,6 +6,12 @@
   import Loader from '../components/Loader.svelte';
   import { loadStoreData } from '../lib/storeData.js';
 
+  // The query string for the current URL — App.svelte passes this down (and
+  // updates it) so a link like a footer category href ("/shop?category=xyz")
+  // is picked up even when clicked while already sitting on /shop, where the
+  // SPA router doesn't remount this component and onMount alone would never see it.
+  export let search = '';
+
   const SORT_MODES = ['newest', 'price-asc', 'price-desc'];
 
   let data = null;
@@ -14,20 +20,31 @@
   let sortMode = 'newest';
   let urlSynced = false; // guards against overwriting the just-parsed URL before the user interacts
 
+  function applyQuery(qs) {
+    if (!data) return;
+    const query = new URLSearchParams(qs);
+    const catId = query.get('category');
+    const filter = query.get('filter');
+    const sortParam = query.get('sort');
+
+    if (filter === 'new') activeCategory = 'new';
+    else if (catId) {
+      const found = data.categories.find(c => c.id === catId);
+      activeCategory = found ? found.id : 'all';
+    } else {
+      activeCategory = 'all';
+    }
+    sortMode = SORT_MODES.includes(sortParam) ? sortParam : 'newest';
+  }
+
+  // Re-parses whenever `data` first loads (initial URL) and whenever the app
+  // router hands us a new `search` string thereafter (a link clicked to a
+  // different /shop?... filter while this component is already mounted).
+  $: if (data) applyQuery(search);
+
   onMount(async () => {
     try {
       data = await loadStoreData();
-      const query = new URLSearchParams(window.location.search || window.location.hash.split('?')[1]);
-      const catId = query.get('category');
-      const filter = query.get('filter');
-      const sortParam = query.get('sort');
-
-      if (filter === 'new') activeCategory = 'new';
-      else if (catId && data.categories) {
-        const found = data.categories.find(c => c.id === catId);
-        if (found) activeCategory = found.id;
-      }
-      if (SORT_MODES.includes(sortParam)) sortMode = sortParam;
     }
     finally {
       loading = false;

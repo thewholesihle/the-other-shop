@@ -22,11 +22,15 @@
   import Maintenance  from './pages/Maintenance.svelte';
 
   let path = window.location.pathname;
+  // Tracked separately from `path` — pathname never includes the query string, so
+  // a link like /shop?category=xyz needs both: `path` for route matching and
+  // `search` passed down so pages can react to filter changes in the URL.
+  let search = window.location.search;
   let maintenance = null; // null = not yet checked
   let site = null;
 
   onMount(async () => {
-    const handler = () => { path = window.location.pathname; };
+    const handler = () => { path = window.location.pathname; search = window.location.search; };
     window.addEventListener('popstate', handler);
     try {
       const data = await loadStoreData();
@@ -40,7 +44,12 @@
 
   window.__navigate = (to) => {
     history.pushState({}, '', to);
-    path = to;
+    // `to` may carry a query string (e.g. a footer category link, "/shop?category=xyz").
+    // resolveRoute only ever matches on the bare pathname — splitting here is what
+    // stops "/shop?category=xyz" !== "/shop" from falling through to the 404 route.
+    const [pathname, queryString] = to.split('?');
+    path = pathname;
+    search = queryString ? `?${queryString}` : '';
     window.scrollTo(0, 0);
   };
 
@@ -182,7 +191,7 @@
 {:else if route.page === 'admin'}
   <Admin />
 {:else if route.page === 'products'}
-  <Shop />
+  <Shop {search} />
 {:else if route.page === 'product'}
   <Product productId={route.id} />
 {:else if route.page === 'lookbook'}
