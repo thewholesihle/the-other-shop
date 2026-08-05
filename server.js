@@ -629,8 +629,12 @@ app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
 });
 
 // ─── Email Notifier Helper for Customers ──────────────────────────────────────
+// Returns an outcome the caller can surface to the admin (e.g. a toast) instead of
+// this being a pure fire-and-forget — "sent" always means it actually left the
+// server via Resend, not just that we decided to try.
 async function sendCustomerStatusEmail(order, baseUrl = '') {
-  if (!process.env.RESEND_API_KEY || !order.email) return;
+  if (!process.env.RESEND_API_KEY) return { sent: false, reason: 'Email is not configured on the server.' };
+  if (!order.email) return { sent: false, reason: 'This order has no customer email address.' };
 
   if (mongoose.connection.readyState === 1) {
     await Log.create({
@@ -743,8 +747,10 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
       }),
     });
     console.log(`[Email] Customer status update sent for order ${order.id}`);
+    return { sent: true, type: order.status, to: order.email };
   } catch (err) {
     console.error(`[Email] Failed to send customer email: ${err.message} (code: ${err.code || 'n/a'})`);
+    return { sent: false, reason: err.message };
   }
 }
 
@@ -780,12 +786,15 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
         }
     }
 
-    // Email customer if status explicitly changed
+    // Email customer if status explicitly changed. Awaited (not fire-and-forget) so
+    // the admin UI can show a real "email sent" confirmation instead of just hoping.
+    let emailResult = null;
     if (status !== oldOrder.status) {
-        sendCustomerStatusEmail(order, `${req.protocol}://${req.get('host')}`).catch(console.error);
+        emailResult = await sendCustomerStatusEmail(order, `${req.protocol}://${req.get('host')}`)
+          .catch(err => ({ sent: false, reason: err.message }));
     }
 
-    res.json({ ok: true, order });
+    res.json({ ok: true, order, emailResult });
   } catch (err) {
     console.error('PATCH /api/orders/:id/status', err);
     res.status(500).json({ error: 'Could not update order status.' });

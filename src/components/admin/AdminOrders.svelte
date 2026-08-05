@@ -16,6 +16,19 @@
   let shippingModalId = null;
   let shippingForm = { carrier: '', trackingNumber: '', estimatedDelivery: '' };
 
+  let emailToast = null; // { sent: true, type, to } | { sent: false, reason } | null
+  const EMAIL_TYPE_LABELS = {
+    paid: 'Order confirmation',
+    processing: 'Processing update',
+    shipped: 'Shipped',
+    delivered: 'Delivered',
+    cancelled: 'Cancellation',
+  };
+  function showEmailToast(result) {
+    emailToast = result;
+    setTimeout(() => { if (emailToast === result) emailToast = null; }, 5000);
+  }
+
   // Sort orders newest first
   $: sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
   $: statusCounts = Object.fromEntries(statusOptions.map(s => [s, s === 'all' ? orders.length : orders.filter(o => o.status === s).length]));
@@ -40,8 +53,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, reason, ...extra }),
       });
-      if (!res.ok) throw new Error((await res.json()).error);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error);
       onUpdate(orders.map(o => o.id === orderId ? { ...o, status, adminNote: reason || o.adminNote, ...extra } : o));
+      if (body.emailResult) showEmailToast(body.emailResult);
     } catch (e) {
       alert(`Failed to update order: ${e.message}`);
     } finally {
@@ -131,6 +146,19 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </svelte:head>
+
+<!-- Email-sent confirmation, shown after any status change that triggers a customer email -->
+{#if emailToast}
+  <div class="fixed bottom-4 right-4 z-50 px-4 py-2.5 text-sm shadow-lg animate-fade-up flex items-center gap-2 {emailToast.sent ? 'bg-foreground text-primary-foreground' : 'bg-destructive text-destructive-foreground'} max-w-xs">
+    {#if emailToast.sent}
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
+      <span>{EMAIL_TYPE_LABELS[emailToast.type] || emailToast.type} email sent to {emailToast.to}</span>
+    {:else}
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+      <span>Order updated, but the email wasn't sent ({emailToast.reason})</span>
+    {/if}
+  </div>
+{/if}
 
 <div class="space-y-6 max-w-4xl">
   <div class="flex items-center justify-between">

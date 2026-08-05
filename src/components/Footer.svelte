@@ -2,10 +2,11 @@
   export let data = { site: {}, categories: [] };
   
   $: site = data.site || {};
-  // Mirror the admin's category list directly — whatever categories exist in
-  // Admin > Categories is exactly what shows here (a category deleted there is
-  // already gone from data.categories, so this can't point at a dead one).
-  $: categories = data.categories || [];
+  $: products = data.products || [];
+  // Only list categories that currently have at least one product — an empty
+  // category has nothing to show at /shop?category=x, so it's left off both
+  // the shop filter tabs and here rather than linking to an empty result.
+  $: categories = (data.categories || []).filter(c => products.some(p => p.category === c.id));
 
   $: footerLinks = {
     Shop: [

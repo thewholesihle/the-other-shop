@@ -13,12 +13,28 @@
   export let search = '';
 
   const SORT_MODES = ['newest', 'price-asc', 'price-desc'];
+  const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '2XL', '3XL', '4XL'];
+
+  function sortSizes(sizes) {
+    return [...sizes].sort((a, b) => {
+      const ai = SIZE_ORDER.indexOf(a.toUpperCase());
+      const bi = SIZE_ORDER.indexOf(b.toUpperCase());
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }
 
   let data = null;
   let loading = true;
   let activeCategory = 'all';
+  let activeSize = 'all';
   let sortMode = 'newest';
   let urlSynced = false; // guards against overwriting the just-parsed URL before the user interacts
+
+  // Every size that appears on at least one product, in a sensible wearing order.
+  $: allSizes = data ? sortSizes([...new Set(data.products.flatMap(p => p.sizes || []))]) : [];
 
   function applyQuery(qs) {
     if (!data) return;
@@ -26,6 +42,7 @@
     const catId = query.get('category');
     const filter = query.get('filter');
     const sortParam = query.get('sort');
+    const sizeParam = query.get('size');
 
     if (filter === 'new') activeCategory = 'new';
     else if (catId) {
@@ -35,6 +52,7 @@
       activeCategory = 'all';
     }
     sortMode = SORT_MODES.includes(sortParam) ? sortParam : 'newest';
+    activeSize = sizeParam && allSizes.includes(sizeParam) ? sizeParam : 'all';
   }
 
   // Re-parses whenever `data` first loads (initial URL) and whenever the app
@@ -59,6 +77,7 @@
     const params = new URLSearchParams();
     if (activeCategory === 'new') params.set('filter', 'new');
     else if (activeCategory !== 'all') params.set('category', activeCategory);
+    if (activeSize !== 'all') params.set('size', activeSize);
     if (sortMode !== 'newest') params.set('sort', sortMode);
     const qs = params.toString();
     history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
@@ -67,8 +86,9 @@
   $: filtered = data
     ? data.products
         .filter(p => {
-          if (activeCategory === 'new') return p.isNew;
-          if (activeCategory !== 'all') return p.category === activeCategory;
+          if (activeCategory === 'new' && !p.isNew) return false;
+          if (activeCategory !== 'all' && activeCategory !== 'new' && p.category !== activeCategory) return false;
+          if (activeSize !== 'all' && !p.sizes?.includes(activeSize)) return false;
           return true;
         })
         .sort((a, b) => {
@@ -99,8 +119,9 @@
       </div>
 
       <!-- Filters & Sort -->
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-border pb-6">
-        
+      <div class="mb-10 border-b border-border pb-6 space-y-5">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+
         <!-- Category filters -->
         <div class="flex flex-wrap gap-2">
           <button
@@ -143,6 +164,28 @@
         </div>
       </div>
 
+      {#if allSizes.length}
+        <!-- Size filter -->
+        <div class="flex items-center flex-wrap gap-3">
+          <span class="text-xs tracking-[0.15em] uppercase text-muted-foreground whitespace-nowrap">Size</span>
+          <div class="flex flex-wrap gap-2">
+            <button
+              onclick={() => (activeSize = 'all')}
+              class="min-w-[2.5rem] px-3 py-1.5 text-xs border transition-colors {activeSize === 'all' ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'}">
+              ALL
+            </button>
+            {#each allSizes as size}
+              <button
+                onclick={() => (activeSize = size)}
+                class="min-w-[2.5rem] px-3 py-1.5 text-xs border transition-colors {activeSize === size ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'}">
+                {size}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+      </div>
+
       <!-- Grid -->
       {#if filtered.length}
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -151,7 +194,7 @@
           {/each}
         </div>
       {:else}
-        <div class="text-center py-24 text-muted-foreground">No products in this category.</div>
+        <div class="text-center py-24 text-muted-foreground">No products match these filters.</div>
       {/if}
     </div>
 
