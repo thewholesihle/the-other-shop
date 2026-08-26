@@ -188,15 +188,21 @@
 
 <!-- Maintenance mode intercept (admin route always bypasses it) -->
 <!-- Keyed on routeKey (not just wrapped) so a real navigation — a different page,
-     or a different product/lookbook/article — remounts and crossfades; staying on
-     the same record (e.g. Shop's filters changing the query string) doesn't. Admin
-     is exempt: it manages its own internal view state client-side, and a fade on
-     top of its live-polling dashboard would just be a distracting flicker. -->
+     or a different product/lookbook/article — remounts; staying on the same record
+     (e.g. Shop's filters changing the query string) doesn't. Admin is exempt: it
+     manages its own internal view state client-side, and a fade on top of its
+     live-polling dashboard would just be a distracting flicker.
+     `in:` only, deliberately not `transition:` — a two-way transition here runs the
+     outgoing page's outro and the incoming page's intro at the same time, which for
+     that overlap window left BOTH full page trees (navbar, content, footer — all of
+     it) mounted and stacked in the document simultaneously: a real layout jump plus
+     duplicated navbar/footer flashing on screen. `in:` removes the old page the
+     instant the key changes (no outro, no overlap) and only fades the new one in. -->
 {#if route.page === 'admin'}
   <Admin />
 {:else}
   {#key routeKey}
-    <div transition:softFade={{ duration: 150 }}>
+    <div in:softFade={{ duration: 150 }}>
       {#if maintenance !== null && maintenance !== false}
         <Maintenance
           title={maintenance.title}
