@@ -3,6 +3,7 @@
   import GeoBlock from './components/GeoBlock.svelte';
   import { cartCount } from './stores/cart.js';
   import { loadStoreData } from './lib/storeData.js';
+  import { softFade } from './lib/motion.js';
   import Loader from './components/Loader.svelte';
 
   // ── Pages ──────────────────────────────────────────────────────────────────
@@ -55,6 +56,15 @@
 
   // ── Route resolver ─────────────────────────────────────────────────────────
   $: route = resolveRoute(path);
+  // Identifies not just which page type is showing but which specific record (a
+  // product/lookbook/article id) — {#key} below remounts on change. That's what
+  // makes navigating directly between two records fetch the new one: Product,
+  // LookbookDetail and Article only ever read their id/slug prop in onMount, so
+  // without a remount, clicking straight from one product to another left the
+  // first product's data on screen. Staying within the same record (e.g. a Shop
+  // filter changing the query string) leaves this key untouched, so it doesn't
+  // remount — and doesn't discard state — for anything that isn't a real navigation.
+  $: routeKey = `${route.page}:${route.id || route.slug || ''}`;
 
   function resolveRoute(p) {
     if (p === '/')                           return { page: 'index' };
@@ -177,39 +187,50 @@
 <GeoBlock />
 
 <!-- Maintenance mode intercept (admin route always bypasses it) -->
-{#if maintenance !== null && maintenance !== false && route.page !== 'admin'}
-  <Maintenance
-    title={maintenance.title}
-    message={maintenance.message}
-    background={maintenance.background}
-    collectEmails={maintenance.collectEmails}
-    logo={site?.logo}
-    socials={site?.socials}
-  />
-{:else if route.page === 'index'}
-  <Index />
-{:else if route.page === 'admin'}
+<!-- Keyed on routeKey (not just wrapped) so a real navigation — a different page,
+     or a different product/lookbook/article — remounts and crossfades; staying on
+     the same record (e.g. Shop's filters changing the query string) doesn't. Admin
+     is exempt: it manages its own internal view state client-side, and a fade on
+     top of its live-polling dashboard would just be a distracting flicker. -->
+{#if route.page === 'admin'}
   <Admin />
-{:else if route.page === 'products'}
-  <Shop {search} />
-{:else if route.page === 'product'}
-  <Product productId={route.id} />
-{:else if route.page === 'lookbook'}
-  <Lookbook />
-{:else if route.page === 'lookbook-detail'}
-  <LookbookDetail lookbookId={route.id} />
-{:else if route.page === 'community'}
-  <Community />
-{:else if route.page === 'article'}
-  <Article slug={route.slug} />
-{:else if route.page === 'cart'}
-  <Cart />
-{:else if route.page === 'shipping'}
-  <Shipping />
-{:else if route.page === 'faq'}
-  <FAQ />
-{:else if route.page === 'contact'}
-  <Contact />
 {:else}
-  <NotFound />
+  {#key routeKey}
+    <div transition:softFade={{ duration: 150 }}>
+      {#if maintenance !== null && maintenance !== false}
+        <Maintenance
+          title={maintenance.title}
+          message={maintenance.message}
+          background={maintenance.background}
+          collectEmails={maintenance.collectEmails}
+          logo={site?.logo}
+          socials={site?.socials}
+        />
+      {:else if route.page === 'index'}
+        <Index />
+      {:else if route.page === 'products'}
+        <Shop {search} />
+      {:else if route.page === 'product'}
+        <Product productId={route.id} />
+      {:else if route.page === 'lookbook'}
+        <Lookbook />
+      {:else if route.page === 'lookbook-detail'}
+        <LookbookDetail lookbookId={route.id} />
+      {:else if route.page === 'community'}
+        <Community />
+      {:else if route.page === 'article'}
+        <Article slug={route.slug} />
+      {:else if route.page === 'cart'}
+        <Cart />
+      {:else if route.page === 'shipping'}
+        <Shipping />
+      {:else if route.page === 'faq'}
+        <FAQ />
+      {:else if route.page === 'contact'}
+        <Contact />
+      {:else}
+        <NotFound />
+      {/if}
+    </div>
+  {/key}
 {/if}

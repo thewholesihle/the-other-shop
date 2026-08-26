@@ -1,16 +1,30 @@
 <script>
-  import { onMount } from 'svelte';
-  let visible = true;
-  
+  import { onMount, onDestroy } from 'svelte';
+  import { softFade } from '../lib/motion.js';
+
+  // A spinner that flashes on screen for a few frames before a fast load finishes
+  // reads as more jarring than showing nothing at all — wait a beat before showing
+  // it. This used to be a fixed 800ms that hid the spinner unconditionally, whether
+  // or not the real data had actually arrived; now visibility is driven purely by
+  // however long the caller's own {#if loading} block keeps this mounted, and the
+  // fade below (not a dead opacity class racing against immediate DOM removal) is
+  // what makes both the appearance and the handoff to real content feel smooth —
+  // this is a full-screen opaque overlay, so its own fade-out doubles as the reveal.
+  const APPEAR_DELAY = 150;
+  let show = false;
+  let timer;
+
   onMount(() => {
-    // Small delay to ensure it feels "engaging" but doesn't block fast users
-    const timer = setTimeout(() => visible = false, 800);
-    return () => clearTimeout(timer);
+    timer = setTimeout(() => { show = true; }, APPEAR_DELAY);
   });
+  onDestroy(() => clearTimeout(timer));
 </script>
 
-{#if visible}
-<div class="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center transition-opacity duration-500" class:opacity-0={!visible}>
+{#if show}
+<div
+  class="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center"
+  transition:softFade={{ duration: 200 }}
+>
   <div class="relative w-16 h-16">
     <!-- Outer ring -->
     <div class="absolute inset-0 border-2 border-muted rounded-full opacity-20"></div>

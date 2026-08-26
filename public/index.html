@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Other Shop</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+  <!-- Font is linked here, not via @import inside bundle.css — an @import nested in
+       a stylesheet isn't discovered until that stylesheet has itself been fetched
+       and parsed, adding a full serial round-trip before the real typeface even
+       starts downloading. Every line of text on the site uses this font (font-sans
+       and font-display both resolve to it), so that delay was the main source of
+       the reported flash: body copy rendering in the fallback font, then visibly
+       reflowing into Space Grotesk a beat later. Discovering it immediately, in
+       parallel with bundle.css, closes most of that gap. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap">
+
+  <!-- Paints the real background the instant HTML parses, before bundle.css has
+       even finished downloading — otherwise a cold cache briefly shows the
+       browser's plain white default first, which is its own small "flash" even
+       though the stylesheet link below is render-blocking. Matches the app's
+       default --background (see src/index.css); admin-configured brand colors
+       still take over once site data loads, same as before. -->
+  <style>html{background:hsl(40 20% 97%)}</style>
+
   <link rel="stylesheet" href="/build/bundle.css">
 </head>
 <body>
