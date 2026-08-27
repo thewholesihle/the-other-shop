@@ -276,6 +276,19 @@ function buildParcel({ order, site, products, overrides = {} }) {
   return [parcel];
 }
 
+/** Rates and shipment-creation both need real address fields on both sides.
+ * Checked here, before ever calling the API, so an incomplete Settings >
+ * Courier Guy address fails fast with a specific "go fill this in" message —
+ * rather than round-tripping to Ship Logic only to surface their own equally
+ * real but less actionable error (e.g. plain "The collection address is
+ * missing.", with no indication of where to fix that). */
+function addressError(address, whatLabel, whereToFixIt) {
+  if (!address.street_address || !address.code) {
+    return `${whatLabel} is missing a street address or postal code${whereToFixIt ? ` — set it in ${whereToFixIt}` : ''}.`;
+  }
+  return null;
+}
+
 /** POST /rates — quotes service levels for a delivery address + parcel set.
  * Returns the raw rate objects verbatim (see the caveat in the module doc
  * comment below about the exact response shape) alongside the request that was
@@ -283,14 +296,19 @@ function buildParcel({ order, site, products, overrides = {} }) {
 async function getRates({ site, order, parcels, declaredValue }) {
   const collection = collectionFromSite(site);
   const delivery = deliveryFromOrder(order);
+
+  const collectionErr = addressError(collection.address, "The store's collection address", 'Settings → Courier Guy');
+  if (collectionErr) return { ok: false, status: 0, error: collectionErr };
+  const deliveryErr = addressError(delivery.address, "This order's delivery address", null);
+  if (deliveryErr) return { ok: false, status: 0, error: deliveryErr };
+
   const body = {
     collection_address: collection.address,
     delivery_address: delivery.address,
     parcels,
   };
   if (declaredValue) body.declared_value = declaredValue;
-  const result = await request('POST', '/rates', body);
-  return result;
+  return request('POST', '/rates', body);
 }
 
 /** POST /shipments — books the shipment. Returns the created shipment object on
@@ -301,12 +319,10 @@ async function createShipment({ site, order, parcels, serviceLevelCode, serviceL
   const collection = collectionFromSite(site);
   const delivery = deliveryFromOrder(order);
 
-  if (!collection.address.street_address || !collection.address.code) {
-    return { ok: false, status: 0, error: 'Set the store\'s collection address (Settings > Courier Guy) before booking a shipment.' };
-  }
-  if (!delivery.address.street_address || !delivery.address.code) {
-    return { ok: false, status: 0, error: 'This order is missing a street address or postal code — cannot book a shipment.' };
-  }
+  const collectionErr = addressError(collection.address, "The store's collection address", 'Settings → Courier Guy');
+  if (collectionErr) return { ok: false, status: 0, error: collectionErr };
+  const deliveryErr = addressError(delivery.address, "This order's delivery address", null);
+  if (deliveryErr) return { ok: false, status: 0, error: deliveryErr };
   if (!collection.contact.email && !collection.contact.mobile_number) {
     return { ok: false, status: 0, error: 'Set a collection contact email or mobile number (Settings > Courier Guy) before booking a shipment.' };
   }
@@ -376,13 +392,23 @@ module.exports = {
   getStickerUrl,
 };
 
-// ─── Known gap ────────────────────────────────────────────────────────────────
-// The Courier Guy Postman collection ships every endpoint's "response" array
-// empty — including /rates — so the exact shape of a rate quote (field names
-// for its id, service level code/name, and price) isn't independently
-// confirmed here, only inferred from field names used elsewhere in the docs
-// (e.g. the admin webhook's embedded `rates`/`service_level_*` fields). The
-// admin UI that renders `getRates()`'s output is written defensively (checks
-// several plausible field names, falls back to a raw view) for exactly this
-// reason — first live sandbox call should be treated as the source of truth,
-// and this comment/the UI's field-name list updated to match.
+// ─── POST /rates response shape (confirmed against a live sandbox call) ──────
+// {
+//   "message": "Success",
+//   "service_days": { "collection_service_days": null, "delivery_service_days": null },
+//   "rates": [
+//     {
+//       "rate": 198.63,                 // final all-inclusive price — base + surcharges + adjustments + VAT
+//       "rate_excluding_vat": 172.72,
+//       "base_rate": { "charge": 105, ... },
+//       "service_level": { "id": 246084, "code": "LOF", "name": "Local Overnight",
+//                           "description": "...", "delivery_date_from": "...", "delivery_date_to": "..." },
+//       "surcharges": [...], "rate_adjustments": [...], "time_based_rate_adjustments": [...],
+//       "charged_weight": 2, "actual_weight": 2, "volumetric_weight": 2
+//     }
+//   ]
+// }
+// The route handler (server.js, POST /api/courier/orders/:id/rates) unwraps
+// `.rates` before sending it to the frontend, so `getRates()` itself is left
+// returning the raw envelope — callers that want service_days/message can still
+// get them from `result.data` directly if that's ever needed.

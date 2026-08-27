@@ -1055,7 +1055,11 @@ app.post('/api/courier/orders/:id/rates', basicAuth, async (req, res) => {
 
     const result = await courierGuy.getRates({ site, order, parcels, declaredValue: req.body?.declaredValue });
     if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
-    res.json({ ok: true, rates: result.data, parcels });
+    // Confirmed live shape: { message, service_days, rates: [...] } — the actual
+    // quotes are nested under `.rates`, not the response itself. Unwrapping here
+    // means AdminOrders.svelte can treat `rates` as the array it actually wants
+    // instead of getting the whole envelope wrapped up as one fake "rate".
+    res.json({ ok: true, rates: result.data?.rates || [], parcels });
   } catch (err) {
     console.error('POST /api/courier/orders/:id/rates', err);
     res.status(500).json({ error: 'Could not fetch courier rates.' });

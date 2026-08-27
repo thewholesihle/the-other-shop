@@ -87,17 +87,29 @@
     }
   }
 
-  /** The exact shape of a rate quote isn't confirmed by Courier Guy's own docs
-   * (every endpoint's example response is empty in their published Postman
-   * collection) — this checks the field names implied elsewhere in their docs
-   * and falls back to showing the raw object rather than silently hiding a
-   * rate whose fields don't match what was guessed here. */
+  /** Confirmed against a real sandbox response: each rate nests its service
+   * level under `.service_level`, and `.rate` is the final all-inclusive price
+   * (base charge + surcharges + adjustments + VAT). The `??` fallbacks are kept
+   * only in case a different account/rate type ever comes back shaped slightly
+   * differently — not because the shape is still a guess. */
   function parseRate(r) {
-    const code = r.service_level_code ?? r.code ?? null;
-    const id = r.service_level_id ?? r.id ?? null;
-    const name = r.service_level_name ?? r.name ?? code ?? `Service ${id ?? ''}`.trim();
-    const price = r.total_rate ?? r.rate_incl_vat ?? r.rate ?? r.total ?? r.amount ?? r.price ?? null;
-    return { code, id, name, price, recognised: code != null || id != null };
+    const sl = r.service_level || {};
+    const code = sl.code ?? r.service_level_code ?? r.code ?? null;
+    const id = sl.id ?? r.service_level_id ?? r.id ?? null;
+    const name = sl.name ?? r.service_level_name ?? r.name ?? code ?? `Service ${id ?? ''}`.trim();
+    const description = sl.description ?? '';
+    const deliveryFrom = sl.delivery_date_from ?? null;
+    const deliveryTo = sl.delivery_date_to ?? null;
+    const price = r.rate ?? r.total_rate ?? r.rate_incl_vat ?? r.total ?? r.amount ?? r.price ?? null;
+    return { code, id, name, description, deliveryFrom, deliveryTo, price, recognised: code != null || id != null };
+  }
+
+  function formatDeliveryWindow(fromIso, toIso) {
+    if (!fromIso && !toIso) return '';
+    const fmt = (iso) => new Date(iso).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+    if (fromIso && toIso && fmt(fromIso) === fmt(toIso)) return `Delivered by ${fmt(toIso)}`;
+    if (fromIso && toIso) return `Delivered ${fmt(fromIso)} – ${fmt(toIso)}`;
+    return `Delivered by ${fmt(toIso || fromIso)}`;
   }
 
   async function bookCourierShipment(orderId) {
@@ -508,12 +520,20 @@
                   <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Select a service level</p>
                   {#each courierRates as r, i}
                     {@const parsed = parseRate(r)}
-                    <label class="flex items-center justify-between gap-2 bg-white border border-border px-2 py-1.5 text-xs cursor-pointer {courierSelectedIdx === i ? 'border-orange-500 ring-1 ring-orange-500' : ''}">
-                      <span class="flex items-center gap-2">
-                        <input type="radio" name="courier-rate-{order.id}" checked={courierSelectedIdx === i} onchange={() => courierSelectedIdx = i} />
-                        {parsed.name}
+                    <label class="flex items-start justify-between gap-2 bg-white border border-border px-2 py-1.5 text-xs cursor-pointer {courierSelectedIdx === i ? 'border-orange-500 ring-1 ring-orange-500' : ''}">
+                      <span class="flex items-start gap-2">
+                        <input type="radio" name="courier-rate-{order.id}" checked={courierSelectedIdx === i} onchange={() => courierSelectedIdx = i} class="mt-0.5" />
+                        <span>
+                          <span class="block font-medium">{parsed.name}</span>
+                          {#if parsed.deliveryFrom || parsed.deliveryTo}
+                            <span class="block text-muted-foreground">{formatDeliveryWindow(parsed.deliveryFrom, parsed.deliveryTo)}</span>
+                          {/if}
+                          {#if parsed.description}
+                            <span class="block text-muted-foreground">{parsed.description}</span>
+                          {/if}
+                        </span>
                       </span>
-                      <span class="tabular-nums font-medium">{parsed.price != null ? `${currency}${Number(parsed.price).toFixed(2)}` : '—'}</span>
+                      <span class="tabular-nums font-medium whitespace-nowrap">{parsed.price != null ? `${currency}${Number(parsed.price).toFixed(2)}` : '—'}</span>
                     </label>
                     {#if !parsed.recognised}
                       <pre class="text-[10px] bg-muted p-2 overflow-x-auto">{JSON.stringify(r, null, 2)}</pre>
