@@ -19,6 +19,7 @@
     description: '',
     sizes: ['S', 'M', 'L', 'XL'], colors: [], stock: 0, variants: [],
     isNew: false, isFeatured: false,
+    weightKg: 0, lengthCm: 0, widthCm: 0, heightCm: 0,
   };
 
   /** Build a stock row per size/color combination, preserving any stock already entered. */
@@ -175,7 +176,17 @@
                 <button aria-label="Edit product" onclick={() => {
                     const sizes = p.sizes || [];
                     const colors = p.colors || [];
-                    editing = { ...p, images: [...(p.images || [p.image].filter(Boolean))], colorImages: [...(p.colorImages || [])], sizes, colors, variants: buildVariants(sizes, colors, p.variants || []) };
+                    editing = {
+                      ...p,
+                      images: [...(p.images || [p.image].filter(Boolean))],
+                      colorImages: [...(p.colorImages || [])],
+                      sizes, colors,
+                      variants: buildVariants(sizes, colors, p.variants || []),
+                      // Older products predate these fields — default to 0 ("not
+                      // set") rather than leaving the inputs showing blank.
+                      weightKg: p.weightKg || 0, lengthCm: p.lengthCm || 0,
+                      widthCm: p.widthCm || 0, heightCm: p.heightCm || 0,
+                    };
                     isNew = false;
                   }} class="p-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-90">
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
@@ -243,6 +254,31 @@
             <div>
               <label for="edit-colors" class="text-label block mb-1.5">COLORS (comma sep.)</label>
               <input id="edit-colors" value={colorsStr} oninput={updateColors} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+            </div>
+          </div>
+
+          <!-- Shipping — optional; used to build an accurate courier parcel when this
+               product is ordered. Left at 0, the site's default parcel size applies instead
+               (Settings > Courier Guy). -->
+          <div>
+            <label class="text-label block mb-1.5" for="edit-weight">SHIPPING WEIGHT & SIZE (optional)</label>
+            <div class="grid grid-cols-4 gap-4">
+              <div>
+                <input id="edit-weight" type="number" min="0" step="0.1" placeholder="kg" bind:value={editing.weightKg} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums" />
+                <p class="text-[10px] text-muted-foreground mt-1">Weight (kg)</p>
+              </div>
+              <div>
+                <input id="edit-length" type="number" min="0" placeholder="cm" bind:value={editing.lengthCm} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums" />
+                <p class="text-[10px] text-muted-foreground mt-1">Length (cm)</p>
+              </div>
+              <div>
+                <input id="edit-width" type="number" min="0" placeholder="cm" bind:value={editing.widthCm} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums" />
+                <p class="text-[10px] text-muted-foreground mt-1">Width (cm)</p>
+              </div>
+              <div>
+                <input id="edit-height" type="number" min="0" placeholder="cm" bind:value={editing.heightCm} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums" />
+                <p class="text-[10px] text-muted-foreground mt-1">Height (cm)</p>
+              </div>
             </div>
           </div>
 

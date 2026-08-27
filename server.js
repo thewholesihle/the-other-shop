@@ -16,6 +16,7 @@ const rateLimit = require('express-rate-limit');
 const { connect, getIsConnected } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
 const crypto = require('crypto');
+const courierGuy = require('./src/services/courierGuy');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -633,6 +634,25 @@ async function adjustVariantStock(query, size, color, delta) {
   }
 }
 
+/** Looks up the current product behind each order line item — needed to read real
+ * weight/dimensions for a courier parcel, since OrderItemSchema only snapshots
+ * name/price/qty at checkout time, not shipping data. Keyed by `item.id` (not
+ * the resolved Mongo query) so courierGuy.buildParcel can look items up the same
+ * way it iterates `order.items`. Missing/deleted products are silently skipped —
+ * buildParcel falls back to the site's default per-unit weight for those. */
+async function resolveOrderProducts(order) {
+  const map = new Map();
+  for (const item of order.items || []) {
+    const pId = item.productId || item.id;
+    if (!pId) continue;
+    let query = { id: pId };
+    if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
+    const product = await Product.findOne(query).lean();
+    if (product) map.set(item.id, product);
+  }
+  return map;
+}
+
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 
 /** Assemble the full store data shape expected by the frontend */
@@ -1005,6 +1025,156 @@ app.delete('/api/orders/:id', basicAuth, async (req, res) => {
   } catch (err) {
     console.error('DELETE /api/orders/:id', err);
     res.status(500).json({ error: 'Could not delete order.' });
+  }
+});
+
+// ─── API: Courier Guy (Ship Logic) fulfillment ───────────────────────────────
+// Every route here is admin-only — booking/cancelling a real shipment (and, in
+// live mode, spending real money) is never something a customer or public
+// request should be able to trigger.
+
+/** Response shape for /shipments/label and /shipments/label/stickers isn't
+ * pinned down by the docs beyond "a signed URL" — checked defensively against
+ * a few plausible field names rather than assuming one. */
+function extractCourierUrl(data) {
+  if (typeof data === 'string') return data;
+  return data?.url || data?.signed_url || data?.label_url || data?.download_url || null;
+}
+
+app.get('/api/courier/status', basicAuth, (req, res) => {
+  res.json({ configured: courierGuy.isConfigured(), sandbox: courierGuy.isSandbox() });
+});
+
+app.post('/api/courier/orders/:id/rates', basicAuth, async (req, res) => {
+  try {
+    const order = await Order.findOne({ id: req.params.id }).lean();
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+    const site = await Settings.findOne({ _id: 'main' }).lean();
+    const products = await resolveOrderProducts(order);
+    const parcels = courierGuy.buildParcel({ order, site, products, overrides: req.body?.parcel || {} });
+
+    const result = await courierGuy.getRates({ site, order, parcels, declaredValue: req.body?.declaredValue });
+    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
+    res.json({ ok: true, rates: result.data, parcels });
+  } catch (err) {
+    console.error('POST /api/courier/orders/:id/rates', err);
+    res.status(500).json({ error: 'Could not fetch courier rates.' });
+  }
+});
+
+app.post('/api/courier/orders/:id/shipments', basicAuth, async (req, res) => {
+  try {
+    const order = await Order.findOne({ id: req.params.id }).lean();
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+    if (order.courierShipmentId && order.courierStatus !== 'cancelled') {
+      return res.status(400).json({ error: `This order already has a Courier Guy shipment (${order.courierTrackingReference || order.courierShipmentId}). Cancel it first to book another.` });
+    }
+
+    const site = await Settings.findOne({ _id: 'main' }).lean();
+    const products = await resolveOrderProducts(order);
+    const parcels = courierGuy.buildParcel({ order, site, products, overrides: req.body?.parcel || {} });
+    const { serviceLevelCode, serviceLevelId, declaredValue, specialInstructions } = req.body || {};
+
+    const result = await courierGuy.createShipment({
+      site, order, parcels, serviceLevelCode, serviceLevelId, declaredValue, specialInstructions,
+    });
+
+    if (!result.ok) {
+      // Kept on the order (not just returned) so a failed booking is still
+      // visible to anyone looking at the order later, not only in this response.
+      await Order.updateOne({ id: order.id }, { $set: { courierError: result.error } }).catch(() => {});
+      return res.status(result.status || 502).json({ error: result.error });
+    }
+
+    const shipment = result.data || {};
+    const update = {
+      courierProvider: 'courier-guy',
+      courierShipmentId: typeof shipment.id === 'number' ? shipment.id : null,
+      courierTrackingReference: shipment.custom_tracking_reference || shipment.short_tracking_reference || shipment.tracking_reference || '',
+      courierServiceLevelCode: shipment.service_level_code || serviceLevelCode || '',
+      courierServiceLevelName: shipment.service_level_name || '',
+      courierRate: typeof shipment.rate === 'number' ? shipment.rate : null,
+      courierStatus: shipment.status || 'submitted',
+      courierError: '',
+      courierBookedAt: new Date(),
+      courierRaw: shipment,
+    };
+    const updated = await Order.findOneAndUpdate({ id: order.id }, { $set: update }, { returnDocument: 'after' });
+
+    await Log.create({
+      id: `log-${Date.now()}-courier`,
+      type: 'info', message: `Courier Guy shipment booked for order ${order.id}`,
+      context: 'COURIER', data: { orderId: order.id, trackingReference: update.courierTrackingReference }
+    }).catch(() => {});
+
+    res.json({ ok: true, order: updated, shipment });
+  } catch (err) {
+    console.error('POST /api/courier/orders/:id/shipments', err);
+    res.status(500).json({ error: 'Could not book courier shipment.' });
+  }
+});
+
+app.post('/api/courier/orders/:id/cancel', basicAuth, async (req, res) => {
+  try {
+    const order = await Order.findOne({ id: req.params.id }).lean();
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+    const result = await courierGuy.cancelShipment({ trackingReference: order.courierTrackingReference });
+    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
+
+    const updated = await Order.findOneAndUpdate(
+      { id: order.id },
+      { $set: { courierStatus: 'cancelled', courierError: '' } },
+      { returnDocument: 'after' }
+    );
+    res.json({ ok: true, order: updated });
+  } catch (err) {
+    console.error('POST /api/courier/orders/:id/cancel', err);
+    res.status(500).json({ error: 'Could not cancel courier shipment.' });
+  }
+});
+
+app.get('/api/courier/orders/:id/track', basicAuth, async (req, res) => {
+  try {
+    const order = await Order.findOne({ id: req.params.id }).lean();
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+
+    const result = await courierGuy.trackShipment({ trackingReference: order.courierTrackingReference });
+    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
+
+    const status = result.data?.status || '';
+    if (status) await Order.updateOne({ id: order.id }, { $set: { courierStatus: status } }).catch(() => {});
+
+    res.json({ ok: true, tracking: result.data, statusInfo: courierGuy.statusInfo(status) });
+  } catch (err) {
+    console.error('GET /api/courier/orders/:id/track', err);
+    res.status(500).json({ error: 'Could not fetch courier tracking.' });
+  }
+});
+
+app.get('/api/courier/orders/:id/label', basicAuth, async (req, res) => {
+  try {
+    const order = await Order.findOne({ id: req.params.id }).lean();
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+    const result = await courierGuy.getLabelUrl({ shipmentId: order.courierShipmentId });
+    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
+    res.json({ ok: true, url: extractCourierUrl(result.data) });
+  } catch (err) {
+    console.error('GET /api/courier/orders/:id/label', err);
+    res.status(500).json({ error: 'Could not fetch shipping label.' });
+  }
+});
+
+app.get('/api/courier/orders/:id/sticker', basicAuth, async (req, res) => {
+  try {
+    const order = await Order.findOne({ id: req.params.id }).lean();
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
+    const result = await courierGuy.getStickerUrl({ shipmentId: order.courierShipmentId });
+    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
+    res.json({ ok: true, url: extractCourierUrl(result.data) });
+  } catch (err) {
+    console.error('GET /api/courier/orders/:id/sticker', err);
+    res.status(500).json({ error: 'Could not fetch shipping sticker.' });
   }
 });
 
@@ -1414,6 +1584,13 @@ app.post('/api/checkout', async (req, res) => {
       email:    order.email    || '',
       phone:    order.phone    || '',
       address:  order.address  || '',
+      // Structured fields alongside the composed `address` display string above —
+      // Cart.svelte sends both; these are what a courier booking actually needs.
+      deliveryStreet:     order.deliveryStreet     || '',
+      deliveryCity:       order.deliveryCity       || '',
+      deliveryProvince:   order.deliveryProvince   || '',
+      deliveryPostalCode: order.deliveryPostalCode || '',
+      deliveryCountry:    order.deliveryCountry    || 'ZA',
       items:    orderItems,
       total:    parseFloat(grandTotal),
       shippingCost,

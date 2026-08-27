@@ -65,6 +65,13 @@
             email: form.email,
             phone: form.phone,
             address: `${form.address}, ${form.city} ${form.postcode}, ${form.province}, South Africa`,
+            // Sent alongside the composed string above — a courier booking needs
+            // real fields (esp. postal code), not something re-parsed from it later.
+            deliveryStreet: form.address,
+            deliveryCity: form.city,
+            deliveryProvince: form.province,
+            deliveryPostalCode: form.postcode,
+            deliveryCountry: 'ZA',
             items: $cart,
             total: $cartTotal,
           }

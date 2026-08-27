@@ -1,4 +1,6 @@
 <script>
+  import { onMount } from 'svelte';
+
   export let orders = [];
   export let currency = 'R';
   export let onUpdate = () => {};
@@ -27,6 +29,157 @@
   function showEmailToast(result) {
     emailToast = result;
     setTimeout(() => { if (emailToast === result) emailToast = null; }, 5000);
+  }
+
+  // ── Courier Guy fulfillment ──────────────────────────────────────────────
+  let courierConfigured = false;
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/courier/status', { credentials: 'include' });
+      if (res.ok) courierConfigured = (await res.json()).configured;
+    } catch { /* leave the "Ship" action hidden if we can't tell */ }
+  });
+
+  let courierModalId = null;
+  let courierBusy = false;
+  let courierError = '';
+  let courierParcel = null;   // { submitted_length_cm, submitted_width_cm, submitted_height_cm, submitted_weight_kg }
+  let courierRates = [];      // raw rate objects from the API — shape isn't fully pinned down, see parseRate()
+  let courierSelectedIdx = null;
+  let courierTracking = null; // { status, tracking_events } from the last track fetch, per order id
+
+  function openCourierModal(orderId) {
+    courierModalId = orderId;
+    courierError = '';
+    courierRates = [];
+    courierSelectedIdx = null;
+    courierParcel = null;
+    fetchCourierRates(orderId);
+  }
+
+  async function fetchCourierRates(orderId, overrideParcel = null) {
+    courierBusy = true;
+    courierError = '';
+    try {
+      const res = await fetch(`/api/courier/orders/${orderId}/rates`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(overrideParcel ? { parcel: overrideParcel } : {}),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Could not fetch rates.');
+      courierRates = Array.isArray(body.rates) ? body.rates : (body.rates ? [body.rates] : []);
+      // Prefill the editable parcel from what the server actually quoted against,
+      // not just our own guess — keeps the form in sync with the real request.
+      const p = body.parcels?.[0];
+      if (p) {
+        courierParcel = {
+          weightKg: p.submitted_weight_kg, lengthCm: p.submitted_length_cm,
+          widthCm: p.submitted_width_cm, heightCm: p.submitted_height_cm,
+        };
+      }
+      if (courierRates.length === 0) courierError = 'Courier Guy returned no rates for this address/parcel.';
+    } catch (e) {
+      courierError = e.message;
+    } finally {
+      courierBusy = false;
+    }
+  }
+
+  /** The exact shape of a rate quote isn't confirmed by Courier Guy's own docs
+   * (every endpoint's example response is empty in their published Postman
+   * collection) — this checks the field names implied elsewhere in their docs
+   * and falls back to showing the raw object rather than silently hiding a
+   * rate whose fields don't match what was guessed here. */
+  function parseRate(r) {
+    const code = r.service_level_code ?? r.code ?? null;
+    const id = r.service_level_id ?? r.id ?? null;
+    const name = r.service_level_name ?? r.name ?? code ?? `Service ${id ?? ''}`.trim();
+    const price = r.total_rate ?? r.rate_incl_vat ?? r.rate ?? r.total ?? r.amount ?? r.price ?? null;
+    return { code, id, name, price, recognised: code != null || id != null };
+  }
+
+  async function bookCourierShipment(orderId) {
+    if (courierSelectedIdx === null) { courierError = 'Select a service level first.'; return; }
+    const rate = parseRate(courierRates[courierSelectedIdx]);
+    if (!rate.recognised) { courierError = 'Could not identify a service level on this rate — see the raw response below.'; return; }
+
+    courierBusy = true;
+    courierError = '';
+    try {
+      const res = await fetch(`/api/courier/orders/${orderId}/shipments`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceLevelCode: rate.code || undefined,
+          serviceLevelId: rate.id || undefined,
+          parcel: courierParcel ? {
+            weightKg: courierParcel.weightKg, lengthCm: courierParcel.lengthCm,
+            widthCm: courierParcel.widthCm, heightCm: courierParcel.heightCm,
+          } : undefined,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Could not book shipment.');
+      onUpdate(orders.map(o => o.id === orderId ? { ...o, ...body.order } : o));
+      courierModalId = null;
+    } catch (e) {
+      courierError = e.message;
+    } finally {
+      courierBusy = false;
+    }
+  }
+
+  async function cancelCourierShipment(orderId) {
+    if (!confirm('Cancel this Courier Guy shipment? If it has not been collected yet, any charges are reversed automatically.')) return;
+    courierBusy = true;
+    try {
+      const res = await fetch(`/api/courier/orders/${orderId}/cancel`, { method: 'POST', credentials: 'include' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Could not cancel shipment.');
+      onUpdate(orders.map(o => o.id === orderId ? { ...o, ...body.order } : o));
+    } catch (e) {
+      alert(`Failed to cancel shipment: ${e.message}`);
+    } finally {
+      courierBusy = false;
+    }
+  }
+
+  async function trackCourierShipment(orderId) {
+    courierBusy = true;
+    try {
+      const res = await fetch(`/api/courier/orders/${orderId}/track`, { credentials: 'include' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Could not fetch tracking.');
+      courierTracking = { orderId, ...body.tracking };
+      if (body.tracking?.status) {
+        onUpdate(orders.map(o => o.id === orderId ? { ...o, courierStatus: body.tracking.status } : o));
+      }
+    } catch (e) {
+      alert(`Failed to fetch tracking: ${e.message}`);
+    } finally {
+      courierBusy = false;
+    }
+  }
+
+  async function openCourierFile(orderId, kind) {
+    courierBusy = true;
+    try {
+      const res = await fetch(`/api/courier/orders/${orderId}/${kind}`, { credentials: 'include' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.url) throw new Error(body.error || `Could not fetch ${kind}.`);
+      window.open(body.url, '_blank', 'noopener');
+    } catch (e) {
+      alert(`Failed to open ${kind}: ${e.message}`);
+    } finally {
+      courierBusy = false;
+    }
+  }
+
+  function courierStatusLabel(status) {
+    return status ? status.replace(/-/g, ' ') : '';
   }
 
   // Sort orders newest first
@@ -249,6 +402,15 @@
               </button>
             {/if}
 
+            <!-- Book a real Courier Guy shipment — only once there's something to
+                 ship, and not offered again on top of an active booking. -->
+            {#if courierConfigured && ['paid', 'processing', 'shipped'].includes(order.status) && (!order.courierShipmentId || order.courierStatus === 'cancelled')}
+              <button onclick={() => openCourierModal(order.id)} disabled={pendingId === order.id || courierBusy}
+                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-orange-600 text-white hover:bg-orange-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
+                🚚 SHIP WITH COURIER GUY
+              </button>
+            {/if}
+
             <button onclick={() => exportPDF(order)} class="text-[10px] uppercase text-muted-foreground hover:text-foreground border border-border px-2 py-1 transition-colors ml-auto">
               PDF
             </button>
@@ -310,6 +472,61 @@
               </div>
             </div>
           {/if}
+
+          <!-- Courier Guy booking flow: quote → pick a service level → book -->
+          {#if courierModalId === order.id}
+            <div class="mt-1 p-3 border border-orange-200 bg-orange-50 space-y-3">
+              <div class="flex items-center justify-between">
+                <p class="text-[10px] uppercase tracking-wider font-medium text-orange-900">Ship with Courier Guy</p>
+                <button onclick={() => courierModalId = null} class="text-xs text-muted-foreground hover:text-foreground">✕ Close</button>
+              </div>
+
+              {#if courierError}
+                <p class="text-xs text-destructive bg-destructive/5 border border-destructive/30 px-2 py-1.5">{courierError}</p>
+              {/if}
+
+              {#if courierParcel}
+                <div class="space-y-1">
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Parcel (edit and re-quote if needed)</p>
+                  <div class="grid grid-cols-4 gap-2">
+                    <input type="number" min="0" step="0.1" bind:value={courierParcel.weightKg} placeholder="kg" class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground tabular-nums" />
+                    <input type="number" min="0" bind:value={courierParcel.lengthCm} placeholder="length cm" class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground tabular-nums" />
+                    <input type="number" min="0" bind:value={courierParcel.widthCm} placeholder="width cm" class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground tabular-nums" />
+                    <input type="number" min="0" bind:value={courierParcel.heightCm} placeholder="height cm" class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground tabular-nums" />
+                  </div>
+                  <button onclick={() => fetchCourierRates(order.id, courierParcel)} disabled={courierBusy}
+                    class="text-[10px] uppercase tracking-wider text-orange-800 underline disabled:opacity-40">
+                    Re-quote with these dimensions
+                  </button>
+                </div>
+              {/if}
+
+              {#if courierBusy && courierRates.length === 0}
+                <p class="text-xs text-muted-foreground">Fetching rates…</p>
+              {:else if courierRates.length > 0}
+                <div class="space-y-1.5">
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Select a service level</p>
+                  {#each courierRates as r, i}
+                    {@const parsed = parseRate(r)}
+                    <label class="flex items-center justify-between gap-2 bg-white border border-border px-2 py-1.5 text-xs cursor-pointer {courierSelectedIdx === i ? 'border-orange-500 ring-1 ring-orange-500' : ''}">
+                      <span class="flex items-center gap-2">
+                        <input type="radio" name="courier-rate-{order.id}" checked={courierSelectedIdx === i} onchange={() => courierSelectedIdx = i} />
+                        {parsed.name}
+                      </span>
+                      <span class="tabular-nums font-medium">{parsed.price != null ? `${currency}${Number(parsed.price).toFixed(2)}` : '—'}</span>
+                    </label>
+                    {#if !parsed.recognised}
+                      <pre class="text-[10px] bg-muted p-2 overflow-x-auto">{JSON.stringify(r, null, 2)}</pre>
+                    {/if}
+                  {/each}
+                  <button onclick={() => bookCourierShipment(order.id)} disabled={courierBusy || courierSelectedIdx === null}
+                    class="bg-orange-600 text-white text-[10px] uppercase tracking-wider px-3 py-1.5 hover:bg-orange-700 transition-colors disabled:opacity-40 disabled:cursor-wait mt-1">
+                    {courierBusy ? 'Booking…' : 'Book Shipment'}
+                  </button>
+                </div>
+              {/if}
+            </div>
+          {/if}
         </div>
 
         <div class="border-t border-border/50 pt-3 space-y-2">
@@ -338,6 +555,42 @@
             {#if order.carrier}<div><span class="text-label">CARRIER:</span> {order.carrier}</div>{/if}
             {#if order.trackingNumber}<div><span class="text-label">TRACKING #:</span> {order.trackingNumber}</div>{/if}
             {#if order.estimatedDelivery}<div><span class="text-label">EST. DELIVERY:</span> {order.estimatedDelivery}</div>{/if}
+          </div>
+        {/if}
+
+        {#if order.courierShipmentId}
+          <div class="text-xs flex flex-col sm:flex-row gap-3 sm:items-center border-t border-border/50 pt-3">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] uppercase font-medium tracking-[0.1em] px-2 py-1 rounded {order.courierStatus === 'cancelled' ? 'bg-red-100 text-red-700' : order.courierStatus === 'delivered' ? 'bg-cyan-100 text-cyan-700' : 'bg-orange-100 text-orange-700'}">
+                🚚 Courier Guy · {courierStatusLabel(order.courierStatus) || 'booked'}
+              </span>
+              {#if order.courierTrackingReference}<span class="text-muted-foreground tabular-nums">{order.courierTrackingReference}</span>{/if}
+              {#if order.courierServiceLevelName}<span class="text-muted-foreground">{order.courierServiceLevelName}</span>{/if}
+              {#if typeof order.courierRate === 'number'}<span class="text-muted-foreground tabular-nums">{currency}{order.courierRate.toFixed(2)}</span>{/if}
+            </div>
+            <div class="flex items-center gap-3 sm:ml-auto">
+              <button onclick={() => trackCourierShipment(order.id)} disabled={courierBusy} class="text-[10px] uppercase text-muted-foreground hover:text-foreground underline disabled:opacity-40">Track</button>
+              <button onclick={() => openCourierFile(order.id, 'label')} disabled={courierBusy} class="text-[10px] uppercase text-muted-foreground hover:text-foreground underline disabled:opacity-40">Label</button>
+              <button onclick={() => openCourierFile(order.id, 'sticker')} disabled={courierBusy} class="text-[10px] uppercase text-muted-foreground hover:text-foreground underline disabled:opacity-40">Sticker</button>
+              {#if order.courierStatus !== 'cancelled' && order.courierStatus !== 'delivered'}
+                <button onclick={() => cancelCourierShipment(order.id)} disabled={courierBusy} class="text-[10px] uppercase text-destructive hover:opacity-70 underline disabled:opacity-40">Cancel</button>
+              {/if}
+            </div>
+          </div>
+          {#if courierTracking?.orderId === order.id}
+            <div class="text-xs border-t border-border/50 pt-3 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Tracking events</p>
+              {#each (courierTracking.tracking_events || []).slice(0, 6) as ev}
+                <p class="text-muted-foreground">{ev.date ? new Date(ev.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''} — {courierStatusLabel(ev.status)}{ev.message ? `: ${ev.message}` : ''}{ev.location ? ` (${ev.location})` : ''}</p>
+              {/each}
+              {#if !(courierTracking.tracking_events || []).length}
+                <p class="text-muted-foreground">No events yet.</p>
+              {/if}
+            </div>
+          {/if}
+        {:else if order.courierError}
+          <div class="text-xs border-t border-border/50 pt-3">
+            <p class="text-destructive"><span class="text-label">COURIER GUY:</span> booking failed — {order.courierError}</p>
           </div>
         {/if}
       </div>
