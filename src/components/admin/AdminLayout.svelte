@@ -12,11 +12,12 @@
   import Settings2 from 'lucide-svelte/icons/settings-2';
   import Activity from 'lucide-svelte/icons/activity';
   import ArrowUpRight from 'lucide-svelte/icons/arrow-up-right';
+  import LogOut from 'lucide-svelte/icons/log-out';
   import Menu from 'lucide-svelte/icons/menu';
   import X from 'lucide-svelte/icons/x';
 
   // `badges` maps a section key to a count shown beside its nav label (e.g. orders to ship).
-  let { activeSection = 'dashboard', navigate = () => {}, badges = {}, children } = $props();
+  let { activeSection = 'dashboard', navigate = () => {}, badges = {}, onLogout = null, children } = $props();
 
   let sidebarOpen = $state(false);
 
@@ -94,10 +95,15 @@
       {/each}
     </nav>
 
-    <div class="border-t border-border p-3">
+    <div class="space-y-0.5 border-t border-border p-3">
       <a href="/" class="flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground">
         <ArrowUpRight size={16} /> View storefront
       </a>
+      {#if onLogout}
+        <button type="button" onclick={onLogout} class="flex h-9 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground">
+          <LogOut size={16} /> Sign out
+        </button>
+      {/if}
     </div>
   </div>
 {/snippet}

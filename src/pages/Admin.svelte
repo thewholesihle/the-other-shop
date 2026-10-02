@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import AdminLayout from '../components/admin/AdminLayout.svelte';
+  import AdminLogin from '../components/admin/AdminLogin.svelte';
   import AdminDashboard from '../components/admin/AdminDashboard.svelte';
   import AdminProducts from '../components/admin/AdminProducts.svelte';
   import AdminOrders from '../components/admin/AdminOrders.svelte';
@@ -16,6 +17,7 @@
   import Toaster from '../components/ui/Toaster.svelte';
   import ConfirmDialog from '../components/ui/ConfirmDialog.svelte';
   import { toast } from '../lib/toast.js';
+  import { notifyDesktop, beep } from '../lib/alerts.js';
 
   const SECTIONS = ['dashboard', 'products', 'categories', 'orders', 'status', 'lookbook', 'community', 'pages', 'subscribers', 'newsletter', 'settings'];
 
@@ -24,11 +26,41 @@
     return SECTIONS.includes(seg) ? seg : 'dashboard';
   }
 
+  // 'checking' → asking the server whether we already have a session
+  // 'login'    → show the sign-in screen
+  // 'ready'    → signed in
+  let authState = 'checking';
+  let csrf = '';
+
   let data = null;
   let loading = true;
   let saving = false;
   let saveError = null;
   let activeSection = sectionFromPath(window.location.pathname);
+
+  // ── Session-aware fetch ───────────────────────────────────────────────────
+  // Every same-origin write automatically carries the session's CSRF token, and a
+  // 401 from any admin endpoint (session expired / signed out elsewhere) drops back to
+  // the sign-in screen instead of failing silently. Restored when the admin unmounts.
+  const nativeFetch = window.fetch.bind(window);
+  function installFetchGuard() {
+    window.fetch = (input, init = {}) => {
+      const url = typeof input === 'string' ? input : input.url;
+      const sameOrigin = url.startsWith('/') || url.startsWith(location.origin);
+      const method = String(init.method || (typeof input !== 'string' && input.method) || 'GET').toUpperCase();
+      if (sameOrigin && csrf && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+        const headers = new Headers(init.headers || (typeof input !== 'string' ? input.headers : undefined));
+        headers.set('X-CSRF-Token', csrf);
+        init = { ...init, headers };
+      }
+      return nativeFetch(input, init).then((res) => {
+        if (res.status === 401 && sameOrigin && url.includes('/api/') && !url.includes('/api/admin/login') && authState === 'ready') {
+          signedOut('Your session expired. Please sign in again.');
+        }
+        return res;
+      });
+    };
+  }
 
   // ── Read from MongoDB (via /api/data) ─────────────────────────────────────
   async function loadData() {
@@ -67,47 +99,106 @@
   // Orders waiting on the shop (paid, not yet shipped) — shown as a nav badge.
   $: badges = { orders: data ? data.orders.filter(o => ['paid', 'processing'].includes(o.status)).length : 0 };
 
+  // ── Orders & stock refresh (lean endpoints, not the whole /api/data blob) ──
+  async function refreshOrders() {
+    if (saving || !data || authState !== 'ready') return;
+    try {
+      const [orders, products] = await Promise.all([
+        fetch('/api/orders', { credentials: 'include' }).then(r => r.ok ? r.json() : Promise.reject()),
+        fetch('/api/products').then(r => r.ok ? r.json() : Promise.reject()),
+      ]);
+      data = { ...data, orders, products };
+    } catch {
+      // Transient network hiccup — keep showing the last known-good data.
+    }
+  }
+
+  // ── Realtime: Server-Sent Events ──────────────────────────────────────────
+  // The server pushes an event the moment an order is created, paid, cancelled or
+  // changed, so it shows up here instantly. A slow poll stays as a safety net in case
+  // the stream is blocked by a proxy.
+  let events = null;
   let pollTimer = null;
+  let refreshTimer = null;
+  const money = (n) => `${data?.site?.currency ?? 'R'}${Number(n || 0).toFixed(2)}`;
+
+  function connectEvents() {
+    if (events) events.close();
+    events = new EventSource('/api/admin/events');
+    events.addEventListener('order', (e) => {
+      let evt; try { evt = JSON.parse(e.data); } catch { return; }
+      // Coalesce bursts into one refresh.
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(refreshOrders, 150);
+
+      if (evt.action === 'paid') {
+        toast.success(`New paid order ${evt.id} — ${money(evt.total)}${evt.customer ? ` from ${evt.customer}` : ''}`, 9000);
+        notifyDesktop('New paid order', `${evt.id} · ${money(evt.total)}${evt.customer ? ` · ${evt.customer}` : ''}`);
+        beep();
+      } else if (evt.action === 'created') {
+        toast.info(`New checkout started: ${evt.id} (${money(evt.total)}), awaiting payment`, 5000);
+      } else if (evt.action === 'cancelled') {
+        toast.info(`Order ${evt.id} was cancelled`, 5000);
+      }
+    });
+    events.addEventListener('signed-out', () => signedOut('Your session expired. Please sign in again.'));
+  }
+
+  function stopSession() {
+    if (events) { events.close(); events = null; }
+    clearInterval(pollTimer);
+    clearTimeout(refreshTimer);
+  }
+
+  // ── Session lifecycle ─────────────────────────────────────────────────────
+  async function startSession(token) {
+    csrf = token;
+    authState = 'ready';
+    loading = true;
+    try {
+      data = await loadData();
+    } catch (e) {
+      console.error('Admin load error:', e);
+      saveError = e.message;
+    } finally {
+      loading = false;
+    }
+    connectEvents();
+    clearInterval(pollTimer);
+    pollTimer = setInterval(refreshOrders, 30000);
+  }
+
+  function signedOut(message) {
+    stopSession();
+    csrf = '';
+    data = null;
+    authState = 'login';
+    if (message) toast.info(message, 6000);
+  }
+
+  async function logout() {
+    try { await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' }); } catch { /* signing out locally regardless */ }
+    signedOut();
+  }
 
   const handlePopState = () => { activeSection = sectionFromPath(window.location.pathname); };
 
   onMount(() => {
     window.addEventListener('popstate', handlePopState);
-
+    installFetchGuard();
     (async () => {
       try {
-        data = await loadData();
-      } catch (e) {
-        console.error('Admin load error:', e);
-        saveError = e.message;
-      } finally {
-        loading = false;
-      }
+        const res = await nativeFetch('/api/admin/session', { credentials: 'include' });
+        if (res.ok) return startSession((await res.json()).csrf);
+      } catch { /* fall through to the sign-in screen */ }
+      authState = 'login';
     })();
-
-    // Light polling so incoming orders / PayFast-driven status changes / stock
-    // movements show up on their own, without the admin needing to reload the
-    // page. Skipped while a save is in flight so it can never race a write.
-    // Uses the lean /api/orders + /api/products endpoints rather than the full
-    // /api/data blob — no need to refetch categories/lookbooks/community/pages/
-    // subscribers every 20 seconds just to pick up order and stock changes.
-    pollTimer = setInterval(async () => {
-      if (saving || loading || !data) return;
-      try {
-        const [orders, products] = await Promise.all([
-          fetch('/api/orders', { credentials: 'include' }).then(r => r.ok ? r.json() : Promise.reject()),
-          fetch('/api/products').then(r => r.ok ? r.json() : Promise.reject()),
-        ]);
-        data = { ...data, orders, products };
-      } catch {
-        // Transient network hiccup — keep showing the last known-good data.
-      }
-    }, 20000);
   });
 
   onDestroy(() => {
     window.removeEventListener('popstate', handlePopState);
-    clearInterval(pollTimer);
+    window.fetch = nativeFetch;
+    stopSession();
   });
 
   // ── Section update handlers — each fetches the latest data, merges the
@@ -138,7 +229,6 @@
   }
 
   function updateProducts(products)     { return updateSection('products',    products);     }
-  function updateOrders(orders)         { return updateSection('orders',      orders);       }
   function updateSite(site)             { return updateSection('site',        site);         }
   function updateLookbooks(lookbooks)   { return updateSection('lookbooks',   lookbooks);    }
   function updateCommunity(community)   { return updateSection('community',   community);    }
@@ -168,7 +258,11 @@
 </svelte:head>
 
 <div class="admin-root min-h-screen">
-{#if loading}
+{#if authState === 'checking'}
+  <Loader />
+{:else if authState === 'login'}
+  <AdminLogin onSuccess={startSession} />
+{:else if loading}
   <Loader />
 {:else if !data}
   <div class="flex min-h-screen items-center justify-center flex-col gap-4">
@@ -177,7 +271,7 @@
     <button onclick={() => location.reload()} class="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm hover:bg-accent transition-colors">Retry</button>
   </div>
 {:else}
-  <AdminLayout {activeSection} {navigate} {badges}>
+  <AdminLayout {activeSection} {navigate} {badges} onLogout={logout}>
     {#if activeSection === 'dashboard'}
       <AdminDashboard {data} {navigate} />
     {:else if activeSection === 'products'}

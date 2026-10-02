@@ -2,6 +2,7 @@
   import Card from '../ui/Card.svelte';
   import Badge from '../ui/Badge.svelte';
   import Button from '../ui/Button.svelte';
+  import Tabs from '../ui/Tabs.svelte';
   import { thCls, tdCls } from '../../lib/ui.js';
   import DollarSign from 'lucide-svelte/icons/circle-dollar-sign';
   import ShoppingBag from 'lucide-svelte/icons/shopping-bag';
@@ -38,24 +39,104 @@
   let recentOrders = $derived(orders.slice(0, 6));
   let stockAlerts = $derived(products.filter(p => p.stock <= 10).sort((a, b) => a.stock - b.stock).slice(0, 6));
 
-  // Revenue per day, last 14 days (today last).
+  // ── Chart state ───────────────────────────────────────────────────────────
+  let view = $state('revenue');   // revenue | orders | status | products
+  let range = $state('14');       // days
+  let hovered = $state(null);     // index of the hovered bar, for the readout line
+
+  const VIEWS = [
+    { value: 'revenue', label: 'Revenue' },
+    { value: 'orders', label: 'Orders' },
+    { value: 'status', label: 'Status' },
+    { value: 'products', label: 'Top products' },
+  ];
+  const RANGES = [
+    { value: '7', label: '7d' }, { value: '14', label: '14d' },
+    { value: '30', label: '30d' }, { value: '90', label: '90d' },
+  ];
+
+  const dayStart = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  const orderDate = (o) => new Date(o.createdAt || o.date || 0);
+  let rangeDays = $derived(Number(range));
+  let cutoff = $derived.by(() => { const d = dayStart(new Date()); d.setDate(d.getDate() - (rangeDays - 1)); return d; });
+  let prevCutoff = $derived.by(() => { const d = new Date(cutoff); d.setDate(d.getDate() - rangeDays); return d; });
+
+  // One bucket per day in range (today last): revenue from paid-or-later orders, and a
+  // count of all non-cancelled orders placed that day.
   let days = $derived.by(() => {
     const out = [];
-    const start = new Date(); start.setHours(0, 0, 0, 0);
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date(start); d.setDate(d.getDate() - i);
-      out.push({ date: d, key: d.toDateString(), total: 0 });
+    for (let i = 0; i < rangeDays; i++) {
+      const d = new Date(cutoff); d.setDate(d.getDate() + i);
+      out.push({ date: d, key: d.toDateString(), revenue: 0, count: 0 });
     }
     const byKey = new Map(out.map(d => [d.key, d]));
     for (const o of orders) {
-      if (!REVENUE_STATUSES.includes(o.status)) continue;
-      const bucket = byKey.get(new Date(o.createdAt || o.date || 0).toDateString());
-      if (bucket) bucket.total += o.total;
+      const bucket = byKey.get(orderDate(o).toDateString());
+      if (!bucket) continue;
+      if (o.status !== 'cancelled') bucket.count += 1;
+      if (REVENUE_STATUSES.includes(o.status)) bucket.revenue += o.total;
     }
     return out;
   });
-  let maxDay = $derived(Math.max(...days.map(d => d.total), 1));
-  let periodTotal = $derived(days.reduce((s, d) => s + d.total, 0));
+
+  let metric = $derived(view === 'orders' ? 'count' : 'revenue');
+  let maxDay = $derived(Math.max(...days.map(d => d[metric]), 1));
+  let periodTotal = $derived(days.reduce((s, d) => s + d[metric], 0));
+  let prevTotal = $derived.by(() => {
+    let sum = 0;
+    for (const o of orders) {
+      const t = orderDate(o);
+      if (t < prevCutoff || t >= cutoff) continue;
+      if (metric === 'count') { if (o.status !== 'cancelled') sum += 1; }
+      else if (REVENUE_STATUSES.includes(o.status)) sum += o.total;
+    }
+    return sum;
+  });
+  let delta = $derived(prevTotal > 0 ? Math.round(((periodTotal - prevTotal) / prevTotal) * 100) : null);
+  const fmtVal = (v) => (metric === 'count' ? String(v) : money(v));
+  const fmtShort = (v) => (metric === 'count' ? String(v) : `${currency}${v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k' : Math.round(v)}`);
+  // Label roughly 7 ticks however many days are shown.
+  let labelEvery = $derived(Math.max(1, Math.ceil(rangeDays / 7)));
+  const dayLabel = (d) => d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+
+  // Orders in the selected range (all statuses), for the status and product views.
+  let rangeOrders = $derived(orders.filter(o => orderDate(o) >= cutoff));
+
+  const STATUS_META = [
+    { key: 'paid', label: 'Paid', bar: 'bg-emerald-500' },
+    { key: 'processing', label: 'Processing', bar: 'bg-violet-500' },
+    { key: 'shipped', label: 'Shipped', bar: 'bg-blue-500' },
+    { key: 'delivered', label: 'Delivered', bar: 'bg-zinc-500' },
+    { key: 'pending_payment', label: 'Awaiting payment', bar: 'bg-amber-500' },
+    { key: 'cancelled', label: 'Cancelled', bar: 'bg-red-500' },
+  ];
+  let statusRows = $derived.by(() => {
+    const total = rangeOrders.length || 1;
+    return STATUS_META
+      .map(m => ({ ...m, count: rangeOrders.filter(o => o.status === m.key).length }))
+      .map(m => ({ ...m, pct: Math.round((m.count / total) * 100) }));
+  });
+
+  let topProducts = $derived.by(() => {
+    const byName = new Map();
+    for (const o of rangeOrders) {
+      if (o.status === 'cancelled' || o.status === 'pending_payment') continue;
+      for (const i of o.items || []) {
+        const row = byName.get(i.name) || { name: i.name, units: 0, revenue: 0 };
+        row.units += i.quantity || 0;
+        row.revenue += (i.price || 0) * (i.quantity || 0);
+        byName.set(i.name, row);
+      }
+    }
+    return [...byName.values()].sort((a, b) => b.units - a.units).slice(0, 6);
+  });
+  let maxUnits = $derived(Math.max(...topProducts.map(p => p.units), 1));
+
+  // Readout line above the chart: the hovered day, or the whole period.
+  let readout = $derived(hovered !== null && days[hovered]
+    ? { label: dayLabel(days[hovered].date), value: fmtVal(days[hovered][metric]), note: '' }
+    : { label: `Last ${rangeDays} days`, value: fmtVal(periodTotal),
+        note: delta === null ? '' : `${delta >= 0 ? '↑' : '↓'} ${Math.abs(delta)}% vs previous ${rangeDays} days` });
 
   let stats = $derived([
     { label: 'Revenue', value: money(totalRevenue), note: 'All time, excluding cancelled', icon: DollarSign },
@@ -91,19 +172,78 @@
   </div>
 
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-    <Card class="lg:col-span-2" title="Revenue" description="Paid orders, last 14 days">
+    <Card class="lg:col-span-2" title="Sales overview" description="Paid orders and activity over time">
+      {#snippet actions()}
+        <Tabs items={RANGES} bind:value={range} label="Date range" />
+      {/snippet}
       <div class="p-6 pt-4">
-        <p class="mb-3 text-sm text-muted-foreground">Total <span class="font-semibold text-foreground tabular-nums">{money(periodTotal)}</span></p>
-        <div class="flex h-44 items-end gap-1.5 border-b border-border" role="img" aria-label="Daily revenue for the last 14 days">
-          {#each days as d, i}
-            <div class="group relative flex h-full flex-1 flex-col justify-end" title="{d.date.toLocaleDateString([], { day: 'numeric', month: 'short' })}: {money(d.total)}">
-              <div class="w-full rounded-t-sm transition-colors {i === days.length - 1 ? 'bg-primary' : 'bg-primary/25 group-hover:bg-primary/60'}" style="height: {d.total > 0 ? Math.max(4, (d.total / maxDay) * 100) : 2}%"></div>
+        <Tabs items={VIEWS} bind:value={view} label="Chart view" class="mb-5" />
+
+        {#if view === 'revenue' || view === 'orders'}
+          <div class="mb-4 flex flex-wrap items-baseline gap-x-3" aria-live="polite">
+            <span class="text-sm text-muted-foreground">{readout.label}</span>
+            <span class="text-2xl font-semibold tracking-tight tabular-nums">{readout.value}</span>
+            {#if readout.note}<span class="text-sm {delta !== null && delta < 0 ? 'text-destructive' : 'text-emerald-700'}">{readout.note}</span>{/if}
+          </div>
+          <div class="relative">
+            <span class="absolute -top-1 left-0 text-[10px] tabular-nums text-muted-foreground">{fmtShort(maxDay)}</span>
+            <div class="flex h-44 items-end border-b border-border pt-3" role="img" aria-label="{view === 'orders' ? 'Orders' : 'Revenue'} per day for the last {rangeDays} days"
+                 onpointerleave={() => (hovered = null)} style="gap: {rangeDays > 30 ? 1 : 3}px">
+              {#each days as d, i}
+                <div class="flex h-full flex-1 cursor-default flex-col justify-end" onpointerenter={() => (hovered = i)} role="presentation">
+                  <div class="w-full rounded-t-sm transition-colors {hovered === i ? 'bg-primary' : i === days.length - 1 && hovered === null ? 'bg-primary' : 'bg-primary/30'}"
+                       style="height: {d[metric] > 0 ? Math.max(3, (d[metric] / maxDay) * 100) : 1}%"></div>
+                </div>
+              {/each}
             </div>
-          {/each}
-        </div>
-        <div class="mt-2 flex gap-1.5">
-          {#each days as d}<span class="flex-1 text-center text-[10px] text-muted-foreground tabular-nums">{d.date.getDate()}</span>{/each}
-        </div>
+            <div class="mt-1.5 flex" style="gap: {rangeDays > 30 ? 1 : 3}px">
+              {#each days as d, i}<span class="flex-1 overflow-visible whitespace-nowrap text-center text-[10px] text-muted-foreground tabular-nums">{i % labelEvery === 0 || i === days.length - 1 ? (rangeDays > 14 ? dayLabel(d.date) : d.date.getDate()) : ''}</span>{/each}
+            </div>
+          </div>
+          <table class="sr-only">
+            <caption>{view === 'orders' ? 'Orders' : 'Revenue'} per day</caption>
+            <thead><tr><th>Day</th><th>Value</th></tr></thead>
+            <tbody>{#each days as d}<tr><td>{dayLabel(d.date)}</td><td>{fmtVal(d[metric])}</td></tr>{/each}</tbody>
+          </table>
+
+        {:else if view === 'status'}
+          <p class="mb-3 text-sm text-muted-foreground">{rangeOrders.length} order{rangeOrders.length === 1 ? '' : 's'} in the last {rangeDays} days</p>
+          {#if rangeOrders.length === 0}
+            <p class="py-12 text-center text-sm text-muted-foreground">No orders in this period.</p>
+          {:else}
+            <div class="flex h-4 w-full overflow-hidden rounded-full bg-muted" role="img" aria-label="Orders by status" style="gap: 2px">
+              {#each statusRows.filter(r => r.count > 0) as r}<div class="{r.bar}" style="width: {r.pct}%" title="{r.label}: {r.count}"></div>{/each}
+            </div>
+            <ul class="mt-5 divide-y divide-border">
+              {#each statusRows as r}
+                <li class="flex items-center gap-3 py-2.5 text-sm">
+                  <span class="h-2.5 w-2.5 shrink-0 rounded-sm {r.bar}"></span>
+                  <span class="flex-1">{r.label}</span>
+                  <span class="tabular-nums text-muted-foreground">{r.pct}%</span>
+                  <span class="w-8 text-right font-medium tabular-nums">{r.count}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+
+        {:else}
+          <p class="mb-4 text-sm text-muted-foreground">Best sellers by units, last {rangeDays} days (cancelled and unpaid orders excluded)</p>
+          {#if topProducts.length === 0}
+            <p class="py-12 text-center text-sm text-muted-foreground">No sales in this period.</p>
+          {:else}
+            <ul class="space-y-3">
+              {#each topProducts as p}
+                <li>
+                  <div class="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                    <span class="truncate font-medium">{p.name}</span>
+                    <span class="shrink-0 tabular-nums text-muted-foreground">{p.units} sold · {money(p.revenue)}</span>
+                  </div>
+                  <div class="h-2.5 w-full rounded-full bg-muted"><div class="h-full rounded-full bg-primary" style="width: {Math.max(3, (p.units / maxUnits) * 100)}%"></div></div>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        {/if}
       </div>
     </Card>
 

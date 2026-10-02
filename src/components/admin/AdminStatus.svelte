@@ -14,6 +14,10 @@
   import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
   import Info from 'lucide-svelte/icons/info';
   import CircleCheck from 'lucide-svelte/icons/circle-check';
+  import Bell from 'lucide-svelte/icons/bell';
+  import ShieldCheck from 'lucide-svelte/icons/shield-check';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+  import { desktopAlertsSupported, desktopAlertsEnabled, enableDesktopAlerts, beep } from '../../lib/alerts.js';
 
   let status = $state(null);
   let logs = $state([]);
@@ -52,6 +56,33 @@
     } catch {
       toast.error('Failed to clear logs');
     }
+  }
+
+  // ── Notification checks ───────────────────────────────────────────────────
+  let testing = $state(false);
+  let testResult = $state(null); // { ok, message, hint }
+  async function sendTestEmail() {
+    testing = true;
+    testResult = null;
+    try {
+      const res = await fetch('/api/admin/test-email', { method: 'POST', credentials: 'include' });
+      const body = await res.json().catch(() => ({}));
+      testResult = res.ok
+        ? { ok: true, message: `Sent to ${body.to.join(', ')} from ${body.from}. Check that inbox (and spam).` }
+        : { ok: false, message: body.error || 'Could not send the test email.', hint: body.hint };
+    } catch {
+      testResult = { ok: false, message: 'Could not reach the server.' };
+    } finally {
+      testing = false;
+    }
+  }
+
+  let desktopOn = $state(desktopAlertsEnabled());
+  async function turnOnDesktopAlerts() {
+    const result = await enableDesktopAlerts();
+    desktopOn = result === 'granted';
+    if (desktopOn) { toast.success('Desktop alerts on. You’ll be notified of new paid orders when this tab is in the background.'); beep(); }
+    else toast.error(result === 'unsupported' ? 'This browser does not support desktop notifications.' : 'Desktop alerts were blocked — allow notifications for this site in your browser settings.');
   }
 
   onMount(loadDiagnostics);
@@ -98,6 +129,50 @@
         </Card>
       {/each}
     </div>
+
+    <Card title="Notifications" description="Make sure you hear about new orders and problems.">
+      <div class="space-y-5 p-6 pt-4 text-sm">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="font-medium">Order & alert emails</p>
+            <p class="text-muted-foreground">Sent from <span class="font-mono text-xs">{status.emailFrom}</span> to the addresses in Settings.</p>
+          </div>
+          <Button variant="outline" disabled={testing || status.email !== 'configured'} onclick={sendTestEmail}>
+            {#if testing}<LoaderCircle size={15} class="animate-spin" /> Sending…{:else}<Mail size={15} /> Send test email{/if}
+          </Button>
+        </div>
+        {#if status.emailSandbox}
+          <p class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">You are sending from Resend’s shared sandbox address. It can only deliver to your own Resend account’s email, so <strong>customers will not receive order emails</strong> until you verify a domain in Resend and set <span class="font-mono text-xs">SMTP_FROM</span> to an address on it.</p>
+        {/if}
+        {#if testResult}
+          <p role="status" class="rounded-md border px-3 py-2 {testResult.ok ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-destructive/40 bg-destructive/10 text-destructive'}">
+            {testResult.message}{#if testResult.hint}<span class="mt-1 block opacity-90">{testResult.hint}</span>{/if}
+          </p>
+        {/if}
+
+        <div class="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="font-medium">Live order alerts</p>
+            <p class="text-muted-foreground">New orders appear here instantly with a chime. Turn on desktop alerts to hear about them from another tab.</p>
+          </div>
+          {#if desktopOn}
+            <Badge variant="success"><Bell size={12} class="mr-1" /> Desktop alerts on</Badge>
+          {:else if desktopAlertsSupported()}
+            <Button variant="outline" onclick={turnOnDesktopAlerts}><Bell size={15} /> Enable desktop alerts</Button>
+          {:else}
+            <Badge variant="secondary">Not supported in this browser</Badge>
+          {/if}
+        </div>
+
+        <div class="flex flex-col gap-1 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="font-medium">Sign-in security</p>
+            <p class="text-muted-foreground">Two-factor codes protect the admin even if the password leaks.</p>
+          </div>
+          <Badge variant={status.twoFactor ? 'success' : 'warning'}><ShieldCheck size={12} class="mr-1" /> {status.twoFactor ? 'Two-factor on' : 'Two-factor off'}</Badge>
+        </div>
+      </div>
+    </Card>
 
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {#each stats as s}

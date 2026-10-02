@@ -18,7 +18,7 @@ Single codebase, single deploy: Express serves both the API and the built SPA.
 | Images/video | Cloudinary |
 | Payments | PayFast (South African gateway) |
 | Transactional email | Resend (HTTPS API — not SMTP) |
-| Auth | HTTP Basic Auth on `/admin*` and all admin API routes |
+| Auth | Session login (HttpOnly cookie, CSRF token, optional TOTP 2FA) on all admin API routes |
 
 ---
 
@@ -55,9 +55,9 @@ npm run build               # builds public/build/bundle.js + bundle.css
 npm start                   # node server.js → http://localhost:3000
 ```
 
-The server will refuse to start (`FATAL`, exit 1) without `ADMIN_USER`/`ADMIN_PASS` and a matching PayFast credential pair for whichever `PAYFAST_SANDBOX` mode is active. Everything else is optional and feature-gates itself off when unset.
+The server will refuse to start (`FATAL`, exit 1) without `ADMIN_USER` plus `ADMIN_PASS_HASH` (or `ADMIN_PASS`) and a matching PayFast credential pair for whichever `PAYFAST_SANDBOX` mode is active. Everything else is optional and feature-gates itself off when unset.
 
-Admin panel: `http://localhost:3000/admin` (HTTP Basic Auth, credentials from `.env`).
+Admin panel: `http://localhost:3000/admin` — sign in with the credentials from `.env` (see **Admin security** below).
 
 There's no `dev` script wired to `nodemon` in `package.json` despite it being a devDependency — during active backend development, run `npx nodemon server.js` directly, or rebuild (`npm run build`) after frontend changes and restart `npm start`.
 
@@ -70,7 +70,8 @@ See [`.env.example`](.env.example) for the full annotated list. Summary:
 ### Required
 | Variable | Purpose |
 |---|---|
-| `ADMIN_USER`, `ADMIN_PASS` | HTTP Basic Auth credentials for `/admin*` |
+| `ADMIN_USER` + `ADMIN_PASS_HASH` (or `ADMIN_PASS`) | Admin sign-in. Generate the hash with `node scripts/hash-password.js "<passphrase>"` |
+| `ADMIN_TOTP_SECRET` | Optional but recommended: require an authenticator-app code at sign-in (`node scripts/totp-secret.js`) |
 | `PAYFAST_SANDBOX` | `true`/`false` — selects which credential pair below is read |
 | `PAYFAST_MERCHANT_ID_SANDBOX` / `_LIVE`, `PAYFAST_MERCHANT_KEY_SANDBOX` / `_LIVE` | Whichever pair matches the active mode |
 
@@ -108,7 +109,7 @@ Every one of these has a matching server-side route in `server.js` (not just the
 
 ## Admin panel
 
-Eleven sections, all under HTTP Basic Auth:
+Eleven sections, all behind the sign-in page:
 
 **Dashboard** · **Products** (variant stock matrix, per-color images) · **Categories** · **Orders** (status pipeline, manual shipping-details capture, PDF invoice export) · **Status** (DB/Cloudinary/email health, live diagnostics) · **Lookbook** · **Community** · **Pages** (Shipping & Returns / FAQ / Contact content) · **Subscribers** · **Newsletter** (rich-text broadcast with per-recipient sending and one-click unsubscribe) · **Settings** (branding, colors, SEO defaults, email templates, maintenance mode).
 
@@ -124,11 +125,27 @@ Shipping is handled manually. Once an order is paid, the admin Orders tab shows 
 
 ---
 
+## Admin security
+
+- **Sign-in page** at `/admin` (no browser Basic Auth prompt). Credentials are compared in constant time; failures return one generic message after a small random delay.
+- **Sessions:** a random 256-bit id in an `HttpOnly`, `SameSite=Strict` cookie (`__Host-` prefixed and `Secure` on HTTPS), regenerated on every sign-in, expiring after 30 minutes idle / 12 hours total, revocable via **Sign out**. They live in server memory, so a restart signs you out.
+- **CSRF:** every write must carry the session's `X-CSRF-Token` (added automatically by the admin app).
+- **Brute-force limits:** 8 failed sign-ins per IP per 15 minutes, then locked out; the admin is emailed and the attempt is logged (**Site status → System logs**).
+- **Two-factor (optional, recommended):** set `ADMIN_TOTP_SECRET`. Each code works once; a wrong password doesn't burn your code.
+- **Strict CSP** on admin pages (scripts only from this site; the PDF libraries are self-hosted in `public/vendor/`), no framing, `noindex`.
+- `/api/data` only returns orders, subscribers and admin-only settings to a signed-in admin.
+
+## Realtime & notifications
+
+- The admin keeps a Server-Sent Events stream (`/api/admin/events`) open: new checkouts, payments and status changes appear instantly, with a toast, a chime and (if enabled) a desktop notification. A 30-second poll is the fallback if a proxy blocks the stream.
+- **Site status → Notifications** has a **Send test email** button and warns if you're still on Resend's sandbox sender (which can only deliver to your own Resend account — verify a domain and set `SMTP_FROM` before expecting customers to get emails).
+- Skipped or failed admin emails are logged, not silent.
+
 ## Resilience
 
 - **MongoDB down or unreachable:** the connection layer retries with capped exponential backoff (5s → up to 60s) rather than giving up after one failed attempt. While disconnected, public traffic sees a maintenance page (email collection optional) instead of a broken site; `/admin` still loads so you can see what's happening.
 - **Unhandled server errors:** logged to MongoDB (inspectable from the admin Status tab) and, if `ADMIN_EMAIL`/`RESEND_API_KEY` are set, emailed to the admin — throttled to once per 15 minutes so a recurring error doesn't flood the inbox.
-- **Cross-origin mutation guard:** state-changing requests (`POST`/`PATCH`/`DELETE`) are rejected if their `Origin`/`Referer` doesn't match the request host — mitigates a malicious page riding an admin's cached Basic Auth credentials. PayFast's ITN webhook and the newsletter one-click-unsubscribe callback are explicitly exempted, since neither is a browser request and both are independently verified another way.
+- **Cross-origin mutation guard:** state-changing requests (`POST`/`PATCH`/`DELETE`) are rejected if their `Origin`/`Referer` doesn't match the request host — defence in depth for the admin session, alongside its `SameSite=Strict` cookie and per-session CSRF token. PayFast's ITN webhook and the newsletter one-click-unsubscribe callback are explicitly exempted, since neither is a browser request and both are independently verified another way.
 
 ---
 

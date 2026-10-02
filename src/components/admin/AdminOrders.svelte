@@ -139,8 +139,39 @@
     }
   }
 
-  function exportPDF(order) {
-    if (!window.jspdf) return toast.info('PDF library is still loading — try again in a moment.');
+  // The PDF libraries are self-hosted (public/vendor) and loaded on first use, so the
+  // admin never executes third-party scripts. (A <script> inside <svelte:head> is inserted
+  // without being executed, which is why the old button silently did nothing.)
+  const loadScript = (src) => new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src;
+    el.onload = resolve;
+    el.onerror = () => reject(new Error(`Could not load ${src}`));
+    document.head.appendChild(el);
+  });
+  let pdfLibs = null;
+  function loadPdfLibs() {
+    if (window.jspdf?.jsPDF?.API?.autoTable) return Promise.resolve();
+    pdfLibs ??= loadScript('/vendor/jspdf.umd.min.js')
+      .then(() => loadScript('/vendor/jspdf.plugin.autotable.min.js'))
+      .catch((e) => { pdfLibs = null; throw e; });
+    return pdfLibs;
+  }
+
+  let pdfBusyId = $state(null);
+  async function exportPDF(order) {
+    pdfBusyId = order.id;
+    try {
+      await loadPdfLibs();
+      buildInvoice(order);
+    } catch (e) {
+      toast.error(`Couldn't create the invoice: ${e.message}`);
+    } finally {
+      pdfBusyId = null;
+    }
+  }
+
+  function buildInvoice(order) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.setFontSize(20);
@@ -181,11 +212,6 @@
   const STEPS = ['paid', 'processing', 'shipped', 'delivered'];
   const stepIndex = (status) => STEPS.indexOf(status);
 </script>
-
-<svelte:head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-</svelte:head>
 
 <div class="space-y-6">
   <div>
@@ -343,7 +369,9 @@
 
   {#snippet footer()}
     {#if selected}
-      <Button variant="outline" onclick={() => exportPDF(selected)}><Download size={15} /> Invoice PDF</Button>
+      <Button variant="outline" disabled={pdfBusyId === selected.id} onclick={() => exportPDF(selected)}>
+        {#if pdfBusyId === selected.id}<LoaderCircle size={15} class="animate-spin" />{:else}<Download size={15} />{/if} Invoice PDF
+      </Button>
       <div class="flex-1"></div>
       {#if selected.status.includes('pending')}
         <Button variant="destructive" disabled={pendingId === selected.id} onclick={() => handleDelete(selected)}>Delete order</Button>

@@ -16,6 +16,8 @@ const rateLimit = require('express-rate-limit');
 const { connect, getIsConnected } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
 const crypto = require('crypto');
+const { EventEmitter } = require('events');
+const auth = require('./src/auth');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -47,27 +49,31 @@ const checkoutLimiter = rateLimit({
   message: { error: 'Too many checkouts. Please wait an hour.' }
 });
 
-// The admin page itself (where Basic Auth is challenged) previously had no rate
-// limiting at all — apiLimiter only covers /api/*, and the /admin route was never
-// mounted under it — leaving credential brute-forcing completely unthrottled.
-const adminAuthLimiter = rateLimit({
+// Sign-in is the one endpoint worth brute-forcing, so it gets its own tight limit:
+// 8 failed attempts per 15 minutes per IP (successful sign-ins don't count).
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20, // 20 attempts per 15 minutes per IP
+  max: 8,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many attempts. Please try again later.' },
+  handler: (req, res) => {
+    logAuth('warn', `Admin sign-in rate limit reached for ${req.ip}`, req);
+    notifyAdminOfError(new Error('Repeated failed admin sign-ins'), req,
+      `Someone from ${req.ip} used up the admin sign-in attempt limit. If that wasn't you, consider changing your admin password.`).catch(() => {});
+    res.status(429).json({ error: 'Too many sign-in attempts. Try again in 15 minutes.' });
+  },
 });
 
 app.use('/api/checkout', checkoutLimiter);
 app.use('/api/', apiLimiter);
 
 // ─── CSRF Guard ───────────────────────────────────────────────────────────────
-// Basic Auth credentials are cached and auto-resent by browsers on same-origin
-// requests, similar to cookies — a malicious page could still trigger a
-// state-changing request against this API from a logged-in admin's browser.
-// Reject cross-origin mutations; requests with no Origin/Referer at all (e.g.
-// PayFast's server-to-server ITN webhook) are left alone since they're not
-// coming from a browser tab in the first place.
+// Defence in depth for the admin session: its cookie is SameSite=Strict, every
+// mutating admin call must also carry the session's X-CSRF-Token (see src/auth.js),
+// and — here — any browser-originated mutation from another origin is rejected.
+// Requests with no Origin/Referer at all (e.g. PayFast's server-to-server ITN
+// webhook) are left alone since they're not coming from a browser tab.
 function verifySameOrigin(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   // PayFast's ITN webhook is a server-to-server POST from PayFast's own infrastructure,
@@ -100,10 +106,42 @@ app.use(verifySameOrigin);
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
-if (!ADMIN_USER || !ADMIN_PASS) {
-  console.error('FATAL: ADMIN_USER and ADMIN_PASS must be set in .env');
+if (!ADMIN_USER || !(ADMIN_PASS || process.env.ADMIN_PASS_HASH)) {
+  console.error('FATAL: ADMIN_USER and either ADMIN_PASS_HASH (recommended) or ADMIN_PASS must be set in .env');
   process.exit(1);
 }
+if (!process.env.ADMIN_PASS_HASH && ADMIN_PASS.length < 12) {
+  console.warn('WARNING: ADMIN_PASS is shorter than 12 characters. Use a long passphrase, or set ADMIN_PASS_HASH (see scripts/hash-password.js).');
+}
+if (!auth.totpEnabled()) {
+  console.warn('NOTE: Two-factor sign-in is OFF. Run `node scripts/totp-secret.js` and set ADMIN_TOTP_SECRET to enable it.');
+}
+
+// Admin pages and admin API responses: strict CSP (scripts only from this site), no framing, no indexing, never cached. The public storefront keeps
+// its existing, looser headers.
+app.use((req, res, next) => {
+  if (req.path === '/admin' || req.path.startsWith('/admin/') || req.path.startsWith('/api/admin')) {
+    res.set({
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https:",
+        "media-src 'self' https:",
+        "connect-src 'self'",
+        "frame-src https://www.youtube.com https://player.vimeo.com",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+      ].join('; '),
+      'X-Robots-Tag': 'noindex, nofollow',
+      'Cache-Control': 'no-store',
+    });
+  }
+  next();
+});
 
 // ─── System Failsafe (Hard Maintenance) ───────────────────────────────────────
 const hardMaintenanceHTML = `
@@ -140,44 +178,41 @@ app.use((req, res, next) => {
   next();
 });
 
-/** True if the request carries valid admin Basic Auth credentials. */
-function hasValidAdminAuth(req) {
-  const h = req.headers['authorization'];
-  if (!h || !h.startsWith('Basic ')) return false;
+/** True if the request carries a live admin session. */
+const hasValidAdminAuth = (req) => Boolean(auth.getSession(req));
 
-  try {
-    const decoded = Buffer.from(h.slice(6), 'base64').toString();
-    // Split on the first colon only — passwords may legitimately contain ':'.
-    const sep = decoded.indexOf(':');
-    if (sep === -1) return false;
-    const user = decoded.slice(0, sep);
-    const pass = decoded.slice(sep + 1);
+/** Guards every admin-only API route: live session + (for writes) the CSRF token. */
+const requireAdmin = auth.requireAdmin;
 
-    // Timing-safe comparison to prevent side-channel attacks
-    const userBuffer = Buffer.from(user);
-    const adminUserBuffer = Buffer.from(ADMIN_USER);
-    const passBuffer = Buffer.from(pass);
-    const adminPassBuffer = Buffer.from(ADMIN_PASS);
-
-    return userBuffer.length === adminUserBuffer.length &&
-      passBuffer.length === adminPassBuffer.length &&
-      crypto.timingSafeEqual(userBuffer, adminUserBuffer) &&
-      crypto.timingSafeEqual(passBuffer, adminPassBuffer);
-  } catch (e) {
-    return false; // Basic auth format error
-  }
+/** Persists an auth event to the admin-visible system log (best effort). */
+function logAuth(type, message, req) {
+  console.log(`[Auth] ${message}`);
+  if (mongoose.connection.readyState !== 1) return;
+  Log.create({
+    id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    type, message, context: 'AUTH',
+    data: { ip: req?.ip, ua: String(req?.headers?.['user-agent'] || '').slice(0, 160) },
+  }).catch(() => {});
 }
 
-function basicAuth(req, res, next) {
-  const h = req.headers['authorization'];
-  if (!h || !h.startsWith('Basic ')) {
-    res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
-    return res.status(401).send('Authentication required.');
-  }
-  if (hasValidAdminAuth(req)) return next();
+/** Writes a log row only when the DB is up. With Mongoose's default buffering, a log write
+ * against a down database would stall for ~10s — and the PayFast ITN handler must not stall:
+ * its offline path is what emails the admin about a payment the DB couldn't record. */
+function dbLog(entry) {
+  if (mongoose.connection.readyState !== 1) return Promise.resolve();
+  return Log.create(entry).catch(() => {});
+}
 
-  res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
-  return res.status(401).send('Invalid credentials.');
+// ─── Realtime admin events (Server-Sent Events) ──────────────────────────────
+// The admin panel keeps one SSE connection open so new orders and status changes
+// appear the moment they happen, instead of on the next poll.
+const adminEvents = new EventEmitter();
+adminEvents.setMaxListeners(50);
+function emitOrderEvent(action, order) {
+  adminEvents.emit('evt', {
+    type: 'order', action, at: Date.now(),
+    id: order?.id, customer: order?.customer, total: order?.total, status: order?.status,
+  });
 }
 
 // ─── PayFast Config ───────────────────────────────────────────────────────────
@@ -208,7 +243,7 @@ const PF_HOST = PF.sandbox
 // blocking outbound SMTP connections outright. Sending over Resend's HTTPS API
 // sidesteps that entirely: it's the same kind of outbound HTTPS call the app
 // already makes successfully to Cloudinary and PayFast.
-const RESEND_API_URL = 'https://api.resend.com/emails';
+const RESEND_API_URL = process.env.RESEND_API_URL || 'https://api.resend.com/emails';
 const EMAIL_FROM = process.env.SMTP_FROM || 'onboarding@resend.dev';
 
 async function sendEmail({ from, to, subject, html, text, replyTo, headers }) {
@@ -296,9 +331,9 @@ function primaryContactEmail(site) {
 // just by guessing/editing the query string — sign each link with an HMAC so only
 // a link this server actually generated (i.e. sent to that address) is honored.
 function unsubscribeSecret() {
-  // ADMIN_PASS is guaranteed set (the server exits at boot without it), so there's
-  // no need for — and no safe — hardcoded fallback that an attacker could know.
-  return process.env.UNSUBSCRIBE_SECRET || ADMIN_PASS;
+  // An admin credential is guaranteed set (the server exits at boot without one), so
+  // there's no need for — and no safe — hardcoded fallback that an attacker could know.
+  return process.env.UNSUBSCRIBE_SECRET || process.env.ADMIN_PASS_HASH || ADMIN_PASS;
 }
 function unsubscribeToken(email) {
   return crypto.createHmac('sha256', unsubscribeSecret()).update(String(email).toLowerCase().trim()).digest('hex').slice(0, 32);
@@ -481,28 +516,37 @@ function emailItemRow(item, { showPrice = false, currency = 'R' } = {}) {
     </table>`;
 }
 
-async function sendOrderNotification(order, baseUrl = '') {
-  let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
-  
-  // Try to get custom emails from DB if connected
+/** Who gets admin emails: Settings → Emails & alerts when the DB is up, else ADMIN_EMAIL. */
+async function getAdminRecipients() {
+  const split = (v) => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
+  let recipients = split(process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com');
   if (mongoose.connection.readyState === 1) {
     try {
       const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
-      if (site?.adminNotificationEmails) {
-        recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
-      }
-      
-      await Log.create({
-        id: `log-${Date.now()}-adm-mail`,
-        type: 'info', message: `Order notification: Sending to ${recipients.join(', ')}`,
-        context: 'EMAIL', data: { orderId: order.id, recipients }
-      }).catch(() => {});
+      const fromSettings = split(site?.adminNotificationEmails);
+      if (fromSettings.length) recipients = fromSettings;
     } catch (e) {
       console.error('Failed to fetch admin emails from DB (using defaults):', e.message);
     }
   }
+  return recipients;
+}
 
-  if (recipients.length === 0 || !process.env.RESEND_API_KEY) return;
+async function sendOrderNotification(order, baseUrl = '') {
+  const recipients = await getAdminRecipients();
+
+  // Never fail silently: a skipped notification is recorded where the admin can see it.
+  if (recipients.length === 0 || !process.env.RESEND_API_KEY) {
+    const why = !process.env.RESEND_API_KEY ? 'RESEND_API_KEY is not set' : 'no notification address configured';
+    console.warn(`[Mail] Order #${order.id} notification skipped: ${why}`);
+    if (mongoose.connection.readyState === 1) {
+      Log.create({
+        id: `log-${Date.now()}-adm-mail-skip`, type: 'warn',
+        message: `Order notification NOT sent for #${order.id}: ${why}`, context: 'EMAIL', data: { orderId: order.id },
+      }).catch(() => {});
+    }
+    return;
+  }
 
   try {
     console.log(`[Mail] Sending order notification for #${order.id} to ${recipients.join(', ')}...`);
@@ -565,6 +609,12 @@ async function sendOrderNotification(order, baseUrl = '') {
     console.log(`[Email] Notification sent for order ${order.id}`);
   } catch (err) {
     console.error(`[Email] Failed to send invoice email: ${err.message} (code: ${err.code || 'n/a'})`);
+    if (mongoose.connection.readyState === 1) {
+      Log.create({
+        id: `log-${Date.now()}-adm-mail-fail`, type: 'error',
+        message: `Admin order email FAILED for #${order.id}: ${err.message}`, context: 'EMAIL', data: { orderId: order.id, recipients },
+      }).catch(() => {});
+    }
   }
 }
 
@@ -756,7 +806,7 @@ async function writeData(blob) {
 }
 
 // ─── API: Delete Product ─────────────────────────────────────────────────────
-app.delete('/api/products/:id', basicAuth, async (req, res) => {
+app.delete('/api/products/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const target = await Product.findOne({ id }).lean();
@@ -777,7 +827,7 @@ app.delete('/api/products/:id', basicAuth, async (req, res) => {
 });
 
 // ─── API: Delete Community Post ──────────────────────────────────────────────
-app.delete('/api/community/:id', basicAuth, async (req, res) => {
+app.delete('/api/community/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const target = await Article.findOne({ id }).lean();
@@ -795,7 +845,7 @@ app.delete('/api/community/:id', basicAuth, async (req, res) => {
 });
 
 // ─── API: Delete Lookbook ────────────────────────────────────────────────────
-app.delete('/api/lookbooks/:id', basicAuth, async (req, res) => {
+app.delete('/api/lookbooks/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const target = await Lookbook.findOne({ id }).lean();
@@ -944,7 +994,7 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
 }
 
 // ─── API: Update Order Status (accept / reject) ─────────────────────────────────
-app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
+app.patch('/api/orders/:id/status', requireAdmin, async (req, res) => {
   const allowed = ['processing', 'shipped', 'delivered', 'cancelled', 'paid', 'pending_payment'];
   const { status, reason, carrier, trackingNumber, estimatedDelivery } = req.body;
   if (!allowed.includes(status))
@@ -978,11 +1028,12 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
     // Email customer if status explicitly changed. Awaited (not fire-and-forget) so
     // the admin UI can show a real "email sent" confirmation instead of just hoping.
     let emailResult = null;
-    if (status !== oldOrder.status) {
+    if (status !== oldOrder.status && status !== 'pending_payment') {
         emailResult = await sendCustomerStatusEmail(order, `${req.protocol}://${req.get('host')}`)
           .catch(err => ({ sent: false, reason: err.message }));
     }
 
+    emitOrderEvent('updated', order);
     res.json({ ok: true, order, emailResult });
   } catch (err) {
     console.error('PATCH /api/orders/:id/status', err);
@@ -991,7 +1042,7 @@ app.patch('/api/orders/:id/status', basicAuth, async (req, res) => {
 });
 
 // ─── API: Delete Order ──────────────────────────────────────────────────────────
-app.delete('/api/orders/:id', basicAuth, async (req, res) => {
+app.delete('/api/orders/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const order = await Order.findOne({ id }).lean();
@@ -1013,6 +1064,7 @@ app.delete('/api/orders/:id', basicAuth, async (req, res) => {
     }
 
     await Order.deleteOne({ id });
+    emitOrderEvent('deleted', order);
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/orders/:id', err);
@@ -1021,18 +1073,117 @@ app.delete('/api/orders/:id', basicAuth, async (req, res) => {
 });
 
 // ─── API: Upload ──────────────────────────────────────────────────────────────
-app.post('/api/upload', basicAuth, upload.single('image'), (req, res) => {
+app.post('/api/upload', requireAdmin, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
   res.json({ url: req.file.path }); // Cloudinary returns secure_url as .path
 });
 
-app.post('/api/upload/multi', basicAuth, upload.array('images', 20), (req, res) => {
+app.post('/api/upload/multi', requireAdmin, upload.array('images', 20), (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded.' });
   res.json({ urls: req.files.map(f => f.path) }); // Cloudinary: .path = secure_url
 });
 
+// ─── API: Admin sign-in / session ────────────────────────────────────────────
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Tells the sign-in screen whether to ask for an authenticator code. Public by design.
+app.get('/api/admin/auth-config', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ totp: auth.totpEnabled() });
+});
+
+app.post('/api/admin/login', loginLimiter, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const { username, password, code } = req.body || {};
+  if (typeof username !== 'string' || typeof password !== 'string' || username.length > 200 || password.length > 500) {
+    return res.status(400).json({ error: 'Enter your username and password.' });
+  }
+
+  // Both factors are always evaluated, so a wrong password and a wrong code are
+  // indistinguishable (same message, same work, same delay).
+  const credsOk = auth.verifyCredentials(username, password);
+  const totpStep = auth.checkTotp(code);
+
+  if (!(credsOk && totpStep)) {
+    logAuth('warn', `Failed admin sign-in from ${req.ip}`, req);
+    await sleep(350 + Math.floor(Math.random() * 300));
+    return res.status(401).json({ error: auth.totpEnabled() ? 'Incorrect username, password or code.' : 'Incorrect username or password.' });
+  }
+
+  auth.consumeTotp(totpStep); // the code is now spent
+  auth.destroySession(req); // never reuse a pre-login session id
+  const { id, session } = auth.createSession(req);
+  auth.setSessionCookie(req, res, id);
+  logAuth('info', `Admin signed in from ${req.ip}`, req);
+  res.json({ ok: true, csrf: session.csrf });
+});
+
+app.get('/api/admin/session', requireAdmin, (req, res) => {
+  res.json({ authenticated: true, csrf: req.adminSession.csrf, user: ADMIN_USER });
+});
+
+app.post('/api/admin/logout', requireAdmin, (req, res) => {
+  auth.destroySession(req);
+  auth.clearSessionCookie(req, res);
+  logAuth('info', `Admin signed out (${req.ip})`, req);
+  res.json({ ok: true });
+});
+
+// ─── API: Admin realtime stream ──────────────────────────────────────────────
+app.get('/api/admin/events', requireAdmin, (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no', // stop nginx-style proxies from buffering the stream
+  });
+  res.flushHeaders();
+  res.write('retry: 5000\n\n');
+  res.write('event: ready\ndata: {}\n\n');
+
+  const onEvent = (e) => res.write(`event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`);
+  adminEvents.on('evt', onEvent);
+
+  // Heartbeat keeps proxies from closing an idle stream, and ends it once the session
+  // has expired. peekSession doesn't extend the idle timer — only real activity does.
+  const heartbeat = setInterval(() => {
+    if (!auth.peekSession(req)) {
+      res.write('event: signed-out\ndata: {}\n\n');
+      return res.end();
+    }
+    res.write(': ping\n\n');
+  }, 25000);
+
+  req.on('close', () => {
+    adminEvents.off('evt', onEvent);
+    clearInterval(heartbeat);
+  });
+});
+
+// ─── API: Admin notification test ────────────────────────────────────────────
+app.post('/api/admin/test-email', requireAdmin, async (_req, res) => {
+  if (!process.env.RESEND_API_KEY) return res.status(400).json({ error: 'RESEND_API_KEY is not set on the server, so no email can be sent.' });
+  const recipients = await getAdminRecipients();
+  if (recipients.length === 0) return res.status(400).json({ error: 'No notification email address is configured (Settings → Emails & alerts).' });
+  try {
+    const html = emailLayout({
+      siteName: 'Others.', bodyHtml: '<h1 style="font-size:22px;margin:0 0 12px;">Notifications are working</h1><p style="font-size:14px;color:#444;line-height:1.6;margin:0;">This is a test message from your Others. admin panel. You’ll receive emails like this for new paid orders and site alerts.</p>',
+      preheader: 'Test email from your admin panel.',
+    });
+    await sendEmail({ from: `Others. Admin <${EMAIL_FROM}>`, to: recipients, subject: 'Test email — notifications are working', html, text: htmlToText(html) });
+    res.json({ ok: true, to: recipients, from: EMAIL_FROM });
+  } catch (err) {
+    const sandbox = /resend\.dev$/i.test(EMAIL_FROM);
+    res.status(502).json({
+      error: err.message,
+      from: EMAIL_FROM,
+      hint: sandbox ? 'You are sending from Resend’s shared sandbox address (onboarding@resend.dev), which can only deliver to the email address of your own Resend account. Verify a domain in Resend and set SMTP_FROM to an address on it to email customers.' : undefined,
+    });
+  }
+});
+
 // ─── API: Admin Diagnostics ──────────────────────────────────────────────────
-app.get('/api/admin/status', basicAuth, async (req, res) => {
+app.get('/api/admin/status', requireAdmin, async (req, res) => {
   try {
     const isConn = getIsConnected();
     const dbStatus = isConn ? 'connected' : 'disconnected';
@@ -1056,6 +1207,9 @@ app.get('/api/admin/status', basicAuth, async (req, res) => {
     res.json({
       db: dbStatus,
       email: emailStatus,
+      emailFrom: EMAIL_FROM,
+      emailSandbox: /resend.dev$/i.test(EMAIL_FROM),
+      twoFactor: auth.totpEnabled(),
       cloudinary: cloudinaryOk ? 'configured' : 'missing',
       stats,
       _db_offline: !isConn
@@ -1065,7 +1219,7 @@ app.get('/api/admin/status', basicAuth, async (req, res) => {
   }
 });
 
-app.get('/api/admin/logs', basicAuth, async (req, res) => {
+app.get('/api/admin/logs', requireAdmin, async (req, res) => {
   try {
     if (!getIsConnected()) {
       return res.json([{ 
@@ -1082,7 +1236,7 @@ app.get('/api/admin/logs', basicAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/admin/logs', basicAuth, async (req, res) => {
+app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
   try {
     await Log.deleteMany({});
     res.json({ ok: true });
@@ -1153,7 +1307,7 @@ app.get('/api/data', async (req, res) => {
   }
 });
 
-app.post('/api/data', basicAuth, async (req, res) => {
+app.post('/api/data', requireAdmin, async (req, res) => {
   try {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
       return res.status(400).json({ error: 'Invalid data payload.' });
@@ -1178,7 +1332,7 @@ app.get('/api/products', async (_req, res) => {
 // Lean endpoint for the admin panel's background refresh — pulling just orders +
 // products (not the whole /api/data blob, which also fetches categories, lookbooks,
 // community, pages, and subscribers on every 20s poll for data that rarely changes).
-app.get('/api/orders', basicAuth, async (_req, res) => {
+app.get('/api/orders', requireAdmin, async (_req, res) => {
   try { res.json(await Order.find().sort({ createdAt: -1 }).lean()); }
   catch (err) {
     console.error('GET /api/orders', err);
@@ -1209,7 +1363,7 @@ app.post('/api/newsletter', async (req, res) => {
 });
 
 // ─── API: Newsletter Broadcast (Admin Only) ──────────────────────────────────
-app.post('/api/newsletter/broadcast', basicAuth, async (req, res) => {
+app.post('/api/newsletter/broadcast', requireAdmin, async (req, res) => {
   const { subject, html, subscriberIds } = req.body;
   if (!subject || !html) return res.status(400).json({ error: 'Subject and HTML body required.' });
   if (!process.env.RESEND_API_KEY) return res.status(500).json({ error: 'RESEND_API_KEY not configured on server.' });
@@ -1485,6 +1639,7 @@ app.post('/api/checkout', async (req, res) => {
       shippingCost,
       status: 'pending_payment',
     });
+    emitOrderEvent('created', { id: orderId, customer: order.customer, total: parseFloat(grandTotal), status: 'pending_payment' });
   } catch (err) {
     console.error('Order save error:', err.message);
     // Stock was already deducted above — give it back, otherwise a failed save strands it.
@@ -1552,6 +1707,7 @@ app.post('/api/payfast/cancel', async (req, res) => {
         await adjustVariantStock(query, item.size, item.color, item.quantity);
       }
 
+      emitOrderEvent('cancelled', order);
       console.log(`[PayFast] Order ${orderId} cancelled by user. Stock restored.`);
     }
 
@@ -1566,7 +1722,7 @@ app.post('/api/payfast/itn', async (req, res) => {
   console.log(`[ITN] Request received from PayFast (IP: ${req.headers["x-forwarded-for"] || req.socket.remoteAddress})`);
   res.status(200).send('OK');
 
-  await Log.create({
+  await dbLog({
     id: `log-${Date.now()}-itn-rx`,
     type: 'info', message: 'ITN: Request received from PayFast',
     context: 'PAYFAST_ITN', data: { body: req.body, ip: (req.headers['x-forwarded-for'] || req.socket.remoteAddress) }
@@ -1577,7 +1733,7 @@ app.post('/api/payfast/itn', async (req, res) => {
     if (!PF.sandbox) {
       const srcIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
       if (!PF_IPS.includes(srcIp)) {
-        await Log.create({
+        await dbLog({
           id: `log-${Date.now()}-itn-ip`,
           type: 'warn', message: `ITN: rejected from untrusted IP ${srcIp}`,
           context: 'PAYFAST_ITN', data: { ip: srcIp }
@@ -1594,7 +1750,7 @@ app.post('/api/payfast/itn', async (req, res) => {
     const computed = pfSignature(received);
     if (computed !== itnData.signature) {
       console.error(`[ITN] Signature mismatch for #${orderId}`);
-      await Log.create({
+      await dbLog({
         id: `log-${Date.now()}-itn-sig`,
         type: 'error', message: 'ITN: invalid signature (tampering check failed)',
         context: 'PAYFAST_ITN', data: { received: itnData.signature, computed, orderId }
@@ -1607,7 +1763,7 @@ app.post('/api/payfast/itn', async (req, res) => {
       try {
         const dbOrder = await Order.findOne({ id: orderId }).maxTimeMS(2000).lean();
         if (dbOrder && Math.abs(parseFloat(amount_gross) - dbOrder.total) > 0.05) {
-          await Log.create({
+          await dbLog({
             id: `log-${Date.now()}-itn-amt`,
             type: 'error', message: `ITN: amount mismatch for #${orderId}`,
             context: 'PAYFAST_ITN', data: { orderId, itnAmount: amount_gross, dbTotal: dbOrder.total }
@@ -1663,7 +1819,8 @@ app.post('/api/payfast/itn', async (req, res) => {
       }
 
       if (updated) {
-        await Log.create({
+        emitOrderEvent('paid', updated);
+        await dbLog({
           id: `log-${Date.now()}-pay-ok`,
           type: 'info', message: `Payment completed for order ${orderId}`,
           context: 'PAYMENT', data: { orderId, pfId: pf_payment_id }
@@ -1686,6 +1843,7 @@ app.post('/api/payfast/itn', async (req, res) => {
           address: 'Check PayFast dashboard for details (DB is currently offline)',
           items: []
         };
+        emitOrderEvent('paid', emergencyOrder);
         sendOrderNotification(emergencyOrder, `${req.protocol}://${req.get('host')}`).catch(e => console.error('Error sending ITN emergency admin notification:', e));
       }
       console.log(`✓ ITN: order ${orderId} marked PAID (PayFast ID: ${pf_payment_id})`);
@@ -1704,6 +1862,7 @@ app.post('/api/payfast/itn', async (req, res) => {
       }
       
       // Only selectively restore stock if the order wasn't ALREADY cancelled.
+      if (updated) emitOrderEvent('cancelled', { ...updated, status: 'cancelled' });
       if (updated && updated.status !== 'cancelled') {
         const orderItems = Array.isArray(updated.items) ? updated.items : [];
         for (const item of orderItems) {
@@ -1715,7 +1874,7 @@ app.post('/api/payfast/itn', async (req, res) => {
       }
 
       if (mongoose.connection.readyState === 1) {
-        await Log.create({
+        await dbLog({
           id: `log-${Date.now()}-pay-fail`,
           type: 'warn', message: `Payment failure/cancel: status=${payment_status} for order ${orderId}`,
           context: 'PAYMENT', data: { orderId, status: payment_status }
@@ -1926,7 +2085,9 @@ app.get('/shipping-returns', async (req, res) => {
 });
 
 // ─── Admin Routes (Basic Auth protected) ─────────────────────────────────────
-app.get(/^\/admin(\/.*)?$/, adminAuthLimiter, basicAuth, (_req, res) => {
+// The SPA shell is public — it renders the sign-in screen itself until /api/admin/session
+// confirms a session. All admin *data* sits behind requireAdmin.
+app.get(/^\/admin(\/.*)?$/, (_req, res) => {
   res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
 });
 
@@ -1961,26 +2122,13 @@ let lastErrorEmailTime = 0;
 const ERROR_EMAIL_THROTTLE = 15 * 60 * 1000; // 15 minutes
 
 async function notifyAdminOfError(err, req = null, customMsg = null) {
-  if (!process.env.ADMIN_EMAIL || !process.env.RESEND_API_KEY) return;
+  if (!process.env.RESEND_API_KEY) return;
   const now = Date.now();
   if (now - lastErrorEmailTime < ERROR_EMAIL_THROTTLE) return;
 
   lastErrorEmailTime = now;
   try {
-    const isConnected = mongoose.connection.readyState === 1;
-    let recipients = (process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
-
-    if (isConnected) {
-      try {
-        const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
-        if (site?.adminNotificationEmails) {
-          recipients = site.adminNotificationEmails.split(',').map(s => s.trim()).filter(Boolean);
-        }
-      } catch (e) {
-        console.error('Failsafe: error fetching settings for alert:', e.message);
-      }
-    }
-
+    const recipients = await getAdminRecipients();
     if (recipients.length === 0) return;
 
     const alertHtml = `<!doctype html>
