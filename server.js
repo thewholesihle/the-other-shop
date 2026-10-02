@@ -476,8 +476,6 @@ async function sendOrderNotification(order, baseUrl = '') {
       from: `${siteName} Alerts <${EMAIL_FROM}>`,
       to: recipients,
       subject: `New order ${order.id} \u2014 ${currency}${order.total.toFixed(2)}`,
-      // Admin hits reply and it goes straight to the customer, not into the void.
-      replyTo: order.email || undefined,
       headers: AUTO_HEADERS,
     }, `New order ${order.id} from ${order.customer || 'a customer'}: ${currency}${order.total.toFixed(2)}.\n\n${order.address || ''}\n\n${(order.items || []).map(i => `${i.quantity} x ${i.name} ${[i.size, i.color].filter(Boolean).join(' / ')}`).join('\n')}`);
     console.log(`[Email] Notification sent for order ${order.id}`);
@@ -834,8 +832,6 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
       from: `${siteName} <${EMAIL_FROM}>`,
       to: order.email,
       subject,
-      // Customer hits reply and it lands in the store's real inbox, not the no-reply sandbox address.
-      replyTo: primaryContactEmail(site),
     }, `${subject}.\n\n${message.replace(/{orderId}/g, order.id)}`);
     console.log(`[Email] Customer status update sent for order ${order.id}`);
     return { sent: true, type: order.status, to: order.email };
@@ -1625,7 +1621,6 @@ app.post('/api/newsletter/broadcast', requireAdmin, async (req, res) => {
           subject: subject,
           html: emailHtml,
           text: emailText,
-          replyTo,
           headers: {
             // RFC 8058 one-click unsubscribe — Gmail/Yahoo/Outlook.com show a native
             // "Unsubscribe" affordance next to the sender and hit this without the

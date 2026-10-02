@@ -59,7 +59,7 @@ export default function OrderUpdate({ brand, order, currency = 'R', message, sup
 
       <Separator />
       <Muted style={{ margin: 0, fontSize: 13 }}>
-        Questions about your order? Reply to this email{supportEmail ? ` or write to ${supportEmail}` : ''} and we'll help.
+        {supportEmail ? `Questions about your order? Write to ${supportEmail} and we will help.` : 'Questions about your order? Contact us through our website and we will help.'}
       </Muted>
     </Shell>
   );

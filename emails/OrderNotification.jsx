@@ -1,6 +1,6 @@
 // To the store owner: a customer's payment went through.
 import * as React from 'react';
-import { Shell, H1, Muted, H2, KeyValue, ItemList, Totals, Btn, Badge, Separator, money } from './ui.jsx';
+import { Shell, H1, Muted, H2, KeyValue, ItemList, Totals, Btn, Badge, money } from './ui.jsx';
 
 const METHODS = { payfast: 'PayFast', yoco: 'Yoco' };
 
@@ -34,8 +34,6 @@ export default function OrderNotification({ brand, order, currency = 'R', adminU
       ]} />
 
       {adminUrl ? <Btn href={adminUrl}>Open order in admin</Btn> : null}
-      <Separator />
-      <Muted style={{ margin: 0, fontSize: 13 }}>Reply to this email to write to the customer directly.</Muted>
     </Shell>
   );
 }

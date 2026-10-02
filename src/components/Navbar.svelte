@@ -1,6 +1,6 @@
 <script>
   import LetterSwap from './LetterSwap.svelte';
-  import Img from './Img.svelte';
+  import AdaptiveLogo from './AdaptiveLogo.svelte';
   import { cartCount } from "../stores/cart.js";
 
   export let siteName = "Others.";
@@ -46,7 +46,7 @@
       class="text-foreground font-display text-xl font-bold tracking-tight"
     >
       {#if logo}
-        <Img src={logo} alt={siteName} widths={[160, 320, 480]} fallbackWidth={320} sizes="200px" priority style="height: {logoHeight}px" class="w-auto object-contain" />
+        <AdaptiveLogo src={logo} alt={siteName} surface="--background" widths={[160, 320, 480]} fallbackWidth={320} sizes="200px" priority style="height: {logoHeight}px" class="w-auto object-contain" />
       {:else}
         {siteName}
       {/if}

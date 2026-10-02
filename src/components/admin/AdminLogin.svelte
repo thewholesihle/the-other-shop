@@ -8,6 +8,8 @@
   import EyeOff from 'lucide-svelte/icons/eye-off';
   import LoaderCircle from 'lucide-svelte/icons/loader-circle';
   import ShieldCheck from 'lucide-svelte/icons/shield-check';
+  import AdaptiveLogo from '../AdaptiveLogo.svelte';
+  import { resolvedTheme } from '../../lib/adminTheme.js';
 
   let { onSuccess = () => {} } = $props();
 
@@ -79,7 +81,7 @@
           <div class="flex flex-col gap-6">
             <div class="flex flex-col items-center gap-2 text-center">
               {#if logo && !logoFailed}
-                <img src={getOptimizedUrl(logo, 440)} alt={siteName} class="mb-3 h-9 w-auto max-w-[180px] object-contain" decoding="async" onerror={() => (logoFailed = true)} />
+                <AdaptiveLogo src={logo} alt={siteName} surface="--card" theme={$resolvedTheme} class="mb-3 h-9 w-auto max-w-[180px] object-contain" widths={[180, 360, 540]} fallbackWidth={360} sizes="180px" priority onerror={() => (logoFailed = true)} />
               {/if}
               <h1 class="text-2xl font-bold tracking-tight">Welcome back</h1>
               <p class="text-balance text-sm text-muted-foreground">Sign in to the {siteName} admin panel</p>

@@ -18,6 +18,8 @@
   import Menu from 'lucide-svelte/icons/menu';
   import X from 'lucide-svelte/icons/x';
   import ThemeToggle from './ThemeToggle.svelte';
+  import AdaptiveLogo from '../AdaptiveLogo.svelte';
+  import { resolvedTheme } from '../../lib/adminTheme.js';
 
   // `badges` maps a section key to a count shown beside its nav label (e.g. orders to ship).
   let { activeSection = 'dashboard', navigate = () => {}, badges = {}, onLogout = null, site = {}, children } = $props();
@@ -69,7 +71,7 @@
     <div class="flex h-14 items-center justify-between px-5">
       <a href="/admin" onclick={(e) => go(e, 'dashboard')} class="flex items-center gap-2.5" aria-label="{brandName} admin — dashboard">
         {#if logoSrc}
-          <img src={logoSrc} alt={brandName} class="h-7 w-auto max-w-[140px] object-contain" decoding="async" onerror={() => (logoFailed = true)} />
+          <AdaptiveLogo src={site.logo} alt={brandName} surface="--card" theme={$resolvedTheme} class="h-7 w-auto max-w-[140px] object-contain" widths={[140, 280, 420]} fallbackWidth={280} sizes="140px" priority onerror={() => (logoFailed = true)} />
         {:else}
           <span class="text-lg font-bold tracking-tight">{brandName}</span>
         {/if}
@@ -137,7 +139,7 @@
   <div class="md:pl-60">
     <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur md:px-8">
       <button type="button" class="md:hidden rounded-md p-1.5 hover:bg-accent" aria-label="Open menu" onclick={() => (sidebarOpen = true)}><Menu size={20} /></button>
-      {#if logoSrc}<img src={logoSrc} alt={brandName} class="h-6 w-auto max-w-[110px] object-contain md:hidden" decoding="async" />{/if}
+      {#if logoSrc}<AdaptiveLogo src={site.logo} alt={brandName} surface="--background" theme={$resolvedTheme} class="h-6 w-auto max-w-[110px] object-contain md:hidden" widths={[110, 220, 330]} fallbackWidth={220} sizes="110px" />{/if}
       <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm">
         <span class="text-muted-foreground">Admin</span>
         <span class="text-muted-foreground">/</span>
