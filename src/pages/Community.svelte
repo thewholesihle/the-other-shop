@@ -1,4 +1,5 @@
 <script>
+  import Img from '../components/Img.svelte';
   import { onMount } from 'svelte';
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
@@ -60,7 +61,7 @@
             <a href={`/community/${post.slug}`} onclick={(e) => { e.preventDefault(); goArticle(post.slug); }} class="group block cursor-pointer">
               <div class="aspect-[16/9] bg-secondary overflow-hidden mb-4">
                 {#if post.image}
-                  <img src={post.image} alt={post.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <Img src={post.image} alt={post.title} sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 {:else}
                   <div class="w-full h-full flex items-center justify-center text-xs text-muted-foreground">{post.category}</div>
                 {/if}

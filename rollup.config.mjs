@@ -3,6 +3,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import postcss from 'rollup-plugin-postcss';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
+import terser from '@rollup/plugin-terser';
 
 export default {
   input: 'src/main.js',
@@ -31,5 +32,7 @@ export default {
         autoprefixer(),
       ],
     }),
+    // Minify the bundle (it shipped as ~1 MB of unminified JS).
+    terser({ compress: { passes: 2 }, format: { comments: false } }),
   ],
 };

@@ -1,4 +1,5 @@
 <script>
+  import Img from './Img.svelte';
   export let data = { site: {}, categories: [] };
   
   $: site = data.site || {};
@@ -56,7 +57,7 @@
   <div class="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16">
     <div class="col-span-2 md:col-span-1">
       {#if site.footerLogo}
-        <img src={site.footerLogo} alt={site.name} class="h-10 w-auto mb-4 object-contain !border-0 bg-transparent" />
+        <Img src={site.footerLogo} alt={site.name} widths={[160, 320, 480]} fallbackWidth={320} sizes="200px" class="h-10 w-auto mb-4 object-contain !border-0 bg-transparent" />
       {:else}
         <h3 class="font-display text-2xl font-bold mb-4">{site.name}</h3>
       {/if}

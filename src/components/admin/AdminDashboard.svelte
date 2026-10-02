@@ -1,4 +1,5 @@
 <script>
+  import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import Card from '../ui/Card.svelte';
   import Badge from '../ui/Badge.svelte';
   import Button from '../ui/Button.svelte';
@@ -302,7 +303,7 @@
       <ul class="mt-4 divide-y divide-border border-t border-border">
         {#each stockAlerts as p}
           <li class="flex items-center gap-3 px-6 py-3">
-            {#if p.image}<img src={p.image} alt="" class="h-10 w-10 rounded-md bg-muted object-cover" />{:else}<div class="h-10 w-10 rounded-md bg-muted"></div>{/if}
+            {#if p.image}<img src={thumb(p.image, 40)} loading="lazy" decoding="async" alt="" class="h-10 w-10 rounded-md bg-muted object-cover" />{:else}<div class="h-10 w-10 rounded-md bg-muted"></div>{/if}
             <span class="flex-1 truncate text-sm font-medium">{p.name}</span>
             <Badge variant={p.stock === 0 ? 'destructive' : 'warning'}>{p.stock === 0 ? 'Sold out' : `${p.stock} left`}</Badge>
           </li>

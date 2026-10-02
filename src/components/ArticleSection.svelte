@@ -1,4 +1,5 @@
 <script>
+  import Img from './Img.svelte';
   import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
   export let article = null;
   export let allArticles = [];
@@ -28,13 +29,11 @@
       onkeydown={(e) => e.key === 'Enter' && goToArticle()}
     >
       {#if displayArticle.image}
-        <img
-          src={getOptimizedUrl(displayArticle.image, 1200)}
-          srcset={getSrcset(displayArticle.image)}
+        <Img
+          src={displayArticle.image}
           sizes="(max-width: 768px) 100vw, 50vw"
           alt={displayArticle.title}
           class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          loading="lazy"
         />
       {:else}
         <div class="w-full h-full flex items-center justify-center text-muted-foreground/30">

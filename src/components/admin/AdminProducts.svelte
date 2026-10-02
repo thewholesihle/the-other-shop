@@ -1,4 +1,5 @@
 <script>
+  import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import ImageUpload from './ImageUpload.svelte';
   import Button from '../ui/Button.svelte';
   import Badge from '../ui/Badge.svelte';
@@ -213,7 +214,7 @@
                   <td class={tdCls}>
                     <button type="button" class="flex items-center gap-3 text-left" onclick={() => startEditing(p, false)}>
                       {#if p.image || p.images?.[0]}
-                        <img src={p.image || p.images?.[0]} alt="" class="h-10 w-10 flex-shrink-0 rounded-md bg-muted object-cover" />
+                        <img src={thumb(p.image || p.images?.[0], 40)} loading="lazy" decoding="async" alt="" class="h-10 w-10 flex-shrink-0 rounded-md bg-muted object-cover" />
                       {:else}
                         <div class="h-10 w-10 flex-shrink-0 rounded-md bg-muted"></div>
                       {/if}

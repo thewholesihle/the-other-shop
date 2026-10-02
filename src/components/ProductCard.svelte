@@ -1,4 +1,5 @@
 <script>
+  import Img from './Img.svelte';
   import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
   export let product;
   export let currency = 'R';
@@ -23,24 +24,23 @@
   <!-- Image container -->
   <div class="relative aspect-[3/4] overflow-hidden bg-secondary mb-3">
     <!-- Primary Image (Static Base) -->
-    <img
-      src={getOptimizedUrl(primaryImage, 600)}
-      srcset={getSrcset(primaryImage)}
+    <Img
+      src={primaryImage}
       sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
       alt={product.name}
+      fallbackWidth={640}
       class="w-full h-full object-cover object-center absolute inset-0"
-      loading="lazy"
     />
 
     <!-- Secondary Image (Fade-In Overlay) -->
     {#if primaryImage !== hoverImage}
-      <img
-        src={getOptimizedUrl(hoverImage, 600)}
-        srcset={getSrcset(hoverImage)}
+      <Img
+        src={hoverImage}
         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
         alt="{product.name} alternate view"
+        fallbackWidth={640}
+        fadeIn={false}
         class="w-full h-full object-cover object-center absolute inset-0 transition-opacity duration-500 opacity-0 group-hover:opacity-100"
-        loading="lazy"
       />
     {/if}
 

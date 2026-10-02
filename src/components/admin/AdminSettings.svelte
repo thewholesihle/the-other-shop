@@ -1,4 +1,5 @@
 <script>
+  import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import ImageUpload from './ImageUpload.svelte';
   import Button from '../ui/Button.svelte';
   import Card from '../ui/Card.svelte';
@@ -128,7 +129,7 @@
     <div class="flex items-start gap-4">
       {#if get()}
         <div class="space-y-2">
-          <img src={get()} alt="{label} preview" class="rounded-md border border-border bg-muted object-contain {shape === 'square' ? 'h-14 w-14' : 'h-14 w-auto max-w-[160px]'}" />
+          <img src={getOptimizedUrl(get(), 320)} decoding="async" alt="{label} preview" class="rounded-md border border-border bg-muted object-contain {shape === 'square' ? 'h-14 w-14' : 'h-14 w-auto max-w-[160px]'}" />
           <button type="button" onclick={() => set('')} class="text-xs text-destructive hover:underline">Remove</button>
         </div>
       {/if}

@@ -1,4 +1,5 @@
 <script>
+  import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import ImageUpload from './ImageUpload.svelte';
   import Button from '../ui/Button.svelte';
   import Card from '../ui/Card.svelte';
@@ -127,7 +128,7 @@
           <Card class="group overflow-hidden">
             <button type="button" class="block w-full text-left" onclick={() => startEditing(lb)} aria-label="Edit {lb.title}">
               {#if cover}
-                <img src={cover} alt="" class="aspect-[4/3] w-full bg-muted object-cover" />
+                <img src={getOptimizedUrl(cover, 640)} loading="lazy" decoding="async" alt="" class="aspect-[4/3] w-full bg-muted object-cover" />
               {:else}
                 <div class="flex aspect-[4/3] w-full items-center justify-center bg-muted text-sm text-muted-foreground">No cover</div>
               {/if}

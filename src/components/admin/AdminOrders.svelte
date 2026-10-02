@@ -1,4 +1,5 @@
 <script>
+  import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import Button from '../ui/Button.svelte';
   import Badge from '../ui/Badge.svelte';
   import Card from '../ui/Card.svelte';
@@ -467,7 +468,7 @@
       <div class="rounded-lg border border-border">
         {#each selected.items || [] as item}
           <div class="flex items-center gap-3 border-b border-border/60 p-3">
-            {#if item.image}<img src={item.image} alt="" class="h-11 w-11 rounded-md bg-muted object-cover" />{:else}<div class="h-11 w-11 rounded-md bg-muted"></div>{/if}
+            {#if item.image}<img src={thumb(item.image, 44)} loading="lazy" decoding="async" alt="" class="h-11 w-11 rounded-md bg-muted object-cover" />{:else}<div class="h-11 w-11 rounded-md bg-muted"></div>{/if}
             <div class="min-w-0 flex-1 text-sm">
               <p class="truncate font-medium">{item.name}</p>
               <p class="text-xs text-muted-foreground">{[item.size, item.color].filter(Boolean).join(' / ') || '—'} · Qty {item.quantity}</p>

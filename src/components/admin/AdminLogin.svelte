@@ -1,4 +1,5 @@
 <script>
+  import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import { onMount } from 'svelte';
   import Button from '../ui/Button.svelte';
   import Card from '../ui/Card.svelte';
@@ -120,7 +121,7 @@
 
         <div class="relative hidden bg-primary md:block">
           {#if heroImage}
-            <img src={heroImage} alt="" class="absolute inset-0 h-full w-full object-cover opacity-70" />
+            <img src={getOptimizedUrl(heroImage, 960)} decoding="async" alt="" class="absolute inset-0 h-full w-full object-cover opacity-70" />
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
           {/if}
           <div class="absolute inset-x-0 bottom-0 p-8 text-primary-foreground">

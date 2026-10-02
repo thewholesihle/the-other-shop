@@ -1,4 +1,7 @@
 <script>
+  import Img from './Img.svelte';
+  import Video from './Video.svelte';
+  import { isGif } from '../lib/cloudinary.js';
   export let hero = { label: '', heading: '', subheading: '', cta: '', ctaLink: '/shop', image: '', video: '' };
 
   $: words = hero.heading ? hero.heading.split(' ') : [];
@@ -14,20 +17,16 @@
 </script>
 
 <section class="relative h-screen w-full overflow-hidden">
-  <!-- Background: video/gif takes precedence over image -->
-  {#if isVideo && hero.video.endsWith('.gif')}
-    <img src={hero.video} alt="" class="absolute inset-0 w-full h-full object-cover" aria-hidden="true" loading="eager" />
+  <!-- Background: video/gif takes precedence over image. All three are optimised: the hero
+       image is the page's LCP element, so it loads eagerly at high priority; the video is
+       transcoded to the best codec, paused off-screen and swapped for its poster on slow or
+       reduced-motion connections. -->
+  {#if isVideo && isGif(hero.video)}
+    <Img src={hero.video} alt="" aria-hidden="true" priority sizes="100vw" class="absolute inset-0 w-full h-full object-cover" />
   {:else if isVideo}
-    <video
-      src={hero.video}
-      class="absolute inset-0 w-full h-full object-cover"
-      autoplay muted loop playsinline
-      aria-hidden="true"
-    >
-      <track kind="captions" />
-    </video>
+    <Video src={hero.video} poster={hero.image} class="absolute inset-0 w-full h-full object-cover" />
   {:else if hero.image}
-    <img src={hero.image} alt="Others. collection editorial" class="absolute inset-0 w-full h-full object-cover" loading="eager" />
+    <Img src={hero.image} alt="Others. collection editorial" priority sizes="100vw" class="absolute inset-0 w-full h-full object-cover" />
   {/if}
 
   <!-- Dark overlay for legibility -->

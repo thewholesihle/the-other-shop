@@ -135,6 +135,15 @@ Shipping is handled manually. Once an order is paid, the admin Orders tab shows 
 - **Strict CSP** on admin pages (scripts only from this site; the PDF libraries are self-hosted in `public/vendor/`), no framing, `noindex`.
 - `/api/data` only returns orders, subscribers and admin-only settings to a signed-in admin.
 
+## Media & performance
+
+- **Images:** every Cloudinary image is served through `<Img>` (`src/components/Img.svelte`): responsive `srcset`/`sizes`, AVIF/WebP via `f_auto`, `q_auto`, lazy-loaded and async-decoded, with a fade-in. The hero and main product/article image are `priority` (eager, high fetch priority), and the home hero is also preloaded from the server-rendered HTML.
+- **Video:** `<Video>` serves the best codec at 1280/1920px with a poster frame; background videos pause when off-screen and fall back to the poster on Data Saver, 2G or reduced-motion; player videos download nothing until played. YouTube embeds load as a thumbnail and only fetch the real player on click.
+- **Editor content** (articles, shipping page) is rewritten on display so its images/videos/iframes get the same treatment.
+- **Uploads:** the browser re-encodes photos over ~1.2 MB to WebP (max 2560px) before uploading; Cloudinary also caps stored images at 2560px and pre-generates the video renditions the site requests.
+- **Emails** use size-capped JPEG/PNG renditions (no WebP/AVIF, which many mail clients can't show). The admin uses small thumbnails everywhere.
+- **Delivery:** responses are gzip/brotli-compressed, the JS bundle is minified (~1 MB → ~330 KB), vendor libs are cached for 30 days, and the Cloudinary connection is opened early with `preconnect`.
+
 ## Logs & backups
 
 - **Sign-in audit trail:** every sign-in, failed attempt, lockout, sign-out and log download is recorded in **Site status → System logs** with the device (browser, OS, desktop/mobile) and IP. A sign-in from a browser/OS combination you haven't used before is flagged **New device** and emailed to you.

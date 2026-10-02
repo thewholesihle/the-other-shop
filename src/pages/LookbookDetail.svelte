@@ -1,4 +1,7 @@
 <script>
+  import Img from '../components/Img.svelte';
+  import Embed from '../components/Embed.svelte';
+  import Video from '../components/Video.svelte';
   import { onMount } from 'svelte';
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
@@ -78,13 +81,9 @@
         {#each items as item, i}
           <div class="flex flex-col">
             {#if isEmbed(item)}
-              <div class="relative w-full aspect-video bg-black">
-                <iframe src={item.url} class="absolute inset-0 w-full h-full" frameborder="0" allowfullscreen title={item.caption || 'Video'}></iframe>
-              </div>
+              <Embed url={item.url} title={item.caption || 'Video'} />
             {:else if isVideo(item)}
-              <video src={item.url} controls class="w-full aspect-[4/5] object-cover bg-secondary" preload="metadata">
-                <track kind="captions" />
-              </video>
+              <Video src={item.url} mode="player" label={item.caption} class="w-full aspect-[4/5] object-cover bg-secondary" />
             {:else}
               <button
                 aria-label="View full image"
@@ -92,7 +91,7 @@
                 class="group w-full aspect-[4/5] overflow-hidden bg-secondary block"
               >
                 <!-- w-full h-full object-cover ensures the image perfectly crops the aspect ratio without stretching the actual pixels -->
-                <img src={getOptimizedUrl(item.url, 1200)} srcset={getSrcset(item.url)} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" alt={item.caption || lb.title} class="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-700" loading="lazy" />
+                <Img src={item.url} alt={item.caption || lb.title} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" class="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-700" />
               </button>
             {/if}
             {#if item.caption}
@@ -122,7 +121,7 @@
     <button aria-label="Close" onclick={() => (expanded = null)} class="absolute top-4 right-4 z-10 text-primary-foreground/70 hover:text-primary-foreground">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </button>
-    <img src={getOptimizedUrl(cur.url, 2000)} srcset={getSrcset(cur.url)} sizes="100vw" alt={cur.caption || ''} class="max-h-[90vh] max-w-full object-contain" />
+    <Img src={cur.url} alt={cur.caption || ''} sizes="100vw" priority class="max-h-[90vh] max-w-full object-contain" />
     {#if expanded.items.length > 1}
       <button aria-label="Previous" onclick={() => (expanded = { ...expanded, index: (expanded.index - 1 + expanded.items.length) % expanded.items.length })} class="absolute left-4 text-primary-foreground/70 hover:text-primary-foreground">
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m15 18-6-6 6-6"/></svg>

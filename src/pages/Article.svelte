@@ -1,4 +1,6 @@
 <script>
+  import Img from '../components/Img.svelte';
+  import { optimizeHtml } from '../lib/cloudinary.js';
   import { onMount } from 'svelte';
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
@@ -58,7 +60,7 @@
 
       {#if post.image}
         <div class="aspect-[16/7] bg-secondary overflow-hidden mb-8">
-          <img src={getOptimizedUrl(post.image, 1600)} srcset={getSrcset(post.image)} sizes="100vw" alt={post.title} class="w-full h-full object-cover object-center" />
+          <Img src={post.image} alt={post.title} sizes="(max-width: 768px) 100vw, 768px" priority class="w-full h-full object-cover object-center" />
         </div>
       {/if}
 
@@ -71,7 +73,7 @@
       </header>
 
       <article class="prose prose-sm max-w-none text-foreground [&_h2]:font-display [&_h2]:font-bold [&_h2]:text-xl [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:text-muted-foreground [&_p]:leading-relaxed [&_p]:mb-4">
-        {@html post.content}
+        {@html optimizeHtml(post.content)}
       </article>
 
       <div class="mt-12 pt-8 border-t border-border">

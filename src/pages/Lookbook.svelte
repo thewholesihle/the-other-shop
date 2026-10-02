@@ -1,4 +1,5 @@
 <script>
+  import Img from '../components/Img.svelte';
   import { onMount } from 'svelte';
   import Footer from '../components/Footer.svelte';
   import Loader from '../components/Loader.svelte';
@@ -50,13 +51,11 @@
               <!-- Cover image -->
               <div class="aspect-[3/4] overflow-hidden bg-secondary mb-4 relative">
                 {#if cover}
-                  <img
-                    src={getOptimizedUrl(cover, 1200)}
-                    srcset={getSrcset(cover)}
+                  <Img
+                    src={cover}
                     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     alt={lb.title}
                     class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                    loading="lazy"
                   />
                 {:else}
                   <div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No cover</div>

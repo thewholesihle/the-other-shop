@@ -1,4 +1,5 @@
 <script>
+  import Img from '../components/Img.svelte';
   import { onMount } from 'svelte';
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
@@ -187,7 +188,7 @@
             <div class="space-y-4">
               {#each $cart as item}
                 <div class="flex gap-4 border-b border-border pb-4">
-                  <img src={getOptimizedUrl(item.image, 200)} srcset={getSrcset(item.image)} sizes="80px" alt={item.name} class="w-20 h-24 object-cover bg-secondary flex-shrink-0" loading="lazy" />
+                  <Img src={item.image} alt={item.name} widths={[160, 320]} fallbackWidth={320} sizes="80px" class="w-20 h-24 object-cover bg-secondary flex-shrink-0" />
                   <div class="flex-1 min-w-0">
                     <p class="font-medium">{item.name}</p>
                     <p class="text-xs text-muted-foreground mt-0.5">{[item.size && `Size: ${item.size}`, item.color && `Color: ${item.color}`].filter(Boolean).join(' · ')}</p>
@@ -339,7 +340,7 @@
             <h2 class="text-label">ORDER SUMMARY</h2>
             {#each $cart as item}
               <div class="flex gap-3 text-sm">
-                <img src={item.image} alt={item.name} class="w-12 h-12 object-cover bg-secondary flex-shrink-0" />
+                <Img src={item.image} alt={item.name} widths={[96, 192]} fallbackWidth={192} sizes="48px" class="w-12 h-12 object-cover bg-secondary flex-shrink-0" />
                 <div class="flex-1">
                   <p class="font-medium">{item.name}</p>
                   <p class="text-xs text-muted-foreground">{[item.size, item.color].filter(Boolean).join(' / ')} × {item.quantity}</p>

@@ -1,4 +1,5 @@
 <script>
+  import { thumb } from '../../lib/cloudinary.js';
   import Upload from 'lucide-svelte/icons/upload';
   import X from 'lucide-svelte/icons/x';
   import LoaderCircle from 'lucide-svelte/icons/loader-circle';
@@ -14,11 +15,29 @@
   let error = '';
   let dragging = false;
 
-  async function handleFiles(files) {
-    if (!files.length) return;
+  // Phone and camera photos are routinely 5–15 MB. Re-encode anything over ~1.2 MB as WebP capped
+  // at 2560px before it leaves the browser: a much faster upload, and no visible quality loss.
+  async function shrink(file) {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 1.2 * 1024 * 1024) return file;
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((r) => canvas.toBlob(r, 'image/webp', 0.88));
+      if (blob && blob.size < file.size) return new File([blob], file.name.replace(/\.\w+$/, '') + '.webp', { type: 'image/webp' });
+    } catch { /* fall back to the original file */ }
+    return file;
+  }
+
+  async function handleFiles(picked) {
+    if (!picked.length) return;
     uploading = true;
     error = '';
     try {
+      const files = await Promise.all(Array.from(picked).map(shrink));
       if (multi) {
         const fd = new FormData();
         Array.from(files).forEach(f => fd.append('images', f));
@@ -91,7 +110,7 @@
   <!-- Single preview -->
   {#if !multi && value}
     <div class="group relative h-24 w-24 overflow-hidden rounded-lg border border-border">
-      <img src={value} alt="Preview" class="h-full w-full object-cover" />
+      <img src={thumb(value, 96)} alt="Preview" decoding="async" class="h-full w-full object-cover" />
       <button
         type="button"
         aria-label="Remove image"
@@ -106,7 +125,7 @@
     <div class="flex flex-wrap gap-2">
       {#each values as url, i}
         <div class="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border">
-          <img src={url} alt="Preview {i + 1}" class="h-full w-full object-cover" />
+          <img src={thumb(url, 80)} alt="Preview {i + 1}" loading="lazy" decoding="async" class="h-full w-full object-cover" />
           {#if i === 0}<span class="absolute bottom-0 left-0 right-0 bg-black/60 py-0.5 text-center text-[10px] font-medium text-white">Cover</span>{/if}
           <button
             type="button"

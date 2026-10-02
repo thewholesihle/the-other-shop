@@ -16,6 +16,7 @@ const rateLimit = require('express-rate-limit');
 const { connect, getIsConnected } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log, LogBackup } = require('./src/db/models');
 const zlib = require('zlib');
+const compression = require('compression');
 const { parseUserAgent } = require('./src/device');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
@@ -26,6 +27,10 @@ const port = process.env.PORT || 3000;
 
 // Add HTTP request logging
 app.use(morgan('dev'));
+
+// gzip/deflate every compressible response (HTML, JS, CSS, JSON). The SSE stream opts out
+// by sending `Cache-Control: no-transform`.
+app.use(compression());
 
 // Trust the edge proxy (Fly.io, Heroku, etc) so req.protocol properly detects HTTPS
 app.set('trust proxy', 1);
@@ -430,6 +435,14 @@ function formatDateLabel(dateStr) {
  * the inbox list. `unsubscribeUrl` is only passed for marketing sends (the
  * newsletter broadcast) — transactional order emails have nothing to unsubscribe
  * from, so the footer link is conditional rather than always present. */
+/** Cloudinary delivery URL for emails: capped size and a format every mail client renders
+ * (no AVIF/WebP — Outlook and some webmail can't show them), so `f_auto` is not used here. */
+function cldEmail(url, { w, h, png = false } = {}) {
+  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url;
+  const t = h ? `c_fill,g_auto,h_${h},w_${w}` : `c_limit,w_${w}`;
+  return url.replace('/upload/', `/upload/${t},f_${png ? 'png' : 'jpg'},q_auto/`);
+}
+
 function emailLayout({ siteName, logoUrl, bodyHtml, socials, contactAddress, contactUrl, preheader = '', unsubscribeUrl = '' }) {
   const socialLinksHtml = emailSocialLinks(socials);
   const safeSiteName = escapeHtmlAttr(siteName);
@@ -479,7 +492,7 @@ ${preheaderHtml}
         <tr>
           <td align="center" style="background:#111111; padding:28px 24px;">
             ${logoUrl
-              ? `<img src="${logoUrl}" width="180" height="36" alt="${safeSiteName}" style="max-height:36px; max-width:180px; width:auto; height:auto; display:block; margin:0 auto;" />`
+              ? `<img src="${cldEmail(logoUrl, { w: 360, png: true })}" width="180" height="36" alt="${safeSiteName}" style="max-height:36px; max-width:180px; width:auto; height:auto; display:block; margin:0 auto;" />`
               : `<span style="color:#ffffff; font-size:18px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;">${safeSiteName}</span>`}
           </td>
         </tr>
@@ -522,7 +535,7 @@ function emailItemRow(item, { showPrice = false, currency = 'R' } = {}) {
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eee; margin-bottom:8px;">
       <tr>
-        ${item.image ? `<td width="48" valign="top" style="padding:12px 0 12px 12px;"><img src="${item.image}" width="48" height="48" alt="" style="width:48px; height:48px; object-fit:cover; background:#f5f5f5;" /></td>` : ''}
+        ${item.image ? `<td width="48" valign="top" style="padding:12px 0 12px 12px;"><img src="${cldEmail(item.image, { w: 96, h: 96 })}" width="48" height="48" alt="" style="width:48px; height:48px; object-fit:cover; background:#f5f5f5;" /></td>` : ''}
         <td valign="middle" style="padding:12px;">
           <p style="margin:0; font-size:13px; font-weight:600;">${item.name}</p>
           ${meta ? `<p style="margin:2px 0 0; font-size:11px; color:#888;">${meta}</p>` : ''}
@@ -650,9 +663,17 @@ const storage = new CloudinaryStorage({
     folder:         'others-store',
     resource_type:  file.mimetype.startsWith('video/') ? 'video' : 'image',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm'],
+    // Images: cap the stored original at 2560px (phone/DSLR originals can be 6000px+ and
+    // 10MB+) and let Cloudinary pick quality/format. Videos: pre-generate the two renditions the
+    // storefront requests (see getVideoUrl in src/lib/cloudinary.js) in the background so the
+    // first visitor doesn't wait for an on-demand transcode.
     transformation: file.mimetype.startsWith('image/')
-      ? [{ quality: 'auto', fetch_format: 'auto' }]
+      ? [{ width: 2560, height: 2560, crop: 'limit' }, { quality: 'auto', fetch_format: 'auto' }]
       : undefined,
+    ...(file.mimetype.startsWith('video/') ? {
+      eager: [1280, 1920].map(w => ({ width: w, crop: 'limit', quality: 'auto', fetch_format: 'auto' })),
+      eager_async: true,
+    } : {}),
   }),
 });
 
@@ -688,7 +709,16 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // `index: false` — otherwise this would auto-serve the bare index.html for GET /
 // before the SEO-meta-injecting route below ever gets a chance to run.
-app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+app.use(express.static(path.join(__dirname, 'public'), {
+  index: false,
+  etag: true,
+  setHeaders(res, filePath) {
+    // Pinned third-party libs never change under the same URL; the app bundle revalidates (ETag)
+    // on each load so a deploy is picked up immediately.
+    if (filePath.includes(`${path.sep}vendor${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+    else if (/\.(?:js|css)$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  },
+}));
 
 // ─── Variant Stock Helpers ──────────────────────────────────────────────────
 // Products track stock per size/color combination in `variants`; the top-level
@@ -1426,9 +1456,9 @@ app.get('/manifest.json', async (req, res) => {
     let icons = [];
     if (iconBase.includes('cloudinary.com')) {
       icons = [
-        { src: iconBase.replace('/upload/', '/upload/c_pad,w_192,h_192/'), sizes: '192x192', type: 'image/png' },
-        { src: iconBase.replace('/upload/', '/upload/c_pad,w_512,h_512/'), sizes: '512x512', type: 'image/png' },
-        { src: iconBase.replace('/upload/', '/upload/c_pad,w_180,h_180/'), sizes: '180x180', type: 'image/png', purpose: 'apple-touch-icon' }
+        { src: iconBase.replace('/upload/', '/upload/c_pad,f_png,q_auto,w_192,h_192/'), sizes: '192x192', type: 'image/png' },
+        { src: iconBase.replace('/upload/', '/upload/c_pad,f_png,q_auto,w_512,h_512/'), sizes: '512x512', type: 'image/png' },
+        { src: iconBase.replace('/upload/', '/upload/c_pad,f_png,q_auto,w_180,h_180/'), sizes: '180x180', type: 'image/png', purpose: 'apple-touch-icon' }
       ];
     }
 
@@ -2111,6 +2141,16 @@ function serveWithMeta(res, metaOptions) {
 }
 
 /** Site-wide fallbacks used whenever a specific page has nothing more specific of its own. */
+/** <link rel="preload"> for the home hero image, using exactly the URLs the page will request
+ * (same widths/transform as src/lib/cloudinary.js) so the browser starts the download from the
+ * raw HTML instead of waiting for the JS bundle to boot and render. */
+function heroPreloadTag(url) {
+  if (!url || !url.includes('res.cloudinary.com') || !url.includes('/upload/')) return '';
+  const at = (w) => url.replace('/upload/', `/upload/c_limit,w_${w},f_auto,q_auto/`);
+  const srcset = [320, 480, 640, 960, 1280, 1600, 2000].map(w => `${at(w)} ${w}w`).join(', ');
+  return `<link rel="preload" as="image" href="${escapeHtmlAttr(at(960))}" imagesrcset="${escapeHtmlAttr(srcset)}" imagesizes="100vw" fetchpriority="high">`;
+}
+
 async function getSeoDefaults() {
   try {
     const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
@@ -2119,9 +2159,11 @@ async function getSeoDefaults() {
       title: site?.metaTitle || site?.name || 'Others.',
       description: site?.metaDescription || site?.description || site?.tagline || '',
       image: site?.ogImage || site?.logo || '',
+      // The home page's LCP element (only when the hero is an image, not a video).
+      heroImage: site?.hero?.video ? '' : (site?.hero?.image || ''),
     };
   } catch {
-    return { siteName: 'Others.', title: 'Others.', description: '', image: '' };
+    return { siteName: 'Others.', title: 'Others.', description: '', image: '', heroImage: '' };
   }
 }
 
@@ -2133,6 +2175,7 @@ app.get('/', async (req, res) => {
     description: d.description,
     image: d.image,
     url: `${req.protocol}://${req.get('host')}/`,
+    extra: heroPreloadTag(d.heroImage),
   });
 });
 

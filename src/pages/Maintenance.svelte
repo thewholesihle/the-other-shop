@@ -1,4 +1,6 @@
 <script>
+  import Img from '../components/Img.svelte';
+  import { getOptimizedUrl } from '../lib/cloudinary.js';
   export let title = "We'll be back soon.";
   export let message =
     "Our store is currently undergoing scheduled maintenance. Please check back shortly.";
@@ -43,7 +45,7 @@
 <div
   class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-background"
   style={background
-    ? `background-image: url('${background}'); background-size: cover; background-position: center;`
+    ? `background-image: url('${getOptimizedUrl(background, 1920)}'); background-size: cover; background-position: center;`
     : ""}
 >
   {#if background}
@@ -56,11 +58,7 @@
       : ''}"
   >
     {#if logo}
-      <img
-        src={logo}
-        alt={siteName}
-        class="h-10 w-auto mx-auto mb-10 object-contain drop-shadow"
-      />
+      <Img src={logo} alt={siteName} widths={[160, 320, 480]} fallbackWidth={320} sizes="200px" priority class="h-10 w-auto mx-auto mb-10 object-contain drop-shadow" />
     {:else}
       <p class="text-label tracking-[0.4em] mb-10 opacity-60">{siteName}</p>
     {/if}
