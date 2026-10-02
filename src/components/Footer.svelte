@@ -1,4 +1,5 @@
 <script>
+  import LetterSwap from './LetterSwap.svelte';
   import Img from './Img.svelte';
   export let data = { site: {}, categories: [] };
   
@@ -73,7 +74,7 @@
                 href={link.href}
                 onclick={(e) => nav(e, link.href)}
                 class="text-sm text-on-dark hover:text-primary-foreground transition-colors duration-200"
-              >{link.label}</a>
+              ><LetterSwap text={link.label} /></a>
             </li>
           {/each}
         </ul>
@@ -122,7 +123,7 @@
     <p class="text-xs text-on-dark">© 2026 {site.name} All rights reserved.</p>
     <div class="flex gap-6">
       {#each socials as [name, href]}
-        <a {href} target="_blank" rel="noopener noreferrer" class="text-xs text-on-dark hover:text-primary-foreground transition-colors capitalize">{name}</a>
+        <a {href} target="_blank" rel="noopener noreferrer" class="text-xs text-on-dark hover:text-primary-foreground transition-colors capitalize"><LetterSwap text={name} /></a>
       {/each}
     </div>
   </div>

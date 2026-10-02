@@ -1,4 +1,5 @@
 <script>
+  import LetterSwap from './LetterSwap.svelte';
   import Img from './Img.svelte';
   import { cartCount } from "../stores/cart.js";
 
@@ -46,8 +47,8 @@
         <a
           href={link.href}
           onclick={(e) => nav(e, link.href)}
-          class="text-foreground text-label hover:opacity-60 transition-opacity duration-200"
-          >{link.label}</a
+          class="text-foreground text-label"
+          ><LetterSwap text={link.label} /></a
         >
       {/each}
     </div>

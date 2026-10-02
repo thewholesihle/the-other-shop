@@ -212,3 +212,42 @@
 @media (prefers-reduced-motion: reduce) {
   .cut-word { transform: none; transition: none; }
 }
+
+/* ── Letter-swap hover (see components/LetterSwap.svelte) ─────────────────────────
+   Each letter is clipped to its own line box; a copy (::after, from data-char) waits just below.
+   On hover/focus of the containing link or button the letter slides up and out while the copy
+   slides in, with the per-letter transition-delay giving the left-to-right ripple. */
+.letter-swap {
+  display: inline-flex;
+  overflow: hidden;
+  vertical-align: bottom;
+  /* a little room so descenders aren't clipped, cancelled out so layout is unchanged */
+  padding: 0.08em 0 0.12em;
+  margin: -0.08em 0 -0.12em;
+}
+.ls-char {
+  position: relative;
+  display: inline-block;
+  white-space: pre;
+  transition: transform 450ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ls-char::after {
+  content: attr(data-char);
+  position: absolute;
+  left: 0;
+  top: 100%;
+}
+a:hover .ls-char,
+button:hover .ls-char,
+a:focus-visible .ls-char,
+button:focus-visible .ls-char {
+  transform: translateY(-100%);
+}
+@media (hover: none) {
+  /* touch: no hover state to show, and a sticky :hover after a tap would leave letters mid-swap */
+  a:hover .ls-char, button:hover .ls-char { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ls-char { transition: none; }
+  a:hover .ls-char, button:hover .ls-char, a:focus-visible .ls-char, button:focus-visible .ls-char { transform: none; }
+}
