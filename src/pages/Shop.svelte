@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import { onMount } from 'svelte';
   import Navbar from '../components/Navbar.svelte';
   import ProductCard from '../components/ProductCard.svelte';
@@ -115,7 +116,7 @@
     <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <div class="mb-10">
         <p class="text-label mb-2">Collection</p>
-        <h1 class="text-4xl md:text-5xl font-display font-bold">All Products</h1>
+        <h1 use:cutReveal class="text-4xl md:text-5xl font-display font-bold">All Products</h1>
       </div>
 
       <!-- Filters & Sort -->

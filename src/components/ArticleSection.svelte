@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import Img from './Img.svelte';
   import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
   export let article = null;
@@ -50,7 +51,7 @@
           <span class="inline-block text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3 font-medium">
             {heading || `EDITORIAL — ${new Date(displayArticle.date || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric'})}`}
           </span>
-          <h2 class="text-3xl md:text-5xl font-display font-bold leading-tight">{displayArticle.title}</h2>
+          <h2 use:cutReveal class="text-3xl md:text-5xl font-display font-bold leading-tight">{displayArticle.title}</h2>
         </div>
         
         <p class="text-muted-foreground leading-relaxed text-sm md:text-base">

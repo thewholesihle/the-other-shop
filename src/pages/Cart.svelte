@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import Img from '../components/Img.svelte';
   import { onMount } from 'svelte';
   import Navbar from '../components/Navbar.svelte';
@@ -155,7 +156,7 @@
           <div class="w-16 h-16 border-2 border-success rounded-full flex items-center justify-center mx-auto mb-6 text-success">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
           </div>
-          <h1 class="text-3xl font-display font-bold mb-3">Payment Successful</h1>
+          <h1 use:cutReveal class="text-3xl font-display font-bold mb-3">Payment Successful</h1>
           <p class="text-muted-foreground mb-2">Your order has been confirmed and is being processed.</p>
           <p class="text-sm text-muted-foreground mb-10">A confirmation will be sent to your email address.</p>
           <a href="/shop" onclick={(e) => { e.preventDefault(); window.__navigate('/shop'); }} class="inline-block bg-foreground text-primary-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground/90 transition-colors">CONTINUE SHOPPING</a>
@@ -166,14 +167,14 @@
           <div class="w-16 h-16 border-2 border-muted-foreground rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </div>
-          <h1 class="text-3xl font-display font-bold mb-3">Payment Cancelled</h1>
+          <h1 use:cutReveal class="text-3xl font-display font-bold mb-3">Payment Cancelled</h1>
           <p class="text-muted-foreground mb-10">Your payment was not completed. Your cart has been saved.</p>
           <a href="/cart" onclick={(e) => { e.preventDefault(); window.__navigate('/cart'); }} class="inline-block border border-foreground px-8 py-3.5 text-label tracking-[0.25em] hover:bg-foreground hover:text-primary-foreground transition-all duration-300">BACK TO CART</a>
         </div>
 
       {:else if step === 'cart'}
         <div class="mb-8">
-          <h1 class="text-3xl md:text-4xl font-display font-bold">Your Cart</h1>
+          <h1 use:cutReveal class="text-3xl md:text-4xl font-display font-bold">Your Cart</h1>
           <p class="text-sm text-muted-foreground mt-1">{$cartCount} item{$cartCount !== 1 ? 's' : ''}</p>
         </div>
 
@@ -243,7 +244,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
             Back to cart
           </button>
-          <h1 class="text-3xl md:text-4xl font-display font-bold">Delivery Details</h1>
+          <h1 use:cutReveal class="text-3xl md:text-4xl font-display font-bold">Delivery Details</h1>
           <p class="text-sm text-muted-foreground mt-1 flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
             South Africa delivery only

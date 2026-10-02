@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import Img from './Img.svelte';
   import Video from './Video.svelte';
   import { isGif } from '../lib/cloudinary.js';
@@ -41,7 +42,7 @@
           {hero.label}
         </p>
       {/if}
-      <h1 class="text-5xl md:text-7xl font-display font-bold leading-[0.9] mb-4 opacity-0 animate-fade-up" style="animation-delay:0.5s;color:hsl(40,20%,97%)">
+      <h1 use:cutReveal={{ delay: 250, stagger: 90 }} class="text-5xl md:text-7xl font-display font-bold leading-[0.9] mb-4" style="color:hsl(40,20%,97%)">
         {#each words as word}
           {word}<br />
         {/each}

@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import Img from '../components/Img.svelte';
   import { onMount } from 'svelte';
   import Footer from '../components/Footer.svelte';
@@ -146,7 +147,7 @@
             {#if product.isNew}
               <span class="inline-block text-[10px] tracking-[0.2em] uppercase bg-foreground text-primary-foreground px-2 py-0.5 mb-3">New</span>
             {/if}
-            <h1 class="text-3xl md:text-4xl font-display font-bold leading-tight mb-2">{product.name}</h1>
+            <h1 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight mb-2">{product.name}</h1>
             <p class="text-2xl font-medium tabular-nums">{data.site.currency}{product.price.toFixed(2)}</p>
           </div>
 

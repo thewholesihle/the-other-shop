@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import { onMount } from 'svelte';
   import ProductCard from './ProductCard.svelte';
 
@@ -29,7 +30,7 @@
   <div class="flex items-end justify-between mb-12">
     <div>
       <p class="text-label mb-2">Latest</p>
-      <h2 class="text-3xl md:text-4xl font-display font-bold leading-tight">New Drops</h2>
+      <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight">New Drops</h2>
     </div>
     <a href="/products" onclick={shopAll} class="text-label hover:text-foreground transition-colors border-b border-current pb-0.5">VIEW ALL</a>
   </div>

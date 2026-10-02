@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import Img from '../components/Img.svelte';
   import { onMount } from 'svelte';
   import { loadStoreData } from '../lib/storeData.js';
@@ -41,7 +42,7 @@
     <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <div class="mb-10">
         <p class="text-label mb-2">Journal</p>
-        <h1 class="text-4xl md:text-5xl font-display font-bold">Community</h1>
+        <h1 use:cutReveal class="text-4xl md:text-5xl font-display font-bold">Community</h1>
       </div>
 
       <!-- Category filter -->

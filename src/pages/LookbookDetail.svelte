@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import Img from '../components/Img.svelte';
   import Embed from '../components/Embed.svelte';
   import Video from '../components/Video.svelte';
@@ -70,7 +71,7 @@
 
       <div class="mb-12">
         <p class="text-label text-muted-foreground mb-2">{lb.date}</p>
-        <h1 class="text-4xl md:text-5xl font-display font-bold mb-4">{lb.title}</h1>
+        <h1 use:cutReveal class="text-4xl md:text-5xl font-display font-bold mb-4">{lb.title}</h1>
         {#if lb.description}
           <p class="text-muted-foreground max-w-xl">{lb.description}</p>
         {/if}

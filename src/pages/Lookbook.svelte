@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import Img from '../components/Img.svelte';
   import { onMount } from 'svelte';
   import Footer from '../components/Footer.svelte';
@@ -35,7 +36,7 @@
     <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <div class="mb-12">
         <p class="text-label mb-2">Editorial</p>
-        <h1 class="text-4xl md:text-5xl font-display font-bold">Lookbook</h1>
+        <h1 use:cutReveal class="text-4xl md:text-5xl font-display font-bold">Lookbook</h1>
       </div>
 
       {#if data.lookbooks.length}

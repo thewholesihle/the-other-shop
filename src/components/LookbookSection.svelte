@@ -1,4 +1,5 @@
 <script>
+  import { cutReveal } from '../lib/cutReveal.js';
   import Img from './Img.svelte';
   import { onMount } from 'svelte';
   import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
@@ -54,7 +55,7 @@
 <section bind:this={ref} class="px-6 md:px-10 pb-20 md:pb-32">
   <div class="mb-12 {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'}">
     <p class="text-label mb-2">Editorial</p>
-    <h2 class="text-3xl md:text-4xl font-display font-bold leading-tight">
+    <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight">
       {lb ? lb.title : 'Lookbook'}
     </h2>
   </div>
