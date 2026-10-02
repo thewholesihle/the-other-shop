@@ -13,7 +13,7 @@
   import LoaderCircle from 'lucide-svelte/icons/loader-circle';
   import ShoppingBag from 'lucide-svelte/icons/shopping-bag';
 
-  let { orders = [], currency = 'R', onUpdate = () => {} } = $props();
+  let { orders = [], currency = 'R', site = {}, contactAddress = '', onUpdate = () => {} } = $props();
 
   const STATUS = {
     pending_payment: { label: 'Pending payment', variant: 'warning' },
@@ -163,7 +163,7 @@
     pdfBusyId = order.id;
     try {
       await loadPdfLibs();
-      buildInvoice(order);
+      await buildInvoice(order);
     } catch (e) {
       toast.error(`Couldn't create the invoice: ${e.message}`);
     } finally {
@@ -171,41 +171,200 @@
     }
   }
 
-  function buildInvoice(order) {
+  // ── Invoice PDF ───────────────────────────────────────────────────────────
+  // Same visual language as the admin: zinc neutrals, hairline rules, a dark brand band
+  // (the same treatment as the order emails, so the same logo file works on it).
+  const INK = [9, 9, 11], MUTED = [113, 113, 122], RULE = [228, 228, 231], SOFT = [244, 244, 245];
+  const PILL = {
+    paid: { bg: [220, 252, 231], fg: [22, 101, 52], label: 'PAID' },
+    processing: { bg: [237, 233, 254], fg: [91, 33, 182], label: 'PROCESSING' },
+    shipped: { bg: [219, 234, 254], fg: [30, 64, 175], label: 'SHIPPED' },
+    delivered: { bg: [244, 244, 245], fg: [63, 63, 70], label: 'DELIVERED' },
+    pending_payment: { bg: [254, 243, 199], fg: [146, 64, 14], label: 'AWAITING PAYMENT' },
+    cancelled: { bg: [254, 226, 226], fg: [153, 27, 27], label: 'CANCELLED' },
+  };
+
+  // Rasterises the logo so jsPDF can embed it. Cloudinary is asked for a PNG (jsPDF can't
+  // embed webp/avif) and served with CORS headers, so the canvas stays readable.
+  function loadLogo(url) {
+    if (!url) return Promise.resolve(null);
+    const src = url.includes('res.cloudinary.com') ? url.replace('/upload/', '/upload/f_png,w_600/') : url;
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(null), 6000);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        clearTimeout(timer);
+        try {
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth; c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          resolve({ data: c.toDataURL('image/png'), w: img.naturalWidth, h: img.naturalHeight });
+        } catch { resolve(null); }
+      };
+      img.onerror = () => { clearTimeout(timer); resolve(null); };
+      img.src = src;
+    });
+  }
+
+  // Helvetica (built into PDFs) has no glyph for the thin/narrow spaces toLocaleString emits,
+  // so thousands are grouped by hand with a plain space.
+  const pdfMoney = (n) => `${currency}${Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
+
+  async function buildInvoice(order) {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text(`Invoice - ${order.id}`, 14, 22);
+    const logo = await loadLogo(site?.emailLogo || site?.logo);
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210, M = 18, R = W - M;
+    const siteName = site?.name || 'Others.';
+    const issued = dateOf(order);
+    const pill = PILL[order.status] || { bg: SOFT, fg: INK, label: String(order.status || '').toUpperCase() };
 
-    doc.setFontSize(11);
-    doc.text(`Customer: ${order.customer}`, 14, 32);
-    doc.text(`Email: ${order.email}`, 14, 38);
-    doc.text(`Address: ${order.address}`, 14, 44);
-    doc.text(`Date: ${dateOf(order).toLocaleString()}`, 14, 50);
-    doc.text(`Status: ${order.status.toUpperCase().replace('_', ' ')}`, 14, 56);
+    // Brand band
+    doc.setFillColor(...INK);
+    doc.rect(0, 0, W, 30, 'F');
+    if (logo) {
+      const maxH = 11, maxW = 56;
+      let h = maxH, w = (logo.w / logo.h) * h;
+      if (w > maxW) { w = maxW; h = (logo.h / logo.w) * w; }
+      doc.addImage(logo.data, 'PNG', M, (30 - h) / 2, w, h);
+    } else {
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+      doc.text(siteName, M, 18.5);
+    }
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text('INVOICE', R, 14.5, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(212, 212, 216);
+    doc.text(order.id, R, 20, { align: 'right' });
 
-    const tableData = (order.items || []).map(item => [
-      item.name,
-      [item.size, item.color].filter(Boolean).join(' / ') || '-',
-      item.quantity.toString(),
-      `${currency}${item.price.toFixed(2)}`,
-      `${currency}${(item.price * item.quantity).toFixed(2)}`
-    ]);
+    // Title row: amount + status pill
+    let y = 46;
+    doc.setTextColor(...MUTED); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.text('Amount', M, y);
+    doc.setTextColor(...INK); doc.setFont('helvetica', 'bold'); doc.setFontSize(26);
+    doc.text(pdfMoney(order.total), M, y + 11);
 
-    doc.autoTable({
-      startY: 65,
-      head: [['Item', 'Size/Color', 'Qty', 'Unit Price', 'Total']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [20, 20, 20] }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    const pw = doc.getTextWidth(pill.label) + 8;
+    doc.setFillColor(...pill.bg);
+    doc.roundedRect(R - pw, y + 3.2, pw, 7, 3.5, 3.5, 'F');
+    doc.setTextColor(...pill.fg);
+    doc.text(pill.label, R - pw / 2, y + 7.9, { align: 'center' });
+
+    // Meta (issued / reference / payment)
+    y += 24;
+    doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
+    doc.line(M, y, R, y);
+    y += 7;
+    const meta = [
+      ['Issued', issued.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })],
+      ['Order', order.id],
+      ['Payment ref', order.payfastId || '—'],
+    ];
+    const colW = (R - M) / 3;
+    meta.forEach(([label, value], i) => {
+      const x = M + i * colW;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+      doc.text(label, x, y);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK);
+      doc.text(doc.splitTextToSize(String(value), colW - 4), x, y + 5.5);
     });
 
-    const finalY = doc.lastAutoTable.finalY || 65;
-    doc.text(`Shipping: ${currency}${(order.shippingCost || 0).toFixed(2)}`, 14, finalY + 10);
-    doc.setFontSize(14);
-    doc.text(`Grand Total: ${currency}${order.total.toFixed(2)}`, 14, finalY + 20);
+    // Billed to / From
+    y += 18;
+    doc.line(M, y, R, y);
+    y += 8;
+    const block = (x, heading, lines) => {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+      doc.text(heading, x, y);
+      let yy = y + 5.5;
+      lines.filter(Boolean).forEach((line, i) => {
+        doc.setFont('helvetica', i === 0 ? 'bold' : 'normal'); doc.setFontSize(10); doc.setTextColor(...(i === 0 ? INK : [63, 63, 70]));
+        const wrapped = doc.splitTextToSize(String(line), (R - M) / 2 - 8);
+        doc.text(wrapped, x, yy);
+        yy += wrapped.length * 4.6;
+      });
+      return yy;
+    };
+    const addressLines = (order.address || '').split(',').map(t => t.trim()).filter(Boolean).join('\n').split('\n');
+    const endLeft = block(M, 'BILLED TO', [order.customer || 'Customer', order.email, order.phone, ...addressLines]);
+    const endRight = block(M + (R - M) / 2 + 4, 'FROM', [siteName, ...String(contactAddress || '').split(/\n|,/).map(t => t.trim()), (site?.adminNotificationEmails || '').split(',')[0]?.trim()]);
+    y = Math.max(endLeft, endRight) + 4;
 
-    doc.save(`${order.id}.pdf`);
+    // Items
+    doc.autoTable({
+      startY: y,
+      margin: { left: M, right: M },
+      head: [['Item', 'Qty', 'Unit price', 'Amount']],
+      body: (order.items || []).map(item => [
+        { content: item.name + ([item.size, item.color].filter(Boolean).length ? '\n' + [item.size, item.color].filter(Boolean).join(' / ') : ''), styles: {} },
+        String(item.quantity),
+        pdfMoney(item.price),
+        pdfMoney(item.price * item.quantity),
+      ]),
+      theme: 'plain',
+      styles: { font: 'helvetica', fontSize: 9.5, textColor: INK, cellPadding: { top: 4, bottom: 4, left: 3, right: 3 }, lineColor: RULE, lineWidth: 0 },
+      headStyles: { fillColor: SOFT, textColor: MUTED, fontStyle: 'bold', fontSize: 8, cellPadding: { top: 3.2, bottom: 3.2, left: 3, right: 3 } },
+      columnStyles: { 0: { cellWidth: 'auto' }, 1: { halign: 'center', cellWidth: 16 }, 2: { halign: 'right', cellWidth: 32 }, 3: { halign: 'right', cellWidth: 32, fontStyle: 'bold' } },
+      didParseCell: (d) => { if (d.section === 'head' && d.column.index > 0) d.cell.styles.halign = d.column.index === 1 ? 'center' : 'right'; },
+      didDrawCell: (d) => {
+        if (d.section === 'body') {
+          doc.setDrawColor(...RULE); doc.setLineWidth(0.2);
+          doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height);
+        }
+      },
+    });
+
+    // Totals
+    let ty = (doc.lastAutoTable?.finalY || y) + 8;
+    if (ty > 245) { doc.addPage(); ty = 24; }
+    const subtotal = (order.total || 0) - (order.shippingCost || 0);
+    const labelX = R - 70;
+    const row = (label, value, strong = false) => {
+      doc.setFont('helvetica', strong ? 'bold' : 'normal'); doc.setFontSize(strong ? 12 : 9.5);
+      doc.setTextColor(...(strong ? INK : MUTED));
+      doc.text(label, labelX, ty);
+      doc.setTextColor(...INK);
+      doc.text(value, R, ty, { align: 'right' });
+      ty += strong ? 0 : 6.5;
+    };
+    row('Subtotal', pdfMoney(subtotal));
+    row('Shipping', order.shippingCost ? pdfMoney(order.shippingCost) : 'Free');
+    doc.setDrawColor(...INK); doc.setLineWidth(0.4);
+    doc.line(labelX, ty - 2.5, R, ty - 2.5);
+    ty += 4;
+    row('Total', pdfMoney(order.total), true);
+
+    // Delivery / tracking
+    if (order.carrier || order.trackingNumber || order.estimatedDelivery) {
+      ty += 14;
+      doc.setFillColor(...SOFT);
+      doc.roundedRect(M, ty, R - M, 20, 2, 2, 'F');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+      const cells = [['CARRIER', order.carrier], ['TRACKING NO.', order.trackingNumber], ['EST. DELIVERY', order.estimatedDelivery]];
+      cells.forEach(([label, value], i) => {
+        const x = M + 6 + i * ((R - M - 6) / 3);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+        doc.text(label, x, ty + 7);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK);
+        doc.text(String(value || '—'), x, ty + 13.5);
+      });
+    }
+
+    // Footer on every page
+    const pages = doc.getNumberOfPages();
+    for (let p = 1; p <= pages; p++) {
+      doc.setPage(p);
+      doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
+      doc.line(M, 280, R, 280);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+      doc.text(`Thank you for shopping with ${siteName}.`, M, 285);
+      doc.text(`Page ${p} of ${pages}`, R, 285, { align: 'right' });
+    }
+
+    doc.save(`Invoice-${order.id}.pdf`);
   }
 
   // Progress through the happy path, for the stepper in the detail panel.

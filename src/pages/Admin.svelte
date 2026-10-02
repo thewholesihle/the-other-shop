@@ -279,7 +279,7 @@
     {:else if activeSection === 'categories'}
       <AdminCategories categories={data.categories} onUpdate={updateCategories} />
     {:else if activeSection === 'orders'}
-      <AdminOrders orders={data.orders} currency={data.site.currency} onUpdate={updateOrdersLocal} />
+      <AdminOrders orders={data.orders} currency={data.site.currency} site={data.site} contactAddress={data.pages?.contact?.address || ''} onUpdate={updateOrdersLocal} />
     {:else if activeSection === 'lookbook'}
       <AdminLookbook lookbooks={data.lookbooks} onUpdate={updateLookbooks} onLocalUpdate={updateLookbooksLocal} />
     {:else if activeSection === 'community'}
