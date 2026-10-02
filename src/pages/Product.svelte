@@ -79,7 +79,7 @@
     : (product?.stock ?? 0);
   $: disabledAdd = product?.stock === 0 || missingSize || missingColor || currentVariantStock === 0;
 
-  // Stock status, shown right under the price and again next to the add-to-cart button. Once a size
+  // Stock status, shown right under the price. Once a size
   // and colour are picked it reflects that exact variant; before that it reflects the product as a whole.
   const LOW_STOCK = 5;
   $: stockInfo = !product ? null
@@ -210,9 +210,6 @@
 
           <!-- Add to cart -->
           <div class="space-y-3 pt-2">
-            {#if stockInfo?.level === 'low'}
-              <p class="text-sm font-medium text-destructive flex items-center gap-2"><span class="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse"></span>{stockInfo.text}</p>
-            {/if}
             <button
               onclick={addToCart}
               disabled={disabledAdd}

@@ -17,6 +17,8 @@ const SettingsSchema = new mongoose.Schema({
   currency:     { type: String, default: 'R' },
   logo:         { type: String, default: '' },
   hero: {
+    // false = no full-screen hero; the home page leads with the New Arrivals grid instead.
+    enabled:    { type: Boolean, default: true },
     label:      { type: String, default: '' },
     heading:    { type: String, default: '' },
     subheading: { type: String, default: '' },

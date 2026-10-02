@@ -2514,7 +2514,7 @@ async function getSeoDefaults() {
       description: site?.metaDescription || site?.description || site?.tagline || '',
       image: site?.ogImage || site?.logo || '',
       // The home page's LCP element (only when the hero is an image, not a video).
-      heroImage: site?.hero?.video ? '' : (site?.hero?.image || ''),
+      heroImage: site?.hero?.video || site?.hero?.enabled === false ? '' : (site?.hero?.image || ''),
     };
   } catch {
     return { siteName: 'Others.', title: 'Others.', description: '', image: '', heroImage: '' };

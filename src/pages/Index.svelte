@@ -19,6 +19,9 @@
     finally { loading = false; }
   });
 
+  // The hero can be switched off in Settings → Homepage; the page then leads with New Arrivals.
+  $: heroEnabled = data?.site?.hero?.enabled !== false;
+
   $: featuredId = data?.site?.featuredLookbook;
   $: editorialType = data?.site?.featuredEditorialType || 'lookbook';
   
@@ -51,9 +54,17 @@
   <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
     <div class="flex-1">
-      <Hero hero={data.site.hero} />
-      <AnnouncementBar text={data.site.announcement} />
-      <ProductGrid products={data.products} currency={data.site.currency} />
+      {#if heroEnabled}
+        <Hero hero={data.site.hero} />
+        <AnnouncementBar text={data.site.announcement} />
+        <ProductGrid products={data.products} currency={data.site.currency} />
+      {:else}
+        <!-- No hero: clear the fixed navbar, then lead with the announcement bar and New Arrivals. -->
+        <div class="pt-[61px]">
+          <AnnouncementBar text={data.site.announcement} />
+        </div>
+        <ProductGrid products={data.products} currency={data.site.currency} mode="arrivals" />
+      {/if}
 
       {#if editorialType === 'article'}
         <ArticleSection article={featuredArticle} {allArticles} heading={data.site.featuredEditorialHeading} message={data.site.featuredEditorialMessage} cta={data.site.featuredEditorialCta} />

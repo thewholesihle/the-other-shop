@@ -21,6 +21,7 @@
     const f = JSON.parse(JSON.stringify(src || {}));
     f.shipping ??= { freeMinimum: 500, standardRate: 99, country: 'South Africa' };
     f.hero ??= {};
+    f.hero.enabled ??= true;
     f.hero.ctaLink ??= '/shop';
     f.hero.video ??= '';
     f.maintenance ??= { enabled: false, collectEmails: false, title: "We'll be back soon.", message: 'Our store is currently undergoing scheduled maintenance. Please check back shortly.', background: '' };
@@ -244,7 +245,14 @@
           </div>
 
           <div class="space-y-4 border-t border-border pt-6">
-            <p class="text-sm font-semibold">Hero</p>
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-semibold">Hero</p>
+                <p class="text-sm text-muted-foreground">The full-screen banner at the top of the home page. Turn it off and the home page opens straight on <strong>New Arrivals</strong> (products marked “New”).</p>
+              </div>
+              <Switch bind:checked={form.hero.enabled} aria-label="Show the hero" />
+            </div>
+            {#if form.hero.enabled}
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div><label for="h-label" class={labelCls}>Season label</label><input id="h-label" bind:value={form.hero.label} class={inputCls} /></div>
               <div><label for="h-heading" class={labelCls}>Title</label><input id="h-heading" bind:value={form.hero.heading} class={inputCls} /></div>
@@ -275,6 +283,7 @@
                 </label>
               </div>
             </div>
+            {/if}
           </div>
 
           <div class="space-y-4 border-t border-border pt-6">
