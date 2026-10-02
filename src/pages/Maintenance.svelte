@@ -1,6 +1,8 @@
 <script>
   import Img from '../components/Img.svelte';
+  import { onMount } from 'svelte';
   import { getOptimizedUrl } from '../lib/cloudinary.js';
+  import { buildTheme, parseHex, contrast } from '../lib/theme.js';
   export let title = "We'll be back soon.";
   export let message =
     "Our store is currently undergoing scheduled maintenance. Please check back shortly.";
@@ -9,6 +11,35 @@
   export let logo = "";
   export let socials = {};
   export let collectEmails = false;
+  export let colors = {}; // the store palette, to know what the page background is
+
+  // The logo is rendered as a flat single colour — black or white, whichever contrasts with what is
+  // actually behind it: a photo background is dimmed dark by the overlay (→ white); otherwise it's the
+  // store's page colour, and we pick whichever of black/white has the higher contrast ratio on it.
+  $: pageBg = parseHex(buildTheme(colors || {}).hex.background) || [255, 255, 255];
+  $: logoWhite = background ? true : contrast([255, 255, 255], pageBg) > contrast([0, 0, 0], pageBg);
+  $: logoFilter = logoWhite ? 'brightness(0) invert(1)' : 'brightness(0)';
+
+  // A flat recolour only makes sense for a logo with a transparent background — on an opaque JPG it
+  // would turn into a solid block. Check the corners; if the logo is opaque (or can't be read), leave it as is...
+  // except an unreadable one, which is assumed transparent (the common case).
+  let logoHasAlpha = true;
+  onMount(() => {
+    if (!logo) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 40;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, 40, 40);
+        const alphaAt = (x, y) => ctx.getImageData(x, y, 1, 1).data[3];
+        logoHasAlpha = [alphaAt(0, 0), alphaAt(39, 0), alphaAt(0, 39), alphaAt(39, 39)].some(a => a < 250);
+      } catch { logoHasAlpha = true; }
+    };
+    img.src = getOptimizedUrl(logo, 160);
+  });
 
   let email = "";
   let submitted = false;
@@ -58,7 +89,7 @@
       : ''}"
   >
     {#if logo}
-      <Img src={logo} alt={siteName} widths={[160, 320, 480]} fallbackWidth={320} sizes="200px" priority class="h-10 w-auto mx-auto mb-10 object-contain drop-shadow" />
+      <Img src={logo} alt={siteName} widths={[160, 320, 480]} fallbackWidth={320} sizes="200px" priority style={logoHasAlpha ? `filter: ${logoFilter}` : ''} class="h-10 w-auto mx-auto mb-10 object-contain {logoHasAlpha && logoWhite ? 'drop-shadow' : ''}" />
     {:else}
       <p class="text-label tracking-[0.4em] mb-10 opacity-60">{siteName}</p>
     {/if}

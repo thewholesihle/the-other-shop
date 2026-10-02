@@ -178,7 +178,9 @@
           message={maintenance.message}
           background={maintenance.background}
           collectEmails={maintenance.collectEmails}
+          siteName={site?.name}
           logo={site?.logo}
+          colors={site?.colors}
           socials={site?.socials}
         />
       {:else if route.page === 'index'}
