@@ -28,6 +28,7 @@
     f.payments.payfast.enabled ??= true;  // existing stores keep PayFast on
     f.payments.yoco ??= {};
     f.payments.yoco.enabled ??= false;    // Yoco is opt-in
+    f.payments.abandonAfterMinutes ??= 60;
     f.hero ??= {};
     f.hero.enabled ??= true;
     f.hero.ctaLink ??= '/shop';
@@ -421,6 +422,12 @@
               {/if}
             </div>
           {/each}
+
+          <div class="border-t border-border pt-5">
+            <label for="s-abandon" class={labelCls}>Release unpaid orders after (minutes)</label>
+            <input id="s-abandon" type="number" min="15" max="1440" step="5" bind:value={form.payments.abandonAfterMinutes} class="{inputCls} max-w-[10rem] tabular-nums" />
+            <p class={hintCls}>If a customer reaches the payment page but never pays, their order is cancelled after this long and the stock goes back on sale. Between 15 minutes and 24 hours. If they do pay late, the order is still marked paid and the stock is re-reserved.</p>
+          </div>
 
           {#if payError}
             <p class="{hintCls} mt-0">Couldn’t check which providers are set up on the server. Switches still save normally.</p>

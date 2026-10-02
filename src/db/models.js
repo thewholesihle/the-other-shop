@@ -32,6 +32,8 @@ const SettingsSchema = new mongoose.Schema({
   payments: {
     payfast: { enabled: { type: Boolean, default: true } },
     yoco:    { enabled: { type: Boolean, default: false } },
+    // An order still unpaid after this long is treated as abandoned: it's cancelled and its stock goes back on sale.
+    abandonAfterMinutes: { type: Number, default: 60 },
   },
   shipping: {
     freeMinimum:  { type: Number, default: 500 },
@@ -145,6 +147,9 @@ const OrderSchema = new mongoose.Schema({
   payfastId:    { type: String, default: '' },
   // How this order is paid. '' on orders created before online methods were recorded.
   paymentMethod: { type: String, default: '', enum: ['', 'payfast', 'yoco'] },
+  // Why a cancelled order was cancelled: the customer backed out, they never paid (abandoned), the
+  // payment failed / couldn't be started, or '' (cancelled by the admin, or before this was recorded).
+  cancelReason: { type: String, default: '', enum: ['', 'customer', 'abandoned', 'payment_failed'] },
   yocoCheckoutId: { type: String, default: '', index: true }, // links Yoco's webhook back to the order
   yocoPaymentId:  { type: String, default: '' },
   adminNote:    { type: String, default: '' },

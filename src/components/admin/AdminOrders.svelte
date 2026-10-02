@@ -241,6 +241,11 @@
   const pdfMoney = (n) => `${currency}${Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
 
   // Which provider took the payment, and its reference — orders from before this was recorded fall back to PayFast's id.
+  const CANCEL_REASONS = {
+    customer: 'The customer cancelled at the payment page.',
+    abandoned: 'Never paid — released automatically after the unpaid-order time limit.',
+    payment_failed: 'The payment failed or could not be started.',
+  };
   const PAY_LABELS = { payfast: 'PayFast', yoco: 'Yoco' };
   const payMethodLabel = (o) => PAY_LABELS[o.paymentMethod] || (o.payfastId ? 'PayFast' : '');
   const payRef = (o) => o.yocoPaymentId || o.payfastId || '';
@@ -519,6 +524,9 @@
         <div><dt class="text-xs text-muted-foreground mb-0.5">Email</dt><dd class="break-all">{selected.email || '—'}</dd></div>
         <div><dt class="text-xs text-muted-foreground mb-0.5">Phone</dt><dd>{selected.phone || '—'}</dd></div>
         <div class="col-span-2"><dt class="text-xs text-muted-foreground mb-0.5">Payment</dt><dd>{payMethodLabel(selected) || (selected.status === 'pending_payment' ? 'Awaiting payment' : '—')}{#if payRef(selected)} <span class="ml-1 break-all font-mono text-xs text-muted-foreground">{payRef(selected)}</span>{/if}</dd></div>
+        {#if selected.status === 'cancelled' && selected.cancelReason}
+          <div class="col-span-2"><dt class="text-xs text-muted-foreground mb-0.5">Why cancelled</dt><dd>{CANCEL_REASONS[selected.cancelReason]}</dd></div>
+        {/if}
         <div class="col-span-2"><dt class="text-xs text-muted-foreground mb-0.5">Deliver to</dt><dd class="whitespace-pre-line">{selected.address || '—'}</dd></div>
       </dl>
 

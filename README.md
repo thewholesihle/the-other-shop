@@ -141,6 +141,8 @@ How it stays safe:
 - The "payment successful" page waits for the webhook (polling a status endpoint that returns only paid / pending) rather than assuming success from the URL.
 - Orders record which method paid and its reference; both appear in the order detail and on the invoice PDF.
 
+**Abandoned payments.** A customer who reaches the payment page and closes the tab never triggers a cancel or a webhook. Every 5 minutes the server cancels orders that are still unpaid after **Settings → Payments → Release unpaid orders after** (default 60 min, allowed 15 min–24 h) and puts their stock back on sale. Each cancelled order records *why* (customer cancelled, never paid, payment failed) and shows it in the order detail; abandoned ones don't pop a "cancelled" toast and don't count toward the weekly report's cancellation-rate alert. The release is one atomic update per order, so it's safe across restarts and multiple instances, never touches a paid order, and a customer who does pay late (slow bank, delayed webhook) still has their order marked paid with stock re-reserved — for PayFast as well as Yoco. If stock ran out in between, the order carries an admin note to check before shipping. PayFast notices that say *failed/cancelled* can no longer cancel an already-paid order, and repeated PayFast "complete" notices no longer re-send emails.
+
 ---
 
 ## Order fulfillment

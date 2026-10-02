@@ -1404,8 +1404,10 @@ async function buildWeeklyReport(now = new Date()) {
   if (errors.length >= 10) flag('medium', `${errors.length} server errors logged`, topErrors.map(e => `${e.message} (${e.count}×)`).join('; '));
   if (dbDrops.length) flag('medium', `Database connection dropped ${plural(dbDrops.length, 'time')}`, 'The store showed its maintenance page while it was down.');
   if (emailFailures.length) flag('medium', `${plural(emailFailures.length, 'email')} failed to send`, emailFailures.slice(0, 3).map(l => l.message).join('; '));
-  const cancelled = statusCounts.cancelled || 0;
-  if (orders.length >= 5 && cancelled / orders.length >= 0.4) flag('medium', `High cancellation rate: ${cancelled} of ${orders.length} orders cancelled`, 'Could be abandoned checkouts, or card testing.');
+  const abandonedCount = orders.filter(o => o.cancelReason === 'abandoned').length;
+  const cancelled = (statusCounts.cancelled || 0) - abandonedCount; // checkouts that were simply never paid aren't cancellations
+  if (orders.length >= 5 && cancelled / orders.length >= 0.4) flag('medium', `High cancellation rate: ${cancelled} of ${orders.length} orders cancelled`, 'Customers backing out, failed payments, or card testing.');
+  if (orders.length >= 10 && abandonedCount / orders.length >= 0.6) flag('info', `${abandonedCount} of ${orders.length} checkouts were never paid`, 'Many customers reach the payment page and leave. Worth checking the payment pages work on your phone.');
   const staleUnpaid = orders.filter(o => o.status === 'pending_payment' && now - new Date(o.createdAt) > DAY_MS).length;
   if (staleUnpaid >= 5) flag('info', `${plural(staleUnpaid, 'checkout')} left unpaid for over a day`, 'Their stock is reserved until the customer cancels or the payment provider confirms.');
   // Median, not mean: one huge order would otherwise drag the average up and hide itself.
@@ -2217,7 +2219,7 @@ app.post('/api/checkout', async (req, res) => {
         notifyAdminOfError(err, req, 'Yoco rejected the API key, so customers cannot pay by card. Check YOCO_SECRET_KEY_* and YOCO_SANDBOX in your environment.').catch(() => {});
       }
       // Nothing was charged — undo the reservation so the cart can simply be retried or paid another way.
-      await releaseOrder(orderId).catch(e => console.error('releaseOrder failed:', e.message));
+      await releaseOrder(orderId, 'payment_failed').catch(e => console.error('releaseOrder failed:', e.message));
       return res.status(502).json({
         error: 'Card payments are temporarily unavailable. Please try again in a moment' + (methods.length > 1 ? ' or choose another payment method.' : '.'),
         code: 'payment_unavailable', methods,
@@ -2265,18 +2267,58 @@ const stockQuery = (item) => {
 
 /** Cancels an order that is still awaiting payment and gives its stock back. Atomic: only the call that
  *  actually flips pending_payment → cancelled restores stock, so repeated/racing calls can't double-restore. */
-async function releaseOrder(orderId) {
+async function releaseOrder(orderId, reason = 'customer', { olderThan = null } = {}) {
+  const filter = { id: orderId, status: 'pending_payment' };
+  if (olderThan) filter.createdAt = { $lt: olderThan }; // sweeper: re-checked atomically, so a fresh order is never swept
   const before = await Order.findOneAndUpdate(
-    { id: orderId, status: 'pending_payment' },
-    { $set: { status: 'cancelled' } },
+    filter,
+    { $set: { status: 'cancelled', cancelReason: reason } },
     { returnDocument: 'before' }
   ).lean();
   if (!before) return null;
   for (const item of Array.isArray(before.items) ? before.items : []) {
     await adjustVariantStock(stockQuery(item), item.size, item.color, item.quantity);
   }
-  emitOrderEvent('cancelled', { ...before, status: 'cancelled' });
+  // Abandoned orders are housekeeping, not news: the admin list refreshes, but no "cancelled" toast.
+  emitOrderEvent(reason === 'abandoned' ? 'abandoned' : 'cancelled', { ...before, status: 'cancelled' });
   return before;
+}
+
+// ─── Abandoned payments ──────────────────────────────────────────────────────
+// A customer who closes the tab at the payment page never triggers a cancel or a webhook, which used to
+// leave their order "pending payment" with its stock reserved indefinitely. This sweep cancels any order
+// still unpaid after Settings → Payments → "release unpaid orders after" (default 60 min, 15 min–24 h).
+// It is safe to run often and from several instances: each order flips in one atomic update. If the
+// customer did pay after all (a slow bank / delayed webhook), the payment handlers re-reserve stock.
+const ABANDON_MIN = 15, ABANDON_MAX = 1440, ABANDON_DEFAULT = 60;
+let sweeping = false;
+async function sweepAbandonedOrders() {
+  if (sweeping || mongoose.connection.readyState !== 1) return 0;
+  sweeping = true;
+  try {
+    let minutes = ABANDON_DEFAULT;
+    try {
+      const p = (await Settings.findOne({ _id: 'main' }).select('payments').maxTimeMS(3000).lean())?.payments;
+      if (Number.isFinite(p?.abandonAfterMinutes)) minutes = Math.min(ABANDON_MAX, Math.max(ABANDON_MIN, Math.round(p.abandonAfterMinutes)));
+    } catch { /* default */ }
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+    const stale = await Order.find({ status: 'pending_payment', createdAt: { $lt: cutoff } }).select('id').limit(100).lean();
+    let released = 0;
+    for (const { id } of stale) {
+      try { if (await releaseOrder(id, 'abandoned', { olderThan: cutoff })) released++; }
+      catch (e) { console.error(`[Abandoned] could not release ${id}:`, e.message); }
+    }
+    if (released) {
+      console.log(`[Abandoned] Released ${released} unpaid order(s) older than ${minutes} min.`);
+      await dbLog({ id: `log-${Date.now()}-abandoned`, type: 'info', message: `Released ${released} abandoned checkout${released === 1 ? '' : 's'} (unpaid after ${minutes} min)`, context: 'PAYMENT', data: { released, minutes } });
+    }
+    return released;
+  } catch (e) {
+    console.error('[Abandoned] sweep failed:', e.message);
+    return 0;
+  } finally {
+    sweeping = false;
+  }
 }
 
 /** Re-reserves stock for an order that was cancelled (stock released) but then turned out to be paid.
@@ -2312,7 +2354,7 @@ async function cancelCheckoutHandler(req, res) {
   try {
     const exists = await Order.exists({ id: orderId });
     if (!exists) return res.status(404).json({ error: 'Order not found.' });
-    const released = await releaseOrder(orderId);
+    const released = await releaseOrder(orderId, req.body.reason === 'failed' ? 'payment_failed' : 'customer');
     if (released) console.log(`[Checkout] Order ${orderId} cancelled by customer. Stock restored.`);
     res.json({ ok: true });
   } catch (err) {
@@ -2547,11 +2589,29 @@ app.post('/api/payfast/itn', async (req, res) => {
       let updated = null;
       if (mongoose.connection.readyState === 1) {
         try {
-          updated = await Order.findOneAndUpdate(
+          const prev = await Order.findOneAndUpdate(
             { id: orderId },
             { $set: { status: 'paid', paymentMethod: 'payfast', payfastId: pf_payment_id || '' } },
-            { returnDocument: 'after', maxTimeMS: 2000 }
-          );
+            { returnDocument: 'before', maxTimeMS: 2000 }
+          ).lean();
+          if (prev) {
+            updated = { ...prev, status: 'paid', paymentMethod: 'payfast', payfastId: pf_payment_id || '' };
+            if (['paid', 'processing', 'shipped', 'delivered'].includes(prev.status)) {
+              // PayFast re-sends ITNs; the order is already paid and fulfilled-or-fulfilling — nothing more to do.
+              console.log(`ITN: duplicate COMPLETE for ${orderId} (already ${prev.status}) ignored`);
+              return;
+            }
+            if (prev.status === 'cancelled') {
+              // Paid after the checkout was cancelled or swept as abandoned: stock was released, so take it back.
+              const short = await reclaimStock(prev.items);
+              if (short.length) {
+                const note = `Paid after the checkout was cancelled; stock could not be re-reserved for: ${short.join(', ')}. Check availability before shipping.`;
+                await Order.updateOne({ id: orderId }, { $set: { adminNote: note } });
+                updated.adminNote = note;
+              }
+              await dbLog({ id: `log-${Date.now()}-pf-late`, type: 'warn', message: `PayFast payment arrived for cancelled order ${orderId}${short.length ? ' (some stock short)' : ''}`, context: 'PAYMENT', data: { orderId, short } });
+            }
+          }
         } catch (e) {
           console.error(`ITN: DB status update failed for ${orderId}:`, e.message);
         }
@@ -2591,8 +2651,8 @@ app.post('/api/payfast/itn', async (req, res) => {
       if (mongoose.connection.readyState === 1) {
         try {
           updated = await Order.findOneAndUpdate(
-            { id: orderId },
-            { $set: { status: 'cancelled' } },
+            { id: orderId, status: { $nin: ['paid', 'processing', 'shipped', 'delivered'] } }, // a stray FAILED/PENDING notice must never cancel a paid order
+            { $set: { status: 'cancelled', cancelReason: 'payment_failed' } },
             { returnDocument: 'before', maxTimeMS: 2000 }
           );
         } catch (e) {
@@ -2924,6 +2984,12 @@ app.listen(port, () => {
   console.log(`Admin          → http://localhost:${port}/admin  [${ADMIN_USER}]`);
   console.log(`MongoDB        → ${getIsConnected() ? 'connected' : 'OFFLINE (failsafe active)'}\n`);
 });
+
+// Release abandoned checkouts: first pass 90s after boot, then every 5 minutes (ABANDON_SWEEP_MS shortens
+// both — a test hook; the time limit itself is the admin setting).
+const SWEEP_MS = Number(process.env.ABANDON_SWEEP_MS) || 5 * 60 * 1000;
+setTimeout(sweepAbandonedOrders, Math.min(90 * 1000, SWEEP_MS)).unref();
+setInterval(sweepAbandonedOrders, SWEEP_MS).unref();
 
 // First check a minute after boot (gives the DB time to connect), then every 30 minutes.
 setTimeout(logBackupTick, 60 * 1000).unref();

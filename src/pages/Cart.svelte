@@ -101,7 +101,7 @@
           fetch('/api/checkout/cancel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: oid })
+            body: JSON.stringify({ orderId: oid, reason: cancelReason })
           }).catch(console.error);
         }
       } else {
