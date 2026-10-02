@@ -119,6 +119,12 @@ Most sections save via a full-data-blob endpoint (`GET`/`POST /api/data`); Order
 
 ---
 
+## Product page gallery
+
+Modelled on patta's product page: one list of photos, two layouts. Below 1024px it's a **[Splide](https://splidejs.com) swipe carousel** (bundled, not loaded from a CDN) whose slides are narrower than the screen, so the next photo peeks in; from 1024px Splide switches itself off and the same list is a static **two-column grid** you scroll past, with the buy panel sticky beside it. The zoom view is a second Splide. Every photo is cropped 4:5 with width/height set (no layout shift), the first is eager + high priority and the rest lazy, with a `sizes` that matches the layout. Tapping a photo opens a native `<dialog>` zoom (full-resolution 1920px images are only fetched then; swipe, arrow keys or buttons to move, Esc to close, focus returns to the photo). Colours show as thumbnails of their own first photo (optimised like every other image; a colour without photos falls back to a text button), and a size or colour that is sold out in every combination is struck out immediately. Photos fade in staggered on load (off for reduced-motion users), mobile shows an "n / total" counter, and alt text names the colour and position.
+
+---
+
 ## Payments
 
 Two providers sit side by side at checkout — **PayFast** and **Yoco** — and the admin controls them in **Settings → Payments**. A method reaches customers only when it is **switched on there *and* its credentials are set on the server**; the same check runs on the server for every checkout, so a hidden method can't be used by calling the API directly. If exactly one method is available it's preselected; if both are, customers choose. If none are, checkout says so instead of failing, and Settings warns you (use Maintenance mode if you actually want to pause the store). PayFast is on by default and Yoco is opt-in, so existing stores behave exactly as before.
