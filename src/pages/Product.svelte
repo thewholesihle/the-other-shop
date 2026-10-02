@@ -104,7 +104,8 @@
   <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
-    <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-6xl mx-auto">
+    <!-- Same width and side padding as the navbar, so the page lines up with the header instead of floating in a narrow column. -->
+    <div class="flex-1 pt-28 pb-20 px-5 md:px-10 max-w-screen-2xl mx-auto w-full">
       <!-- Back button & Breadcrumb -->
       <div class="mb-8 flex flex-col gap-6">
         <button onclick={() => window.history.length > 1 ? window.history.back() : window.__navigate('/shop')} class="flex items-center gap-2 text-[10px] tracking-[0.2em] uppercase font-bold text-muted-foreground hover:text-foreground transition-colors group w-fit">
@@ -121,7 +122,7 @@
         </nav>
       </div>
 
-      <div class="grid md:grid-cols-2 gap-10 lg:gap-16">
+      <div class="grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-8 lg:gap-14 xl:gap-20">
         <!-- Image gallery -->
         <div class="space-y-3">
           <div class="aspect-[4/5] bg-secondary overflow-hidden">
