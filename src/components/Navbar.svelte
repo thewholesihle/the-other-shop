@@ -15,6 +15,16 @@
 
   let mobileOpen = false;
 
+  // The bar's height depends on the logo-size setting, so publish the real value as --nav-h for pages that
+  // need to start below the fixed bar (the home page without a hero). The open mobile menu isn't counted.
+  function publishHeight(node) {
+    const set = () => document.documentElement.style.setProperty('--nav-h', `${node.offsetHeight + 1}px`); // +1 = border
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(node);
+    return { destroy: () => ro.disconnect() };
+  }
+
   function nav(e, href) {
     e.preventDefault();
     if (window.__navigate) window.__navigate(href);
@@ -26,6 +36,7 @@
   class="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/40"
 >
   <div
+    use:publishHeight
     class="flex items-center justify-between px-5 md:px-10 py-4 max-w-screen-2xl mx-auto"
   >
     <!-- Logo -->

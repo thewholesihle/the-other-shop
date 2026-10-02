@@ -59,8 +59,8 @@
         <AnnouncementBar text={data.site.announcement} />
         <ProductGrid products={data.products} currency={data.site.currency} />
       {:else}
-        <!-- No hero: clear the fixed navbar, then lead with the announcement bar and New Arrivals. -->
-        <div class="pt-[61px]">
+        <!-- No hero: clear the fixed navbar (its real height, which follows the logo-size setting), then lead with the announcement bar and New Arrivals. -->
+        <div class="pt-[var(--nav-h,61px)]">
           <AnnouncementBar text={data.site.announcement} />
         </div>
         <ProductGrid products={data.products} currency={data.site.currency} mode="arrivals" />
