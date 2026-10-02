@@ -17,6 +17,7 @@
   import Bell from 'lucide-svelte/icons/bell';
   import Download from 'lucide-svelte/icons/download';
   import Archive from 'lucide-svelte/icons/archive';
+  import FileText from 'lucide-svelte/icons/file-text';
   import Monitor from 'lucide-svelte/icons/monitor';
   import Smartphone from 'lucide-svelte/icons/smartphone';
   import ShieldCheck from 'lucide-svelte/icons/shield-check';
@@ -92,6 +93,22 @@
     desktopOn = result === 'granted';
     if (desktopOn) { toast.success('Desktop alerts on. You’ll be notified of new paid orders when this tab is in the background.'); beep(); }
     else toast.error(result === 'unsupported' ? 'This browser does not support desktop notifications.' : 'Desktop alerts were blocked — allow notifications for this site in your browser settings.');
+  }
+
+  let sendingWeekly = $state(false);
+  async function sendWeeklyNow() {
+    sendingWeekly = true;
+    try {
+      const res = await fetch('/api/admin/weekly-report/send', { method: 'POST', credentials: 'include' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Could not send the summary.');
+      toast.success(`Weekly summary sent to ${body.to.join(', ')}${body.attention ? ` — ${body.attention} item(s) flagged` : ' — nothing suspicious'}.`);
+      await loadDiagnostics();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      sendingWeekly = false;
+    }
   }
 
   async function backUpNow() {
@@ -215,6 +232,10 @@
 
   <Card title="Log backups" description="Snapshots of the system logs, kept separately so history survives clearing the live log.">
     {#snippet actions()}
+      <a href="/api/admin/weekly-report?format=html" target="_blank" rel="noopener" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent"><FileText size={14} /> Preview weekly summary</a>
+      <Button variant="outline" size="sm" disabled={sendingWeekly} onclick={sendWeeklyNow}>
+        {#if sendingWeekly}<LoaderCircle size={14} class="animate-spin" /> Sending…{:else}<Mail size={14} /> Email it now{/if}
+      </Button>
       <Button variant="outline" size="sm" disabled={backingUp} onclick={backUpNow}>
         {#if backingUp}<LoaderCircle size={14} class="animate-spin" /> Backing up…{:else}<Archive size={14} /> Back up now{/if}
       </Button>
@@ -222,7 +243,7 @@
     <div class="mt-4 border-t border-border">
       <p class="px-6 py-3 text-sm text-muted-foreground">
         Backed up automatically every day and kept for {backupInfo.retentionDays ?? 180} days.
-        {#if backupInfo.emailEnabled}A copy is also emailed to you weekly{backupInfo.lastEmailedAt ? ` (last sent ${fmtWhen(backupInfo.lastEmailedAt)})` : ''}.{:else}Weekly email copies are off (set up email to enable them).{/if}
+        {#if backupInfo.emailEnabled}Every week you also get an emailed summary of site activity, with anything suspicious highlighted and the new log entries attached{backupInfo.lastEmailedAt ? ` (last sent ${fmtWhen(backupInfo.lastEmailedAt)})` : ''}.{:else}The weekly summary email is off (set up email to enable it).{/if}
       </p>
       {#if backupInfo.backups.length === 0}
         <p class="border-t border-border px-6 py-8 text-center text-sm text-muted-foreground">No backups yet. The first one is created within a day, or press “Back up now”.</p>

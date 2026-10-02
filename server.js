@@ -1212,7 +1212,8 @@ async function sendNewDeviceAlert(req, info) {
 // ─── System log backups ──────────────────────────────────────────────────────
 // The live `logs` collection can be cleared from the admin, so history is snapshotted
 // separately: every day to the `logbackups` collection (gzip JSON, incremental, kept
-// 180 days), and every week a copy is emailed to the admin as an off-site backup.
+// 180 days), and every week a summary of the week's activity — suspicious items flagged — is
+// emailed to the admin with the new log entries attached as an off-site backup.
 const LOG_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const LOG_EMAIL_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 const LOG_BACKUP_RETENTION_DAYS = 180;
@@ -1237,31 +1238,241 @@ async function createLogBackup(reason = 'scheduled') {
   return backupSummary(doc);
 }
 
-/** Emails the log entries added since the last emailed copy (at most weekly unless forced). */
-async function emailLogBackup(force = false) {
+// ─── Weekly activity summary ─────────────────────────────────────────────────
+// A digest of the last 7 days — sales, sign-ins, payments, errors — with anything that
+// looks suspicious called out at the top. Built from the Orders and Logs collections.
+const DAY_MS = 86400000;
+const SAST = 'Africa/Johannesburg';
+
+async function buildWeeklyReport(now = new Date()) {
+  const to = now;
+  const from = new Date(now.getTime() - 7 * DAY_MS);
+  const prevFrom = new Date(from.getTime() - 7 * DAY_MS);
+
+  const [orders, prevOrders, logs, newSubscribers, soldOut, branding] = await Promise.all([
+    Order.find({ createdAt: { $gte: from, $lte: to } }).lean(),
+    Order.find({ createdAt: { $gte: prevFrom, $lt: from } }).select('total status').lean(),
+    Log.find({ timestamp: { $gte: from, $lte: to } }).sort({ timestamp: 1 }).lean(),
+    Subscriber.countDocuments({ date: { $gte: from.toISOString().slice(0, 10) } }),
+    Product.countDocuments({ stock: 0 }),
+    getEmailBranding(),
+  ]);
+  const site = branding.site || {};
+  const currency = site.currency || 'R';
+
+  // ── Sales ───────────────────────────────────────────────────────────────────
+  const REVENUE = ['paid', 'processing', 'shipped', 'delivered'];
+  const sumRevenue = (list) => list.filter(o => REVENUE.includes(o.status)).reduce((t, o) => t + (o.total || 0), 0);
+  const paid = orders.filter(o => REVENUE.includes(o.status));
+  const revenue = sumRevenue(orders);
+  const prevRevenue = sumRevenue(prevOrders);
+  const prevPaidCount = prevOrders.filter(o => REVENUE.includes(o.status)).length;
+  const avgOrder = paid.length ? revenue / paid.length : 0;
+  const pct = (cur, prev) => (prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null);
+
+  const statusCounts = {};
+  for (const o of orders) statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+
+  const byProduct = new Map();
+  for (const o of paid) {
+    for (const i of o.items || []) {
+      const row = byProduct.get(i.name) || { name: i.name, units: 0, revenue: 0 };
+      row.units += i.quantity || 0;
+      row.revenue += (i.price || 0) * (i.quantity || 0);
+      byProduct.set(i.name, row);
+    }
+  }
+  const topProducts = [...byProduct.values()].sort((x, y) => y.units - x.units).slice(0, 5);
+
+  // ── Security (sign-ins, log tampering) ─────────────────────────────────────
+  const auth = logs.filter(l => l.context === 'AUTH');
+  const ev = (name) => auth.filter(l => l.data?.event === name);
+  const signins = ev('signin');
+  const failed = ev('signin-failed');
+  const lockouts = ev('lockout');
+  const cleared = ev('logs-cleared');
+  const downloads = ev('log-backup-download');
+
+  const devices = new Map();
+  for (const l of signins) {
+    const key = l.data?.device || 'Unknown device';
+    const d = devices.get(key) || { device: key, count: 0, ips: new Set(), isNew: false };
+    d.count += 1; if (l.data?.ip) d.ips.add(l.data.ip); if (l.data?.newDevice) d.isNew = true;
+    devices.set(key, d);
+  }
+  const deviceList = [...devices.values()].map(d => ({ ...d, ips: [...d.ips] }));
+  const signinIps = new Set(signins.map(l => l.data?.ip).filter(Boolean));
+  const failedIps = new Map();
+  for (const l of failed) failedIps.set(l.data?.ip || '?', (failedIps.get(l.data?.ip || '?') || 0) + 1);
+  const hourOf = (d) => Number(new Date(d).toLocaleString('en-GB', { timeZone: SAST, hour: 'numeric', hour12: false })) % 24;
+  const lateNight = signins.filter(l => hourOf(l.timestamp) < 5);
+
+  // ── Payments (PayFast webhook) ─────────────────────────────────────────────
+  const itn = logs.filter(l => l.context === 'PAYFAST_ITN');
+  const itnBadSig = itn.filter(l => /invalid signature/i.test(l.message));
+  const itnBadAmount = itn.filter(l => /amount mismatch/i.test(l.message));
+  const itnBadIp = itn.filter(l => /untrusted IP/i.test(l.message));
+
+  // ── System health ──────────────────────────────────────────────────────────
+  const errors = logs.filter(l => l.type === 'error');
+  const errorGroups = new Map();
+  for (const l of errors) errorGroups.set(l.message, (errorGroups.get(l.message) || 0) + 1);
+  const topErrors = [...errorGroups.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([message, count]) => ({ message, count }));
+  const emailFailures = logs.filter(l => l.context === 'EMAIL' && l.type === 'error');
+  const dbDrops = logs.filter(l => /DATABASE_CONNECTION_LOST/.test(l.message));
+
+  // ── Flags: the "anything suspicious?" list ─────────────────────────────────
+  const flags = [];
+  const flag = (severity, title, detail) => flags.push({ severity, title, detail });
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+  for (const [name, list, what] of [['invalid-signature', itnBadSig, 'with an invalid signature'], ['amount-mismatch', itnBadAmount, 'whose amount didn\u2019t match the order'], ['untrusted-ip', itnBadIp, 'from an IP address PayFast doesn\u2019t use']]) {
+    if (list.length) flag('high', `${plural(list.length, 'payment notification')} ${what}`, 'Someone may be trying to fake or alter a payment confirmation. Check these orders against your PayFast dashboard before shipping anything.');
+  }
+  if (lockouts.length) flag('high', `Sign-in lockout triggered ${plural(lockouts.length, 'time')}`, `Someone hit the failed-attempt limit from: ${[...new Set(lockouts.map(l => `${l.data?.ip} (${l.data?.device})`))].join('; ')}. If that wasn\u2019t you, change your admin password and turn on two-factor sign-in.`);
+  if (failed.length >= 5) {
+    const top = [...failedIps.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([ip, n]) => `${ip} (${n}×)`).join(', ');
+    flag(failed.length >= 20 ? 'high' : 'medium', `${plural(failed.length, 'failed admin sign-in')}`, `Top sources: ${top}.`);
+  }
+  const newDevs = deviceList.filter(d => d.isNew);
+  if (newDevs.length) flag('medium', `Sign-in from ${plural(newDevs.length, 'new device')}`, newDevs.map(d => `${d.device} — ${d.ips.join(', ')}`).join('; ') + '. Fine if that was you.');
+  if (signinIps.size >= 3) flag('medium', `Admin signed in from ${signinIps.size} different IP addresses`, [...signinIps].join(', '));
+  if (lateNight.length) flag('info', `${plural(lateNight.length, 'sign-in')} between midnight and 5am (SA time)`, [...new Set(lateNight.map(l => `${l.data?.device} · ${l.data?.ip}`))].join('; '));
+  if (cleared.length) flag('medium', `System logs were cleared ${plural(cleared.length, 'time')}`, 'A backup is saved first each time, but clearing logs is also what someone covering their tracks would do.');
+  if (downloads.length) flag('info', `${plural(downloads.length, 'log backup')} downloaded`, 'Backups contain IP addresses and device details.');
+  if (errors.length >= 10) flag('medium', `${errors.length} server errors logged`, topErrors.map(e => `${e.message} (${e.count}×)`).join('; '));
+  if (dbDrops.length) flag('medium', `Database connection dropped ${plural(dbDrops.length, 'time')}`, 'The store showed its maintenance page while it was down.');
+  if (emailFailures.length) flag('medium', `${plural(emailFailures.length, 'email')} failed to send`, emailFailures.slice(0, 3).map(l => l.message).join('; '));
+  const cancelled = statusCounts.cancelled || 0;
+  if (orders.length >= 5 && cancelled / orders.length >= 0.4) flag('medium', `High cancellation rate: ${cancelled} of ${orders.length} orders cancelled`, 'Could be abandoned PayFast payments, or card testing.');
+  const staleUnpaid = orders.filter(o => o.status === 'pending_payment' && now - new Date(o.createdAt) > DAY_MS).length;
+  if (staleUnpaid >= 5) flag('info', `${plural(staleUnpaid, 'checkout')} left unpaid for over a day`, 'Their stock is reserved until the PayFast cancel or ITN arrives.');
+  // Median, not mean: one huge order would otherwise drag the average up and hide itself.
+  const sortedTotals = paid.map(o => o.total || 0).sort((x, y) => x - y);
+  const median = sortedTotals.length ? sortedTotals[Math.floor(sortedTotals.length / 2)] : 0;
+  const big = paid.filter(o => o.total >= Math.max(5000, median * 4));
+  if (big.length) flag('info', `${plural(big.length, 'unusually large order')}`, big.map(o => `${o.id} (${currency}${o.total.toFixed(2)}, ${o.customer || 'unknown'})`).join('; '));
+  const byEmail = new Map();
+  for (const o of orders) { const k = (o.email || '').toLowerCase(); if (k) byEmail.set(k, (byEmail.get(k) || 0) + 1); }
+  const repeaters = [...byEmail.entries()].filter(([, n]) => n >= 4);
+  if (repeaters.length) flag('info', `${plural(repeaters.length, 'customer')} placed 4+ orders this week`, repeaters.map(([e, n]) => `${e} (${n})`).join(', ') + ' — often a loyal customer, occasionally card testing.');
+  if (soldOut > 0) flag('info', `${plural(soldOut, 'product')} sold out`, 'Restock or hide them so customers aren\u2019t disappointed.');
+
+  const rank = { high: 0, medium: 1, info: 2 };
+  flags.sort((x, y) => rank[x.severity] - rank[y.severity]);
+
+  return {
+    from, to, siteName: site.name || 'Others.', currency, site, contactAddress: branding.contactAddress,
+    sales: { orders: orders.length, paidOrders: paid.length, revenue, avgOrder, prevRevenue, prevPaidOrders: prevPaidCount, revenueDelta: pct(revenue, prevRevenue), ordersDelta: pct(paid.length, prevPaidCount), statusCounts, topProducts, newSubscribers },
+    security: { signins: signins.length, failed: failed.length, lockouts: lockouts.length, devices: deviceList, logsCleared: cleared.length },
+    payments: { badSignature: itnBadSig.length, badAmount: itnBadAmount.length, untrustedIp: itnBadIp.length },
+    health: { errors: errors.length, topErrors, emailFailures: emailFailures.length, dbDrops: dbDrops.length },
+    flags, totalLogs: logs.length,
+  };
+}
+
+function renderWeeklyReportHtml(r, baseUrl = '') {
+  const e = escapeHtmlAttr;
+  const money = (n) => `${r.currency}${Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
+  const day = (d) => new Date(d).toLocaleDateString('en-ZA', { timeZone: SAST, day: 'numeric', month: 'short' });
+  const delta = (v) => (v === null ? '<span style="color:#888;">no data last week</span>' : `<span style="color:${v >= 0 ? '#166534' : '#b91c1c'};">${v >= 0 ? '\u2191' : '\u2193'} ${Math.abs(v)}% vs last week</span>`);
+  const SEV = {
+    high: { bg: '#fef2f2', bd: '#fecaca', fg: '#991b1b', label: 'REVIEW' },
+    medium: { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e', label: 'CHECK' },
+    info: { bg: '#f4f4f5', bd: '#e4e4e7', fg: '#3f3f46', label: 'NOTE' },
+  };
+  const h2 = (t) => `<p style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:#888; margin:32px 0 12px;">${t}</p>`;
+
+  const worst = r.flags[0]?.severity;
+  const banner = !r.flags.length
+    ? { ...{ bg: '#f0fdf4', bd: '#bbf7d0', fg: '#166534' }, title: 'Nothing suspicious this week', sub: 'No unusual sign-ins, payment anomalies or error spikes were found.' }
+    : worst === 'high'
+      ? { bg: '#fef2f2', bd: '#fecaca', fg: '#991b1b', title: `${r.flags.filter(f => f.severity !== 'info').length} item${r.flags.filter(f => f.severity !== 'info').length === 1 ? '' : 's'} need your attention`, sub: 'See the list below, starting with the most serious.' }
+      : worst === 'medium'
+        ? { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e', title: `${r.flags.filter(f => f.severity !== 'info').length} thing${r.flags.filter(f => f.severity !== 'info').length === 1 ? '' : 's'} worth a look`, sub: 'Probably fine, but worth confirming it was you.' }
+        : { bg: '#f4f4f5', bd: '#e4e4e7', fg: '#3f3f46', title: 'Nothing suspicious — a few notes', sub: 'Just housekeeping items below.' };
+
+  const stat = (label, value, note) => `<td width="50%" valign="top" style="padding:0 6px 12px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;"><tr><td style="padding:14px 16px;"><p style="margin:0; font-size:11px; color:#888;">${label}</p><p style="margin:4px 0 2px; font-size:22px; font-weight:800; color:#111;">${value}</p><p style="margin:0; font-size:12px;">${note}</p></td></tr></table></td>`;
+
+  const flagsHtml = r.flags.map(f => {
+    const c = SEV[f.severity];
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px; background:${c.bg}; border:1px solid ${c.bd};"><tr><td width="64" valign="top" style="padding:12px 0 12px 14px;"><span style="font-size:10px; font-weight:700; letter-spacing:0.08em; color:${c.fg};">${c.label}</span></td><td style="padding:12px 14px 12px 6px;"><p style="margin:0; font-size:14px; font-weight:700; color:#111;">${e(f.title)}</p><p style="margin:4px 0 0; font-size:13px; color:#555; line-height:1.5;">${e(f.detail)}</p></td></tr></table>`;
+  }).join('');
+
+  const row = (cells, head = false) => `<tr>${cells.map((c, i) => `<td align="${i === 0 ? 'left' : 'right'}" style="padding:8px 0; font-size:${head ? 11 : 13}px; ${head ? 'color:#888;' : 'color:#111;'} border-bottom:1px solid #f0f0f0;">${c}</td>`).join('')}</tr>`;
+
+  const sc = r.sales.statusCounts;
+  const statusLine = ['paid', 'processing', 'shipped', 'delivered', 'pending_payment', 'cancelled'].filter(k => sc[k]).map(k => `${k.replace('_', ' ')}: <strong>${sc[k]}</strong>`).join(' &nbsp;·&nbsp; ') || 'No orders this week.';
+
+  const bodyHtml = `
+    <h1 style="font-size:24px; font-weight:800; margin:0 0 4px;">Your weekly summary</h1>
+    <p style="font-size:14px; color:#666; margin:0 0 24px;">${day(r.from)} \u2013 ${day(r.to)} &middot; ${e(r.siteName)}</p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${banner.bg}; border:1px solid ${banner.bd}; margin-bottom:8px;"><tr><td style="padding:16px 18px;"><p style="margin:0; font-size:16px; font-weight:800; color:${banner.fg};">${banner.title}</p><p style="margin:4px 0 0; font-size:13px; color:${banner.fg};">${banner.sub}</p></td></tr></table>
+
+    ${r.flags.length ? h2('Flagged this week') + flagsHtml : ''}
+
+    ${h2('Sales')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      ${stat('Revenue', money(r.sales.revenue), delta(r.sales.revenueDelta))}
+      ${stat('Paid orders', String(r.sales.paidOrders), delta(r.sales.ordersDelta))}
+    </tr><tr>
+      ${stat('Average order', money(r.sales.avgOrder), '<span style="color:#888;">paid orders only</span>')}
+      ${stat('New subscribers', String(r.sales.newSubscribers), '<span style="color:#888;">newsletter</span>')}
+    </tr></table>
+    <p style="font-size:13px; color:#555; margin:4px 0 0; line-height:1.7;">Orders placed: <strong>${r.sales.orders}</strong> &nbsp;&middot;&nbsp; ${statusLine}</p>
+
+    ${r.sales.topProducts.length ? h2('Top products') + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${row(['Product', 'Units', 'Revenue'], true)}${r.sales.topProducts.map(p => row([e(p.name), p.units, money(p.revenue)])).join('')}</table>` : ''}
+
+    ${h2('Sign-ins & security')}
+    <p style="font-size:13px; color:#555; margin:0 0 10px; line-height:1.7;">Successful sign-ins: <strong>${r.security.signins}</strong> &nbsp;&middot;&nbsp; Failed: <strong style="color:${r.security.failed ? '#b91c1c' : '#111'};">${r.security.failed}</strong> &nbsp;&middot;&nbsp; Lockouts: <strong style="color:${r.security.lockouts ? '#b91c1c' : '#111'};">${r.security.lockouts}</strong> &nbsp;&middot;&nbsp; Logs cleared: <strong>${r.security.logsCleared}</strong></p>
+    ${r.security.devices.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${row(['Device', 'Sign-ins', 'IP'], true)}${r.security.devices.map(d => row([e(d.device) + (d.isNew ? ' <span style="font-size:10px; font-weight:700; color:#92400e;">NEW</span>' : ''), d.count, e(d.ips.join(', '))])).join('')}</table>` : '<p style="font-size:13px; color:#888; margin:0;">No admin sign-ins this week.</p>'}
+
+    ${h2('Payments & system health')}
+    <p style="font-size:13px; color:#555; margin:0; line-height:1.8;">Suspicious payment notifications: <strong style="color:${r.payments.badSignature + r.payments.badAmount + r.payments.untrustedIp ? '#b91c1c' : '#111'};">${r.payments.badSignature + r.payments.badAmount + r.payments.untrustedIp}</strong><br>Server errors: <strong>${r.health.errors}</strong> &nbsp;&middot;&nbsp; Failed emails: <strong>${r.health.emailFailures}</strong> &nbsp;&middot;&nbsp; Database drops: <strong>${r.health.dbDrops}</strong></p>
+    ${r.health.topErrors.length ? `<p style="font-size:12px; color:#888; margin:8px 0 0; line-height:1.6;">Most frequent: ${r.health.topErrors.map(x => `${e(x.message)} (${x.count}\u00d7)`).join('; ')}</p>` : ''}
+
+    <p style="font-size:12px; color:#888; margin:32px 0 0; line-height:1.6;">The full system log for the period (${r.totalLogs} entries) is attached as a compressed backup (.json.gz). It includes sign-in IP addresses and device details, so keep it somewhere safe.${baseUrl ? ` <a href="${baseUrl}/admin/status" style="color:#111;">Open Site status</a>.` : ''}</p>`;
+
+  return emailLayout({
+    siteName: r.siteName,
+    logoUrl: r.site?.emailLogo || r.site?.logo,
+    bodyHtml,
+    socials: r.site?.socials,
+    contactAddress: r.contactAddress,
+    contactUrl: baseUrl ? `${baseUrl}/contact` : '',
+    preheader: r.flags.filter(f => f.severity !== 'info').length ? `${r.flags.filter(f => f.severity !== 'info').length} item(s) flagged \u00b7 ${money(r.sales.revenue)} revenue` : `All quiet \u00b7 ${money(r.sales.revenue)} revenue, ${r.sales.paidOrders} paid orders`,
+  });
+}
+
+/** Emails the weekly summary (with the new log entries attached as a backup) — at most weekly unless forced. */
+async function emailLogBackup(force = false, baseUrl = '') {
   if (!process.env.RESEND_API_KEY || process.env.LOG_BACKUP_EMAIL === 'false' || !getIsConnected()) return null;
   const lastMail = await LogBackup.findOne({ kind: 'email' }).sort({ createdAt: -1 }).lean();
   if (!force && lastMail && Date.now() - new Date(lastMail.createdAt).getTime() < LOG_EMAIL_INTERVAL_MS) return null;
-  const logs = await Log.find(lastMail?.to ? { timestamp: { $gt: lastMail.to } } : {}).sort({ timestamp: 1 }).lean();
-  if (!logs.length) return null;
   const recipients = await getAdminRecipients();
   if (!recipients.length) return null;
 
-  const gz = gzipLogs(logs);
+  const report = await buildWeeklyReport();
+  const logs = await Log.find(lastMail?.to ? { timestamp: { $gt: lastMail.to } } : {}).sort({ timestamp: 1 }).lean();
+  const html = renderWeeklyReportHtml(report, baseUrl || process.env.PUBLIC_URL || '');
   const day = new Date().toISOString().slice(0, 10);
-  const html = emailLayout({
-    siteName: 'Others.',
-    bodyHtml: `<h1 style="font-size:22px;margin:0 0 12px;">System log backup</h1>
-      <p style="font-size:14px;color:#444;line-height:1.6;margin:0;">Attached is a compressed copy (.json.gz) of ${logs.length} system log entries from ${logs[0].timestamp.toISOString().slice(0, 10)} to ${logs[logs.length - 1].timestamp.toISOString().slice(0, 10)}. Keep it somewhere safe — it includes sign-in IP addresses and device details.</p>`,
-    preheader: `${logs.length} log entries attached`,
+  const attention = report.flags.filter(f => f.severity !== 'info').length;
+  const email = {
+    from: `${report.siteName} System <${EMAIL_FROM}>`, to: recipients,
+    subject: `${attention ? `\u26a0 ${attention} to review \u2014 ` : ''}Weekly summary, ${day}`,
+    html, text: htmlToText(html),
+  };
+  if (logs.length) {
+    const gz = gzipLogs(logs);
+    email.attachments = [{ filename: `others-logs-${day}.json.gz`, content: gz.toString('base64') }];
+  }
+  await sendEmail(email);
+  await LogBackup.create({
+    id: `lb-mail-${Date.now()}`, kind: 'email', reason: force ? 'manual' : 'scheduled',
+    from: logs[0]?.timestamp || null, to: logs.length ? logs[logs.length - 1].timestamp : (lastMail?.to || null), count: logs.length, bytes: 0,
   });
-  await sendEmail({
-    from: `Others. System <${EMAIL_FROM}>`, to: recipients,
-    subject: `Others. log backup — ${day} (${logs.length} entries)`, html, text: htmlToText(html),
-    attachments: [{ filename: `others-logs-${day}.json.gz`, content: gz.toString('base64') }],
-  });
-  await LogBackup.create({ id: `lb-mail-${Date.now()}`, kind: 'email', reason: force ? 'manual' : 'scheduled', from: logs[0].timestamp, to: logs[logs.length - 1].timestamp, count: logs.length, bytes: gz.length });
-  return { count: logs.length, to: recipients };
+  return { to: recipients, flags: report.flags.length, attention, entries: logs.length };
 }
 
 async function logBackupTick() {
@@ -1319,6 +1530,34 @@ app.get('/api/admin/log-backups/:id/download', requireAdmin, async (req, res) =>
     res.send(Buffer.from(doc.data.buffer ?? doc.data));
   } catch {
     res.status(500).json({ error: 'Could not download the backup.' });
+  }
+});
+
+app.get('/api/admin/weekly-report', requireAdmin, async (req, res) => {
+  try {
+    if (!getIsConnected()) return res.status(503).json({ error: 'The database is offline.' });
+    const report = await buildWeeklyReport();
+    if (req.query.format === 'html') {
+      res.type('html').send(renderWeeklyReportHtml(report, `${req.protocol}://${req.get('host')}`));
+    } else {
+      const { site, contactAddress, ...rest } = report;
+      res.json(rest);
+    }
+  } catch (e) {
+    console.error('weekly-report', e);
+    res.status(500).json({ error: 'Could not build the weekly summary.' });
+  }
+});
+
+app.post('/api/admin/weekly-report/send', requireAdmin, async (req, res) => {
+  try {
+    if (!process.env.RESEND_API_KEY) return res.status(400).json({ error: 'RESEND_API_KEY is not set on the server, so no email can be sent.' });
+    const sent = await emailLogBackup(true, `${req.protocol}://${req.get('host')}`);
+    if (!sent) return res.status(400).json({ error: 'Nothing was sent (email backups are disabled or there is no notification address).' });
+    logAuth('info', 'Weekly summary emailed on demand', req, 'weekly-report-sent');
+    res.json({ ok: true, ...sent });
+  } catch (e) {
+    res.status(502).json({ error: e.message || 'Could not send the weekly summary.' });
   }
 });
 
