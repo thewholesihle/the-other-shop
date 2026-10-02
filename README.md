@@ -119,6 +119,12 @@ Most sections save via a full-data-blob endpoint (`GET`/`POST /api/data`); Order
 
 ---
 
+## Logos that adapt to the theme
+
+The logo in the storefront header and footer, the admin sidebar and the sign-in page is checked against the surface it sits on (the store's palette, or the admin's light/dark theme). A logo that already contrasts is left exactly as uploaded; one that would disappear (a black logo on a dark surface, a white one on a light surface) is drawn as a flat white or black silhouette instead, and it follows the admin theme toggle live. Logos with a solid background (JPG, opaque PNG) are never altered. Upload a transparent PNG or SVG for best results. See `src/lib/logoTone.js`. (The maintenance page and emails do their own thing: the page picks black or white for its backdrop, and emails stay light.)
+
+---
+
 ## Emails
 
 Every email is a [React Email](https://react.email) template in `emails/`, built from shadcn/ui-style components (`emails/ui.jsx`: the same zinc palette, 8px radius and type scale as the admin, translated to inline-styled tables because email clients don't do CSS variables or flexbox). Seven templates: new paid order (to you), order updates (to the customer: confirmed, preparing, shipped, delivered, cancelled), new-device sign-in alert, weekly summary, test email, newsletter, and the site-error alert. They share one shell (logo, card, footer with reason-for-receiving, links and postal address), are a single 600px column that goes full-width on phones, and keep light colours on purpose (a store logo made for a light page vanishes if a client auto-inverts it).
