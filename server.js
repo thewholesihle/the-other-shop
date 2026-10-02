@@ -14,7 +14,9 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const { connect, getIsConnected } = require('./src/db/connection');
-const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
+const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log, LogBackup } = require('./src/db/models');
+const zlib = require('zlib');
+const { parseUserAgent } = require('./src/device');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const auth = require('./src/auth');
@@ -58,9 +60,9 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
-    logAuth('warn', `Admin sign-in rate limit reached for ${req.ip}`, req);
+    logAuth('warn', 'Admin sign-in rate limit reached', req, 'lockout');
     notifyAdminOfError(new Error('Repeated failed admin sign-ins'), req,
-      `Someone from ${req.ip} used up the admin sign-in attempt limit. If that wasn't you, consider changing your admin password.`).catch(() => {});
+      `Someone using ${deviceInfo(req).device} (IP ${req.ip}) used up the admin sign-in attempt limit. If that wasn't you, consider changing your admin password.`).catch(() => {});
     res.status(429).json({ error: 'Too many sign-in attempts. Try again in 15 minutes.' });
   },
 });
@@ -184,14 +186,29 @@ const hasValidAdminAuth = (req) => Boolean(auth.getSession(req));
 /** Guards every admin-only API route: live session + (for writes) the CSRF token. */
 const requireAdmin = auth.requireAdmin;
 
-/** Persists an auth event to the admin-visible system log (best effort). */
-function logAuth(type, message, req) {
-  console.log(`[Auth] ${message}`);
+/** What we can tell about the device behind a request: IP plus a readable browser / OS / type. */
+function deviceInfo(req) {
+  const ua = String(req?.headers?.['user-agent'] || '');
+  const d = parseUserAgent(ua);
+  return {
+    ip: req?.ip,
+    device: d.label, browser: d.browser, os: d.os, deviceType: d.type,
+    language: String(req?.headers?.['accept-language'] || '').split(',')[0].slice(0, 20),
+    ua: ua.slice(0, 300),
+  };
+}
+
+/** Persists an auth event to the admin-visible system log (best effort), tagged with the
+ *  device it came from. `event` is a machine-readable kind (signin, signin-failed, ...). */
+function logAuth(type, message, req, event = '', extra = {}) {
+  const info = deviceInfo(req);
+  const full = `${message} — ${info.device} · ${info.ip}`;
+  console.log(`[Auth] ${full}`);
   if (mongoose.connection.readyState !== 1) return;
   Log.create({
     id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    type, message, context: 'AUTH',
-    data: { ip: req?.ip, ua: String(req?.headers?.['user-agent'] || '').slice(0, 160) },
+    type, message, context: 'AUTH', // device + IP live in `data` and are shown beside the entry
+    data: { event, ...info, ...extra },
   }).catch(() => {});
 }
 
@@ -246,7 +263,7 @@ const PF_HOST = PF.sandbox
 const RESEND_API_URL = process.env.RESEND_API_URL || 'https://api.resend.com/emails';
 const EMAIL_FROM = process.env.SMTP_FROM || 'onboarding@resend.dev';
 
-async function sendEmail({ from, to, subject, html, text, replyTo, headers }) {
+async function sendEmail({ from, to, subject, html, text, replyTo, headers, attachments }) {
   if (!process.env.RESEND_API_KEY) {
     throw new Error('RESEND_API_KEY is not set');
   }
@@ -259,6 +276,8 @@ async function sendEmail({ from, to, subject, html, text, replyTo, headers }) {
   if (replyTo) payload.reply_to = replyTo;
   // Used for List-Unsubscribe / List-Unsubscribe-Post on marketing sends (RFC 8058).
   if (headers) payload.headers = headers;
+  // [{ filename, content: <base64 string> }]
+  if (attachments?.length) payload.attachments = attachments;
   const res = await fetch(RESEND_API_URL, {
     method: 'POST',
     headers: {
@@ -1105,7 +1124,7 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
   const totpStep = auth.checkTotp(code);
 
   if (!(credsOk && totpStep)) {
-    logAuth('warn', `Failed admin sign-in from ${req.ip}`, req);
+    logAuth('warn', 'Failed admin sign-in', req, 'signin-failed');
     await sleep(350 + Math.floor(Math.random() * 300));
     return res.status(401).json({ error: auth.totpEnabled() ? 'Incorrect username, password or code.' : 'Incorrect username or password.' });
   }
@@ -1114,7 +1133,18 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
   auth.destroySession(req); // never reuse a pre-login session id
   const { id, session } = auth.createSession(req);
   auth.setSessionCookie(req, res, id);
-  logAuth('info', `Admin signed in from ${req.ip}`, req);
+  // Flag sign-ins from a browser/OS combination this admin has never used before, and tell them.
+  const info = deviceInfo(req);
+  let newDevice = false;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const known = await Log.countDocuments({ context: 'AUTH', 'data.event': 'signin', 'data.device': info.device }).maxTimeMS(1500);
+      const anyPrior = await Log.countDocuments({ context: 'AUTH', 'data.event': 'signin' }).maxTimeMS(1500);
+      newDevice = known === 0 && anyPrior > 0; // the very first sign-in isn't "new"
+    } catch { /* can't tell — don't alert */ }
+  }
+  logAuth('info', newDevice ? 'Admin signed in (new device)' : 'Admin signed in', req, 'signin', { newDevice });
+  if (newDevice) sendNewDeviceAlert(req, info).catch(() => {});
   res.json({ ok: true, csrf: session.csrf });
 });
 
@@ -1125,8 +1155,141 @@ app.get('/api/admin/session', requireAdmin, (req, res) => {
 app.post('/api/admin/logout', requireAdmin, (req, res) => {
   auth.destroySession(req);
   auth.clearSessionCookie(req, res);
-  logAuth('info', `Admin signed out (${req.ip})`, req);
+  logAuth('info', 'Admin signed out', req, 'signout');
   res.json({ ok: true });
+});
+
+async function sendNewDeviceAlert(req, info) {
+  if (!process.env.RESEND_API_KEY) return;
+  const recipients = await getAdminRecipients();
+  if (!recipients.length) return;
+  const when = new Date().toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' });
+  const html = emailLayout({
+    siteName: 'Others.',
+    bodyHtml: `<h1 style="font-size:22px;margin:0 0 12px;">New admin sign-in</h1>
+      <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 20px;">Your admin panel was just signed in to from a device we haven't seen before.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.7;margin:0 0 20px;">
+        <tr><td style="color:#888;padding-right:16px;">Device</td><td>${escapeHtmlAttr(info.device)}</td></tr>
+        <tr><td style="color:#888;padding-right:16px;">IP address</td><td>${escapeHtmlAttr(info.ip)}</td></tr>
+        <tr><td style="color:#888;padding-right:16px;">Time</td><td>${escapeHtmlAttr(when)}</td></tr>
+      </table>
+      <p style="font-size:14px;color:#444;line-height:1.6;margin:0;">If this was you, no action is needed. If not, change your admin password immediately.</p>`,
+    preheader: `New sign-in from ${info.device}`,
+  });
+  await sendEmail({ from: `Others. Security <${EMAIL_FROM}>`, to: recipients, subject: 'New admin sign-in from an unrecognised device', html, text: htmlToText(html) });
+}
+
+// ─── System log backups ──────────────────────────────────────────────────────
+// The live `logs` collection can be cleared from the admin, so history is snapshotted
+// separately: every day to the `logbackups` collection (gzip JSON, incremental, kept
+// 180 days), and every week a copy is emailed to the admin as an off-site backup.
+const LOG_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const LOG_EMAIL_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+const LOG_BACKUP_RETENTION_DAYS = 180;
+
+const gzipLogs = (logs, extra = {}) =>
+  zlib.gzipSync(Buffer.from(JSON.stringify({ exportedAt: new Date().toISOString(), count: logs.length, ...extra, logs }), 'utf8'));
+
+const backupSummary = (d) => ({ id: d.id, kind: d.kind, reason: d.reason, createdAt: d.createdAt, from: d.from, to: d.to, count: d.count, bytes: d.bytes });
+
+/** Snapshots every log entry newer than the previous snapshot. Returns null if there is nothing new. */
+async function createLogBackup(reason = 'scheduled') {
+  if (!getIsConnected()) throw new Error('The database is offline.');
+  const last = await LogBackup.findOne({ kind: 'snapshot' }).sort({ to: -1 }).select('to').lean();
+  const logs = await Log.find(last?.to ? { timestamp: { $gt: last.to } } : {}).sort({ timestamp: 1 }).lean();
+  if (!logs.length) return null;
+  const data = gzipLogs(logs);
+  const doc = await LogBackup.create({
+    id: `lb-${Date.now()}`, kind: 'snapshot', reason,
+    from: logs[0].timestamp, to: logs[logs.length - 1].timestamp, count: logs.length, bytes: data.length, data,
+  });
+  console.log(`[LogBackup] ${reason}: saved ${logs.length} entries (${data.length} bytes)`);
+  return backupSummary(doc);
+}
+
+/** Emails the log entries added since the last emailed copy (at most weekly unless forced). */
+async function emailLogBackup(force = false) {
+  if (!process.env.RESEND_API_KEY || process.env.LOG_BACKUP_EMAIL === 'false' || !getIsConnected()) return null;
+  const lastMail = await LogBackup.findOne({ kind: 'email' }).sort({ createdAt: -1 }).lean();
+  if (!force && lastMail && Date.now() - new Date(lastMail.createdAt).getTime() < LOG_EMAIL_INTERVAL_MS) return null;
+  const logs = await Log.find(lastMail?.to ? { timestamp: { $gt: lastMail.to } } : {}).sort({ timestamp: 1 }).lean();
+  if (!logs.length) return null;
+  const recipients = await getAdminRecipients();
+  if (!recipients.length) return null;
+
+  const gz = gzipLogs(logs);
+  const day = new Date().toISOString().slice(0, 10);
+  const html = emailLayout({
+    siteName: 'Others.',
+    bodyHtml: `<h1 style="font-size:22px;margin:0 0 12px;">System log backup</h1>
+      <p style="font-size:14px;color:#444;line-height:1.6;margin:0;">Attached is a compressed copy (.json.gz) of ${logs.length} system log entries from ${logs[0].timestamp.toISOString().slice(0, 10)} to ${logs[logs.length - 1].timestamp.toISOString().slice(0, 10)}. Keep it somewhere safe — it includes sign-in IP addresses and device details.</p>`,
+    preheader: `${logs.length} log entries attached`,
+  });
+  await sendEmail({
+    from: `Others. System <${EMAIL_FROM}>`, to: recipients,
+    subject: `Others. log backup — ${day} (${logs.length} entries)`, html, text: htmlToText(html),
+    attachments: [{ filename: `others-logs-${day}.json.gz`, content: gz.toString('base64') }],
+  });
+  await LogBackup.create({ id: `lb-mail-${Date.now()}`, kind: 'email', reason: force ? 'manual' : 'scheduled', from: logs[0].timestamp, to: logs[logs.length - 1].timestamp, count: logs.length, bytes: gz.length });
+  return { count: logs.length, to: recipients };
+}
+
+async function logBackupTick() {
+  if (!getIsConnected()) return;
+  try {
+    const last = await LogBackup.findOne({ kind: 'snapshot' }).sort({ createdAt: -1 }).select('createdAt').lean();
+    if (!last || Date.now() - new Date(last.createdAt).getTime() >= LOG_BACKUP_INTERVAL_MS) {
+      const made = await createLogBackup('scheduled');
+      if (made) dbLog({ id: `log-${Date.now()}-lbk`, type: 'info', message: `Log backup saved: ${made.count} entries`, context: 'BACKUP', data: { backupId: made.id } });
+    }
+    await emailLogBackup(false);
+    await LogBackup.deleteMany({ createdAt: { $lt: new Date(Date.now() - LOG_BACKUP_RETENTION_DAYS * 86400000) } });
+  } catch (e) {
+    console.error('[LogBackup] failed:', e.message);
+    dbLog({ id: `log-${Date.now()}-lbk-fail`, type: 'error', message: `Scheduled log backup FAILED: ${e.message}`, context: 'BACKUP', data: {} });
+  }
+}
+
+app.get('/api/admin/log-backups', requireAdmin, async (_req, res) => {
+  try {
+    if (!getIsConnected()) return res.json({ backups: [], offline: true });
+    const backups = await LogBackup.find({ kind: 'snapshot' }).sort({ createdAt: -1 }).limit(30).lean();
+    const lastMail = await LogBackup.findOne({ kind: 'email' }).sort({ createdAt: -1 }).select('createdAt').lean();
+    res.json({
+      backups: backups.map(backupSummary),
+      retentionDays: LOG_BACKUP_RETENTION_DAYS,
+      emailEnabled: Boolean(process.env.RESEND_API_KEY) && process.env.LOG_BACKUP_EMAIL !== 'false',
+      lastEmailedAt: lastMail?.createdAt || null,
+    });
+  } catch {
+    res.status(500).json({ error: 'Could not load log backups.' });
+  }
+});
+
+app.post('/api/admin/log-backups', requireAdmin, async (req, res) => {
+  try {
+    const made = await createLogBackup('manual');
+    if (made) logAuth('info', 'Manual log backup created', req, 'log-backup', { backupId: made.id });
+    res.json({ ok: true, backup: made, empty: !made });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Backup failed.' });
+  }
+});
+
+app.get('/api/admin/log-backups/:id/download', requireAdmin, async (req, res) => {
+  if (!/^lb-\d+$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid backup id.' });
+  try {
+    const doc = await LogBackup.findOne({ id: req.params.id, kind: 'snapshot' }).select('+data').lean();
+    if (!doc?.data) return res.status(404).json({ error: 'Backup not found.' });
+    logAuth('info', 'Log backup downloaded', req, 'log-backup-download', { backupId: doc.id });
+    res.set({
+      'Content-Type': 'application/gzip',
+      'Content-Disposition': `attachment; filename="others-logs-${new Date(doc.createdAt).toISOString().slice(0, 10)}-${doc.id}.json.gz"`,
+    });
+    res.send(Buffer.from(doc.data.buffer ?? doc.data));
+  } catch {
+    res.status(500).json({ error: 'Could not download the backup.' });
+  }
 });
 
 // ─── API: Admin realtime stream ──────────────────────────────────────────────
@@ -1238,8 +1401,12 @@ app.get('/api/admin/logs', requireAdmin, async (req, res) => {
 
 app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
   try {
+    // Never destroy history without a copy: snapshot what isn't backed up yet, then clear.
+    let backedUp = null;
+    try { backedUp = await createLogBackup('before-clear'); } catch (e) { console.warn('[LogBackup] pre-clear snapshot failed:', e.message); }
     await Log.deleteMany({});
-    res.json({ ok: true });
+    logAuth('warn', 'System logs cleared', req, 'logs-cleared', { backedUp: Boolean(backedUp) });
+    res.json({ ok: true, backedUp: Boolean(backedUp) });
   } catch (err) {
     res.status(500).json({ error: 'Failed to clear logs.' });
   }
@@ -2107,6 +2274,10 @@ app.listen(port, () => {
   console.log(`Admin          → http://localhost:${port}/admin  [${ADMIN_USER}]`);
   console.log(`MongoDB        → ${getIsConnected() ? 'connected' : 'OFFLINE (failsafe active)'}\n`);
 });
+
+// First check a minute after boot (gives the DB time to connect), then every 30 minutes.
+setTimeout(logBackupTick, 60 * 1000).unref();
+setInterval(logBackupTick, 30 * 60 * 1000).unref();
 
 // ─── Database Alerts ─────────────────────────────────────────────────────────
 mongoose.connection.on('disconnected', () => {

@@ -234,6 +234,22 @@ const LogSchema = new mongoose.Schema({
   data:      { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { strict: true, versionKey: false });
 
+// ── Log backup ───────────────────────────────────────────────────────────────
+// A gzip-compressed JSON snapshot of log entries, kept independently of the live `logs`
+// collection so clearing or losing the logs doesn't lose the history. `kind: 'email'`
+// rows carry no data — they only record how far the emailed (off-site) copy has reached.
+const LogBackupSchema = new mongoose.Schema({
+  id:        { type: String, required: true, unique: true },
+  kind:      { type: String, enum: ['snapshot', 'email'], default: 'snapshot' },
+  reason:    { type: String, default: 'scheduled' }, // scheduled | manual | before-clear
+  createdAt: { type: Date, default: Date.now },
+  from:      { type: Date, default: null },  // oldest log entry included
+  to:        { type: Date, default: null },  // newest log entry included
+  count:     { type: Number, default: 0 },
+  bytes:     { type: Number, default: 0 },   // compressed size
+  data:      { type: Buffer, select: false },
+}, { strict: true, versionKey: false });
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 module.exports = {
   Settings:   mongoose.model('Settings',   SettingsSchema,   'settings'),
@@ -245,4 +261,5 @@ module.exports = {
   Pages:      mongoose.model('Pages',      PagesSchema,      'pages'),
   Subscriber: mongoose.model('Subscriber', SubscriberSchema, 'subscribers'),
   Log:        mongoose.model('Log',        LogSchema,        'logs'),
+  LogBackup:  mongoose.model('LogBackup',  LogBackupSchema,  'logbackups'),
 };

@@ -135,6 +135,12 @@ Shipping is handled manually. Once an order is paid, the admin Orders tab shows 
 - **Strict CSP** on admin pages (scripts only from this site; the PDF libraries are self-hosted in `public/vendor/`), no framing, `noindex`.
 - `/api/data` only returns orders, subscribers and admin-only settings to a signed-in admin.
 
+## Logs & backups
+
+- **Sign-in audit trail:** every sign-in, failed attempt, lockout, sign-out and log download is recorded in **Site status → System logs** with the device (browser, OS, desktop/mobile) and IP. A sign-in from a browser/OS combination you haven't used before is flagged **New device** and emailed to you.
+- **Automatic backups:** system logs are snapshotted daily (incremental, gzip JSON) into a separate `logbackups` collection and kept 180 days. A copy of new entries is also emailed weekly as an attachment (off-site) — disable with `LOG_BACKUP_EMAIL=false`.
+- **Manual:** **Back up now** and per-backup **Download** on the Site status page. **Clear** always saves a backup first.
+
 ## Realtime & notifications
 
 - The admin keeps a Server-Sent Events stream (`/api/admin/events`) open: new checkouts, payments and status changes appear instantly, with a toast, a chime and (if enabled) a desktop notification. A 30-second poll is the fallback if a proxy blocks the stream.

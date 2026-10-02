@@ -15,24 +15,32 @@
   import Info from 'lucide-svelte/icons/info';
   import CircleCheck from 'lucide-svelte/icons/circle-check';
   import Bell from 'lucide-svelte/icons/bell';
+  import Download from 'lucide-svelte/icons/download';
+  import Archive from 'lucide-svelte/icons/archive';
+  import Monitor from 'lucide-svelte/icons/monitor';
+  import Smartphone from 'lucide-svelte/icons/smartphone';
   import ShieldCheck from 'lucide-svelte/icons/shield-check';
   import LoaderCircle from 'lucide-svelte/icons/loader-circle';
   import { desktopAlertsSupported, desktopAlertsEnabled, enableDesktopAlerts, beep } from '../../lib/alerts.js';
 
   let status = $state(null);
   let logs = $state([]);
+  let backupInfo = $state({ backups: [] });
+  let backingUp = $state(false);
   let loading = $state(true);
   let refreshing = $state(false);
 
   async function loadDiagnostics() {
     refreshing = true;
     try {
-      const [statusRes, logsRes] = await Promise.all([
+      const [statusRes, logsRes, backupsRes] = await Promise.all([
         fetch('/api/admin/status', { credentials: 'include' }),
-        fetch('/api/admin/logs', { credentials: 'include' })
+        fetch('/api/admin/logs', { credentials: 'include' }),
+        fetch('/api/admin/log-backups', { credentials: 'include' })
       ]);
       if (statusRes.ok) status = await statusRes.json();
       if (logsRes.ok) logs = await logsRes.json();
+      if (backupsRes.ok) backupInfo = await backupsRes.json();
     } catch (e) {
       console.error('Failed to load diagnostics', e);
       toast.error('Could not load diagnostics.');
@@ -44,7 +52,7 @@
 
   async function clearLogs() {
     const ok = await confirmDialog.ask({
-      title: 'Clear all system logs?', description: 'This removes the log history permanently.',
+      title: 'Clear all system logs?', description: 'Any entries not yet backed up are saved to a backup first, then the live log is emptied.',
       confirmLabel: 'Clear logs', destructive: true,
     });
     if (!ok) return;
@@ -52,7 +60,8 @@
       const res = await fetch('/api/admin/logs', { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error();
       logs = [];
-      toast.success('Logs cleared');
+      toast.success('Logs cleared — a backup was saved first');
+      loadDiagnostics();
     } catch {
       toast.error('Failed to clear logs');
     }
@@ -84,6 +93,26 @@
     if (desktopOn) { toast.success('Desktop alerts on. You’ll be notified of new paid orders when this tab is in the background.'); beep(); }
     else toast.error(result === 'unsupported' ? 'This browser does not support desktop notifications.' : 'Desktop alerts were blocked — allow notifications for this site in your browser settings.');
   }
+
+  async function backUpNow() {
+    backingUp = true;
+    try {
+      const res = await fetch('/api/admin/log-backups', { method: 'POST', credentials: 'include' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'Backup failed.');
+      if (body.empty) toast.info('Everything is already backed up — no new log entries.');
+      else toast.success(`Backed up ${body.backup.count} log entries.`);
+      await loadDiagnostics();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      backingUp = false;
+    }
+  }
+
+  const fmtBytes = (n) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
+  const fmtWhen = (d) => new Date(d).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  const REASON = { scheduled: 'Automatic', manual: 'Manual', 'before-clear': 'Before clearing' };
 
   onMount(loadDiagnostics);
 
@@ -184,6 +213,36 @@
     </div>
   {/if}
 
+  <Card title="Log backups" description="Snapshots of the system logs, kept separately so history survives clearing the live log.">
+    {#snippet actions()}
+      <Button variant="outline" size="sm" disabled={backingUp} onclick={backUpNow}>
+        {#if backingUp}<LoaderCircle size={14} class="animate-spin" /> Backing up…{:else}<Archive size={14} /> Back up now{/if}
+      </Button>
+    {/snippet}
+    <div class="mt-4 border-t border-border">
+      <p class="px-6 py-3 text-sm text-muted-foreground">
+        Backed up automatically every day and kept for {backupInfo.retentionDays ?? 180} days.
+        {#if backupInfo.emailEnabled}A copy is also emailed to you weekly{backupInfo.lastEmailedAt ? ` (last sent ${fmtWhen(backupInfo.lastEmailedAt)})` : ''}.{:else}Weekly email copies are off (set up email to enable them).{/if}
+      </p>
+      {#if backupInfo.backups.length === 0}
+        <p class="border-t border-border px-6 py-8 text-center text-sm text-muted-foreground">No backups yet. The first one is created within a day, or press “Back up now”.</p>
+      {:else}
+        <ul class="divide-y divide-border border-t border-border">
+          {#each backupInfo.backups as b (b.id)}
+            <li class="flex items-center gap-3 px-6 py-3 text-sm">
+              <div class="min-w-0 flex-1">
+                <p class="font-medium">{fmtWhen(b.createdAt)}</p>
+                <p class="text-xs text-muted-foreground">{b.count} {b.count === 1 ? 'entry' : 'entries'} · {fmtBytes(b.bytes)}</p>
+              </div>
+              <Badge variant={b.reason === 'before-clear' ? 'warning' : 'secondary'}>{REASON[b.reason] || b.reason}</Badge>
+              <a href="/api/admin/log-backups/{b.id}/download" download class="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent"><Download size={13} /> Download</a>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  </Card>
+
   <Card title="System logs" description="Most recent 100 events, newest first." class="overflow-hidden">
     {#snippet actions()}
       {#if logs.length > 0}<Button variant="outline" size="sm" class="text-destructive hover:text-destructive" onclick={clearLogs}><Trash2 size={14} /> Clear</Button>{/if}
@@ -207,6 +266,13 @@
                   <time class="tabular-nums">{new Date(log.timestamp).toLocaleString()}</time>
                 </div>
                 <p class="break-words text-sm font-medium">{log.message}</p>
+                {#if log.context === 'AUTH' && log.data?.device}
+                  <p class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    {#if log.data.deviceType === 'Mobile' || log.data.deviceType === 'Tablet'}<Smartphone size={13} />{:else}<Monitor size={13} />{/if}
+                    <span>{log.data.device}</span><span aria-hidden="true">·</span><span class="font-mono">{log.data.ip}</span>
+                    {#if log.data.newDevice}<Badge variant="warning">New device</Badge>{/if}
+                  </p>
+                {/if}
                 {#if log.data?.path}
                   <p class="mt-1.5 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{log.data.method} {log.data.path}</p>
                 {/if}
