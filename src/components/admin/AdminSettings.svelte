@@ -13,6 +13,9 @@
   import { buildTheme } from '../../lib/theme.js';
   import Check from 'lucide-svelte/icons/check';
   import Wand from 'lucide-svelte/icons/wand-sparkles';
+  import Copy from 'lucide-svelte/icons/copy';
+  import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
+  import { onMount } from 'svelte';
 
   let { site = {}, onUpdate = () => {}, lookbooks = [], articles = [] } = $props();
 
@@ -20,6 +23,11 @@
   function normalize(src) {
     const f = JSON.parse(JSON.stringify(src || {}));
     f.shipping ??= { freeMinimum: 500, standardRate: 99, country: 'South Africa' };
+    f.payments ??= {};
+    f.payments.payfast ??= {};
+    f.payments.payfast.enabled ??= true;  // existing stores keep PayFast on
+    f.payments.yoco ??= {};
+    f.payments.yoco.enabled ??= false;    // Yoco is opt-in
     f.hero ??= {};
     f.hero.enabled ??= true;
     f.hero.ctaLink ??= '/shop';
@@ -111,11 +119,33 @@
     { id: 'appearance', label: 'Appearance' },
     { id: 'storefront', label: 'Homepage' },
     { id: 'shipping', label: 'Shipping' },
+    { id: 'payments', label: 'Payments' },
     { id: 'emails', label: 'Emails & alerts' },
     { id: 'seo', label: 'SEO & sharing' },
     { id: 'social', label: 'Social & footer' },
     { id: 'maintenance', label: 'Maintenance' },
   ];
+
+  // Which providers have their credentials in place on the server (it never sends the credentials themselves).
+  let pay = $state(null);
+  let payError = $state(false);
+  onMount(async () => {
+    try {
+      const res = await fetch('/api/admin/payments', { credentials: 'include' });
+      if (!res.ok) throw new Error();
+      pay = await res.json();
+    } catch { payError = true; }
+  });
+  // A method only reaches customers when it is switched on here AND configured on the server.
+  let providers = $derived([
+    { id: 'payfast', name: 'PayFast', blurb: 'Cards, Instant EFT and more.', info: pay?.payfast },
+    { id: 'yoco', name: 'Yoco', blurb: 'Card payments through Yoco’s hosted checkout.', info: pay?.yoco },
+  ]);
+  let liveMethods = $derived(pay ? providers.filter(p => form.payments?.[p.id]?.enabled && p.info?.configured) : null);
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); toast.success('Copied'); }
+    catch { toast.error('Copy failed — select the text and copy it manually.'); }
+  }
 
   function jump(id) {
     document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -335,6 +365,73 @@
             <div><label for="s-std-rate" class={labelCls}>Standard rate ({form.currency})</label><input id="s-std-rate" type="number" min="0" bind:value={form.shipping.standardRate} class="{inputCls} tabular-nums" /></div>
           </div>
           <p class={hintCls}>Orders at or above the free-shipping minimum ship free. Checkout is restricted to South Africa.</p>
+        </div>
+      </Card>
+
+      <!-- Payments -->
+      <Card id="settings-payments" title="Payments" description="Choose how customers can pay. Turn a method off and it disappears from checkout straight away." class="scroll-mt-20">
+        <div class="space-y-5 p-6 pt-4">
+          {#each providers as p (p.id)}
+            {@const enabled = form.payments[p.id].enabled}
+            <div class="rounded-md border border-border p-4">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="text-sm font-semibold">{p.name}</p>
+                    {#if pay}
+                      {#if p.info?.configured}
+                        <Badge variant="success">Ready</Badge>
+                        <Badge variant="outline">{p.info.mode === 'live' ? 'Live' : p.info.mode === 'test' ? 'Test mode' : 'Sandbox'}</Badge>
+                      {:else}
+                        <Badge variant="warning">Not set up</Badge>
+                      {/if}
+                    {/if}
+                  </div>
+                  <p class="mt-1 text-sm text-muted-foreground">{p.blurb}</p>
+                </div>
+                <Switch bind:checked={form.payments[p.id].enabled} aria-label="Accept payments with {p.name}" />
+              </div>
+
+              {#if pay && !p.info?.configured}
+                <div class="mt-3 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                  <TriangleAlert size={15} class="mt-0.5 shrink-0" />
+                  <p>
+                    {#if p.id === 'payfast'}
+                      PayFast credentials aren’t set on the server, so it won’t be offered{enabled ? '' : ' even if switched on'}. Add <code class="rounded bg-muted px-1 text-xs text-foreground">PAYFAST_MERCHANT_ID_*</code> and <code class="rounded bg-muted px-1 text-xs text-foreground">PAYFAST_MERCHANT_KEY_*</code>, then restart.
+                    {:else if p.info?.keyMismatch}
+                      The Yoco key doesn’t match the mode: a {p.info.mode === 'test' ? 'live' : 'test'} key is set while the server is in <strong>{p.info.mode}</strong> mode. Fix <code class="rounded bg-muted px-1 text-xs text-foreground">YOCO_SANDBOX</code> or the key, then restart.
+                    {:else}
+                      Yoco isn’t finished being set up{enabled ? '' : ', so switching it on won’t show it yet'}:
+                      {#if !p.info?.hasKey}add <code class="rounded bg-muted px-1 text-xs text-foreground">YOCO_SECRET_KEY_{p.info?.mode === 'live' ? 'LIVE' : 'TEST'}</code>{/if}{#if !p.info?.hasKey && !p.info?.hasWebhookSecret} and {/if}{#if !p.info?.hasWebhookSecret}register the webhook (below) and add <code class="rounded bg-muted px-1 text-xs text-foreground">YOCO_WEBHOOK_SECRET_{p.info?.mode === 'live' ? 'LIVE' : 'TEST'}</code>{/if}. Restart the server afterwards.
+                    {/if}
+                  </p>
+                </div>
+              {/if}
+
+              {#if p.id === 'yoco' && pay}
+                <div class="mt-4 space-y-2 border-t border-border pt-4">
+                  <p class="text-sm font-medium">Webhook address</p>
+                  <p class="{hintCls} mt-0">Yoco tells this address when a payment succeeds — that is the only thing that marks an order paid. It must be https and publicly reachable.</p>
+                  <div class="flex items-center gap-2">
+                    <code class="min-w-0 flex-1 truncate rounded-md border border-input bg-muted px-3 py-2 text-xs" title={pay.yoco.webhookUrl}>{pay.yoco.webhookUrl}</code>
+                    <Button variant="outline" size="sm" onclick={() => copyText(pay.yoco.webhookUrl)} aria-label="Copy webhook address"><Copy size={14} /> Copy</Button>
+                  </div>
+                  <p class={hintCls}>Register it once with <code class="rounded bg-muted px-1 text-xs">node scripts/yoco-webhook.js {pay.yoco.webhookUrl}</code> and save the printed secret as <code class="rounded bg-muted px-1 text-xs">YOCO_WEBHOOK_SECRET_{pay.yoco.mode === 'live' ? 'LIVE' : 'TEST'}</code>.</p>
+                </div>
+              {/if}
+            </div>
+          {/each}
+
+          {#if payError}
+            <p class="{hintCls} mt-0">Couldn’t check which providers are set up on the server. Switches still save normally.</p>
+          {:else if liveMethods && liveMethods.length === 0}
+            <div role="alert" class="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <TriangleAlert size={15} class="mt-0.5 shrink-0" />
+              <p><strong>No payment method will be available.</strong> Customers won’t be able to check out until at least one method is switched on and set up. To pause the store on purpose, use Maintenance mode instead.</p>
+            </div>
+          {:else if liveMethods}
+            <p class="{hintCls} mt-0">Checkout offers: <strong>{liveMethods.map(p => p.name).join(' and ')}</strong>{liveMethods.length > 1 ? ' — customers choose at checkout.' : '.'}</p>
+          {/if}
         </div>
       </Card>
 

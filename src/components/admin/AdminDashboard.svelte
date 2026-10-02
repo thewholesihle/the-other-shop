@@ -148,7 +148,7 @@
 
   let todos = $derived([
     toShip > 0 && { title: `${toShip} order${toShip === 1 ? '' : 's'} to pack and ship`, sub: 'Paid, not yet shipped', section: 'orders', dot: 'bg-primary' },
-    unpaid > 0 && { title: `${unpaid} awaiting payment`, sub: 'Customers who haven’t completed PayFast', section: 'orders', dot: 'bg-amber-500' },
+    unpaid > 0 && { title: `${unpaid} awaiting payment`, sub: 'Customers who haven’t completed payment', section: 'orders', dot: 'bg-amber-500' },
     outOfStock.length > 0 && { title: `${outOfStock.length} product${outOfStock.length === 1 ? '' : 's'} sold out`, sub: outOfStock.slice(0, 2).map(p => p.name).join(', '), section: 'products', dot: 'bg-red-500' },
   ].filter(Boolean));
 </script>
@@ -184,7 +184,7 @@
           <div class="mb-4 flex flex-wrap items-baseline gap-x-3" aria-live="polite">
             <span class="text-sm text-muted-foreground">{readout.label}</span>
             <span class="text-2xl font-semibold tracking-tight tabular-nums">{readout.value}</span>
-            {#if readout.note}<span class="text-sm {delta !== null && delta < 0 ? 'text-destructive' : 'text-emerald-700'}">{readout.note}</span>{/if}
+            {#if readout.note}<span class="text-sm {delta !== null && delta < 0 ? 'text-destructive' : 'text-emerald-700 dark:text-emerald-400'}">{readout.note}</span>{/if}
           </div>
           <div class="relative">
             <span class="absolute -top-1 left-0 text-[10px] tabular-nums text-muted-foreground">{fmtShort(maxDay)}</span>

@@ -21,6 +21,7 @@ const { parseUserAgent } = require('./src/device');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const auth = require('./src/auth');
+const { yocoConfig, YocoError, createYocoCheckout, verifyYocoWebhook } = require('./src/services/yoco');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -92,6 +93,8 @@ function verifySameOrigin(req, res, next) {
   // signature check, and a server-to-server confirmation call back to PayFast —
   // exempt it explicitly instead of guessing at header behavior.
   if (req.path === '/api/payfast/itn') return next();
+  // Yoco's webhook is likewise server-to-server; it is authenticated by its HMAC signature instead.
+  if (req.path === '/api/yoco/webhook') return next();
   // RFC 8058 one-click unsubscribe: mailbox providers (Gmail/Yahoo/etc.) POST this
   // endpoint directly from the List-Unsubscribe-Post header, server-to-server, with
   // no Origin/Referer guarantee — same reasoning as the ITN exemption above.
@@ -250,13 +253,38 @@ const PF = {
 // Simple visual indicator of active payment mode
 console.log(`PayFast mode   → ${PF.sandbox ? 'SANDBOX' : 'LIVE'}`);
 
-if (!PF.merchantId || !PF.merchantKey) {
-  console.error(`FATAL: PAYFAST_MERCHANT_ID_${PF.sandbox ? 'SANDBOX' : 'LIVE'} and PAYFAST_MERCHANT_KEY_${PF.sandbox ? 'SANDBOX' : 'LIVE'} must be set in .env`);
-  process.exit(1);
+const PF_CONFIGURED = Boolean(PF.merchantId && PF.merchantKey);
+if (!PF_CONFIGURED) {
+  console.warn(`NOTE: PayFast is not configured (set PAYFAST_MERCHANT_ID_${PF.sandbox ? 'SANDBOX' : 'LIVE'} and PAYFAST_MERCHANT_KEY_${PF.sandbox ? 'SANDBOX' : 'LIVE'}). It will not be offered at checkout.`);
 }
 const PF_HOST = PF.sandbox
   ? 'https://sandbox.payfast.co.za/eng/process'
   : 'https://www.payfast.co.za/eng/process';
+
+// ─── Yoco Config ──────────────────────────────────────────────────────────────
+const YOCO = yocoConfig();
+console.log(`Yoco mode      → ${YOCO.mode.toUpperCase()}${YOCO.configured ? '' : ' (not configured)'}`);
+if (YOCO.keyMismatch) {
+  console.error(`Yoco: YOCO_SECRET_KEY_${YOCO.sandbox ? 'TEST' : 'LIVE'} looks like a ${YOCO.sandbox ? 'live' : 'test'} key. Yoco is disabled until the key matches YOCO_SANDBOX.`);
+}
+
+// ─── Payment methods ─────────────────────────────────────────────────────────
+// A method is offered only when the admin has switched it on (Settings → Payments) AND the server
+// has its credentials. Everything that takes money checks this, not just the UI.
+const PAYMENT_METHODS = {
+  payfast: { label: 'PayFast', description: 'Cards, Instant EFT and more', configured: () => PF_CONFIGURED },
+  yoco:    { label: 'Yoco',    description: 'Pay by card',                  configured: () => YOCO.configured },
+};
+async function paymentToggles() {
+  let p = {};
+  try { p = (await Settings.findOne({ _id: 'main' }).select('payments').maxTimeMS(3000).lean())?.payments || {}; } catch { /* defaults */ }
+  return { payfast: p.payfast?.enabled !== false, yoco: p.yoco?.enabled === true };
+}
+async function availablePaymentMethods() {
+  const on = await paymentToggles();
+  return Object.keys(PAYMENT_METHODS).filter(id => on[id] && PAYMENT_METHODS[id].configured());
+}
+if (!PF_CONFIGURED && !YOCO.configured) console.warn('WARNING: no payment method is configured — checkout will be unavailable.');
 
 // ─── Email Notifier ──────────────────────────────────────────────────────────
 // Raw SMTP sockets kept failing on Render — first IPv6 routes with no egress
@@ -705,7 +733,11 @@ const deleteCloudinaryAsset = async (url) => {
 };
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
+// The Yoco webhook is signed over the exact bytes it sent, so keep the raw body for that one route.
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => { if (req.originalUrl.startsWith('/api/yoco/webhook')) req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // `index: false` — otherwise this would auto-serve the bare index.html for GET /
 // before the SEO-meta-injecting route below ever gets a chance to run.
@@ -1180,6 +1212,11 @@ app.post('/api/admin/login', loginLimiter, async (req, res) => {
   if (!(credsOk && totpStep)) {
     logAuth('warn', 'Failed admin sign-in', req, 'signin-failed');
     await sleep(350 + Math.floor(Math.random() * 300));
+    // Only someone who already has the right username + password is told the code was the problem,
+    // so this reveals nothing to a guesser; everyone else gets the generic message.
+    if (credsOk && auth.totpEnabled()) {
+      return res.status(401).json({ error: 'Incorrect authentication code. Check your authenticator app and try again.', field: 'code' });
+    }
     return res.status(401).json({ error: auth.totpEnabled() ? 'Incorrect username, password or code.' : 'Incorrect username or password.' });
   }
 
@@ -1332,7 +1369,7 @@ async function buildWeeklyReport(now = new Date()) {
   const lateNight = signins.filter(l => hourOf(l.timestamp) < 5);
 
   // ── Payments (PayFast webhook) ─────────────────────────────────────────────
-  const itn = logs.filter(l => l.context === 'PAYFAST_ITN');
+  const itn = logs.filter(l => l.context === 'PAYFAST_ITN' || l.context === 'YOCO_WEBHOOK');
   const itnBadSig = itn.filter(l => /invalid signature/i.test(l.message));
   const itnBadAmount = itn.filter(l => /amount mismatch/i.test(l.message));
   const itnBadIp = itn.filter(l => /untrusted IP/i.test(l.message));
@@ -1351,7 +1388,7 @@ async function buildWeeklyReport(now = new Date()) {
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
   for (const [name, list, what] of [['invalid-signature', itnBadSig, 'with an invalid signature'], ['amount-mismatch', itnBadAmount, 'whose amount didn\u2019t match the order'], ['untrusted-ip', itnBadIp, 'from an IP address PayFast doesn\u2019t use']]) {
-    if (list.length) flag('high', `${plural(list.length, 'payment notification')} ${what}`, 'Someone may be trying to fake or alter a payment confirmation. Check these orders against your PayFast dashboard before shipping anything.');
+    if (list.length) flag('high', `${plural(list.length, 'payment notification')} ${what}`, 'Someone may be trying to fake or alter a payment confirmation. Check these orders against your PayFast / Yoco dashboard before shipping anything.');
   }
   if (lockouts.length) flag('high', `Sign-in lockout triggered ${plural(lockouts.length, 'time')}`, `Someone hit the failed-attempt limit from: ${[...new Set(lockouts.map(l => `${l.data?.ip} (${l.data?.device})`))].join('; ')}. If that wasn\u2019t you, change your admin password and turn on two-factor sign-in.`);
   if (failed.length >= 5) {
@@ -1368,9 +1405,9 @@ async function buildWeeklyReport(now = new Date()) {
   if (dbDrops.length) flag('medium', `Database connection dropped ${plural(dbDrops.length, 'time')}`, 'The store showed its maintenance page while it was down.');
   if (emailFailures.length) flag('medium', `${plural(emailFailures.length, 'email')} failed to send`, emailFailures.slice(0, 3).map(l => l.message).join('; '));
   const cancelled = statusCounts.cancelled || 0;
-  if (orders.length >= 5 && cancelled / orders.length >= 0.4) flag('medium', `High cancellation rate: ${cancelled} of ${orders.length} orders cancelled`, 'Could be abandoned PayFast payments, or card testing.');
+  if (orders.length >= 5 && cancelled / orders.length >= 0.4) flag('medium', `High cancellation rate: ${cancelled} of ${orders.length} orders cancelled`, 'Could be abandoned checkouts, or card testing.');
   const staleUnpaid = orders.filter(o => o.status === 'pending_payment' && now - new Date(o.createdAt) > DAY_MS).length;
-  if (staleUnpaid >= 5) flag('info', `${plural(staleUnpaid, 'checkout')} left unpaid for over a day`, 'Their stock is reserved until the PayFast cancel or ITN arrives.');
+  if (staleUnpaid >= 5) flag('info', `${plural(staleUnpaid, 'checkout')} left unpaid for over a day`, 'Their stock is reserved until the customer cancels or the payment provider confirms.');
   // Median, not mean: one huge order would otherwise drag the average up and hide itself.
   const sortedTotals = paid.map(o => o.total || 0).sort((x, y) => x - y);
   const median = sortedTotals.length ? sortedTotals[Math.floor(sortedTotals.length / 2)] : 0;
@@ -1995,6 +2032,17 @@ app.post('/api/checkout', async (req, res) => {
   }).catch(() => {});
   if (!order) return res.status(400).json({ error: 'Missing order.' });
 
+  // Which method? Decided (and validated) before any stock is reserved, so a bad choice costs nothing.
+  const methods = await availablePaymentMethods();
+  if (methods.length === 0) {
+    return res.status(503).json({ error: 'Online payments are temporarily unavailable. Please try again shortly.', code: 'no_payment_method' });
+  }
+  const requestedMethod = String(req.body.paymentMethod || order.paymentMethod || '').toLowerCase();
+  const method = requestedMethod || methods[0];
+  if (!methods.includes(method)) {
+    return res.status(400).json({ error: 'That payment method isn\u2019t available. Please choose another.', code: 'method_unavailable', methods });
+  }
+
   let shippingConfig = { freeMinimum: 500, standardRate: 99 };
   try {
     const site = await Settings.findOne({ _id: 'main' }).lean();
@@ -2120,6 +2168,7 @@ app.post('/api/checkout', async (req, res) => {
       total:    parseFloat(grandTotal),
       shippingCost,
       status: 'pending_payment',
+      paymentMethod: method,
     });
     emitOrderEvent('created', { id: orderId, customer: order.customer, total: parseFloat(grandTotal), status: 'pending_payment' });
   } catch (err) {
@@ -2133,6 +2182,48 @@ app.post('/api/checkout', async (req, res) => {
   }
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+  // ── Yoco: create a hosted checkout and send the customer to it ─────────────
+  if (method === 'yoco') {
+    const cents = (n) => Math.round(n * 100);
+    const lineItems = orderItems.map(i => ({
+      displayName: [i.name, [i.size, i.color].filter(Boolean).join(' / ')].filter(Boolean).join(' — ').slice(0, 100),
+      quantity: i.quantity,
+      pricingDetails: { price: cents(i.price) },
+    }));
+    if (shippingCost > 0) lineItems.push({ displayName: 'Shipping', quantity: 1, pricingDetails: { price: cents(shippingCost) } });
+    try {
+      const checkout = await createYocoCheckout(YOCO, {
+        amount: cents(parseFloat(grandTotal)),
+        currency: 'ZAR',
+        successUrl: `${baseUrl}/payment/success?orderId=${orderId}&m=yoco`,
+        cancelUrl:  `${baseUrl}/payment/cancel?orderId=${orderId}`,
+        failureUrl: `${baseUrl}/payment/cancel?orderId=${orderId}&reason=failed`,
+        clientReferenceId: orderId,
+        externalId: orderId,
+        metadata: { orderId },
+        lineItems,
+      }, `order-${orderId}`);
+      await Order.updateOne({ id: orderId }, { $set: { yocoCheckoutId: checkout.id } });
+      return res.json({ method: 'yoco', redirectUrl: checkout.redirectUrl, orderId });
+    } catch (err) {
+      console.error(`[Yoco] Could not create checkout for ${orderId}:`, err.message);
+      await dbLog({
+        id: `log-${Date.now()}-yoco-create`,
+        type: 'error', message: `Yoco: could not create checkout for ${orderId}`,
+        context: 'YOCO', data: { orderId, error: err.message, status: err.status || 0, detail: err.detail || null },
+      });
+      if (err instanceof YocoError && err.kind === 'auth') {
+        notifyAdminOfError(err, req, 'Yoco rejected the API key, so customers cannot pay by card. Check YOCO_SECRET_KEY_* and YOCO_SANDBOX in your environment.').catch(() => {});
+      }
+      // Nothing was charged — undo the reservation so the cart can simply be retried or paid another way.
+      await releaseOrder(orderId).catch(e => console.error('releaseOrder failed:', e.message));
+      return res.status(502).json({
+        error: 'Card payments are temporarily unavailable. Please try again in a moment' + (methods.length > 1 ? ' or choose another payment method.' : '.'),
+        code: 'payment_unavailable', methods,
+      });
+    }
+  }
 
   // Fields MUST be in this exact order per PayFast documentation
   const params = {};
@@ -2163,42 +2254,208 @@ app.post('/api/checkout', async (req, res) => {
   // Generate signature
   params.signature = pfSignature(params);
 
-  res.json({ paymentUrl: PF_HOST, params, orderId });
+  res.json({ method: 'payfast', paymentUrl: PF_HOST, params, orderId });
 });
 
-// ─── API: Cancel Payment (Restore Stock) ───────────────────────────────────────
-app.post('/api/payfast/cancel', async (req, res) => {
-  const { orderId } = req.body;
-  if (!orderId) return res.status(400).json({ error: 'Missing orderId.' });
+// ─── Order release / stock helpers ───────────────────────────────────────────
+const stockQuery = (item) => {
+  const pId = item.productId || item.id;
+  return mongoose.Types.ObjectId.isValid(pId) ? { $or: [{ id: pId }, { _id: pId }] } : { id: pId };
+};
 
-  try {
-    const order = await Order.findOne({ id: orderId });
-    if (!order) return res.status(404).json({ error: 'Order not found.' });
+/** Cancels an order that is still awaiting payment and gives its stock back. Atomic: only the call that
+ *  actually flips pending_payment → cancelled restores stock, so repeated/racing calls can't double-restore. */
+async function releaseOrder(orderId) {
+  const before = await Order.findOneAndUpdate(
+    { id: orderId, status: 'pending_payment' },
+    { $set: { status: 'cancelled' } },
+    { returnDocument: 'before' }
+  ).lean();
+  if (!before) return null;
+  for (const item of Array.isArray(before.items) ? before.items : []) {
+    await adjustVariantStock(stockQuery(item), item.size, item.color, item.quantity);
+  }
+  emitOrderEvent('cancelled', { ...before, status: 'cancelled' });
+  return before;
+}
 
-    // Only cancel if it's still pending_payment to avoid double-cancelling or cancelling paid orders
-    if (order.status === 'pending_payment') {
-      order.status = 'cancelled';
-      await order.save();
-
-      // Restore stock
-      const orderItems = Array.isArray(order.items) ? order.items : [];
-      for (const item of orderItems) {
-        const pId = item.productId || item.id;
-        let query = { id: pId };
-        if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-        await adjustVariantStock(query, item.size, item.color, item.quantity);
-      }
-
-      emitOrderEvent('cancelled', order);
-      console.log(`[PayFast] Order ${orderId} cancelled by user. Stock restored.`);
+/** Re-reserves stock for an order that was cancelled (stock released) but then turned out to be paid.
+ *  Returns the names of items that could no longer be reserved. */
+async function reclaimStock(items) {
+  const short = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    const query = stockQuery(item);
+    const product = await Product.findOne(query).lean();
+    const hasVariants = Array.isArray(product?.variants) && product.variants.length > 0;
+    const size = item.size || '', color = item.color || '';
+    let result = { modifiedCount: 0 };
+    if (product && hasVariants) {
+      result = await Product.updateOne(
+        { ...query, variants: { $elemMatch: { size, color, stock: { $gte: item.quantity } } } },
+        { $inc: { 'variants.$[v].stock': -item.quantity, stock: -item.quantity } },
+        { arrayFilters: [{ 'v.size': size, 'v.color': color }] }
+      );
+    } else if (product) {
+      result = await Product.updateOne({ ...query, stock: { $gte: item.quantity } }, { $inc: { stock: -item.quantity } });
     }
+    if (result.modifiedCount === 0) short.push(item.name || String(item.productId || item.id));
+  }
+  return short;
+}
 
+// ─── API: Cancel Payment (Restore Stock) ───────────────────────────────────────
+// Where the customer lands after cancelling (or failing) at PayFast or Yoco. Only an order that is
+// still unpaid is touched; a paid one is never cancelled by this.
+async function cancelCheckoutHandler(req, res) {
+  const { orderId } = req.body || {};
+  if (!orderId || typeof orderId !== 'string') return res.status(400).json({ error: 'Missing orderId.' });
+  try {
+    const exists = await Order.exists({ id: orderId });
+    if (!exists) return res.status(404).json({ error: 'Order not found.' });
+    const released = await releaseOrder(orderId);
+    if (released) console.log(`[Checkout] Order ${orderId} cancelled by customer. Stock restored.`);
     res.json({ ok: true });
   } catch (err) {
     console.error('Cancel payment error:', err);
     res.status(500).json({ error: 'Failed to process cancellation.' });
   }
+}
+app.post('/api/checkout/cancel', cancelCheckoutHandler);
+app.post('/api/payfast/cancel', cancelCheckoutHandler); // original path, kept for pages already open
+
+// What the "payment successful" page polls while it waits for the provider's webhook. Deliberately
+// returns nothing but a state — no order contents.
+app.get('/api/checkout/status', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const orderId = String(req.query.orderId || '');
+  if (!orderId) return res.status(400).json({ error: 'Missing orderId.' });
+  try {
+    const order = await Order.findOne({ id: orderId }).select('status').maxTimeMS(3000).lean();
+    if (!order) return res.json({ state: 'unknown' });
+    const state = ['paid', 'processing', 'shipped', 'delivered'].includes(order.status) ? 'paid' : order.status === 'cancelled' ? 'cancelled' : 'pending';
+    res.json({ state });
+  } catch {
+    res.status(503).json({ error: 'Status unavailable.' });
+  }
 });
+
+// Methods the checkout may show right now (enabled by the admin AND configured on the server).
+app.get('/api/payment-methods', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const ids = await availablePaymentMethods();
+  res.json({ methods: ids.map(id => ({ id, label: PAYMENT_METHODS[id].label, description: PAYMENT_METHODS[id].description })) });
+});
+
+// For Settings → Payments: whether each provider's credentials are in place (never the credentials themselves).
+app.get('/api/admin/payments', requireAdmin, (req, res) => {
+  const base = (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+  res.json({
+    payfast: { configured: PF_CONFIGURED, mode: PF.sandbox ? 'sandbox' : 'live' },
+    yoco: {
+      configured: YOCO.configured, mode: YOCO.mode,
+      hasKey: Boolean(YOCO.secretKey), hasWebhookSecret: Boolean(YOCO.webhookSecret), keyMismatch: YOCO.keyMismatch,
+      webhookUrl: `${base}/api/yoco/webhook`,
+    },
+  });
+});
+
+// ─── Yoco webhook ────────────────────────────────────────────────────────────
+// The ONLY thing that marks a Yoco order paid. Authenticated by its HMAC signature (not by origin/IP).
+// Status codes matter: Yoco retries any non-2xx for ~a day, so transient problems (DB down) answer 5xx
+// to get a retry, while "this will never succeed" cases (unknown order, wrong amount) answer 200.
+app.post('/api/yoco/webhook', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  if (!YOCO.webhookSecret) {
+    console.error('[Yoco] Webhook received but no YOCO_WEBHOOK_SECRET_* is configured.');
+    return res.status(503).json({ error: 'Webhook not configured.' });
+  }
+  const verified = verifyYocoWebhook({ rawBody: req.rawBody, headers: req.headers, secret: YOCO.webhookSecret });
+  if (!verified.ok) {
+    console.warn(`[Yoco] Webhook rejected (${verified.reason}) from ${ip}`);
+    await dbLog({
+      id: `log-${Date.now()}-yoco-bad`,
+      type: verified.reason === 'stale' ? 'warn' : 'error',
+      message: verified.reason === 'stale' ? 'Yoco webhook: timestamp outside tolerance' : 'Yoco webhook: invalid signature (tampering check failed)',
+      context: 'YOCO_WEBHOOK', data: { reason: verified.reason, ip },
+    });
+    return res.status(verified.reason === 'stale' ? 400 : 401).json({ error: 'Invalid webhook.' });
+  }
+
+  const event = verified.event;
+  const payment = event.payload || {};
+  try {
+    if (event.type !== 'payment.succeeded') {
+      // payment.failed: the customer can retry on Yoco's page, so it isn't treated as a cancellation
+      // (the cancel/failure redirect handles abandonment). Refund events are informational here.
+      await dbLog({
+        id: `log-${Date.now()}-yoco-evt`,
+        type: event.type === 'payment.failed' ? 'warn' : 'info', message: `Yoco webhook: ${event.type || 'event'}`,
+        context: 'YOCO_WEBHOOK', data: { eventId: event.id, paymentId: payment.id, checkoutId: payment.metadata?.checkoutId },
+      });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (mongoose.connection.readyState !== 1) return res.status(503).json({ error: 'Database unavailable, retry.' });
+
+    const expectedMode = YOCO.mode;
+    if (payment.mode && payment.mode !== expectedMode) {
+      await dbLog({ id: `log-${Date.now()}-yoco-mode`, type: 'warn', message: `Yoco webhook: ignored a ${payment.mode}-mode payment while running in ${expectedMode} mode`, context: 'YOCO_WEBHOOK', data: { eventId: event.id } });
+      return res.status(200).json({ ok: true });
+    }
+
+    const checkoutId = payment.metadata?.checkoutId || '';
+    const metaOrderId = payment.metadata?.orderId || '';
+    const order = (checkoutId && await Order.findOne({ yocoCheckoutId: checkoutId }).lean())
+      || (metaOrderId && await Order.findOne({ id: String(metaOrderId), paymentMethod: 'yoco' }).lean())
+      || null;
+    if (!order) {
+      await dbLog({ id: `log-${Date.now()}-yoco-noorder`, type: 'warn', message: 'Yoco webhook: payment for an unknown checkout', context: 'YOCO_WEBHOOK', data: { eventId: event.id, checkoutId, paymentId: payment.id } });
+      return res.status(200).json({ ok: true });
+    }
+
+    // The signature proves it came from Yoco; this proves it's for the right amount.
+    if (payment.currency !== 'ZAR' || Number(payment.amount) !== Math.round(order.total * 100)) {
+      await dbLog({
+        id: `log-${Date.now()}-yoco-amt`, type: 'error', message: `Yoco webhook: amount mismatch for #${order.id}`,
+        context: 'YOCO_WEBHOOK', data: { orderId: order.id, paid: payment.amount, currency: payment.currency, expected: Math.round(order.total * 100) },
+      });
+      return res.status(200).json({ ok: true });
+    }
+
+    // Atomic transition → idempotent under Yoco's retries and double deliveries.
+    const before = await Order.findOneAndUpdate(
+      { id: order.id, status: { $in: ['pending_payment', 'pending', 'cancelled'] } },
+      { $set: { status: 'paid', paymentMethod: 'yoco', yocoPaymentId: String(payment.id || '') } },
+      { returnDocument: 'before' }
+    ).lean();
+    if (!before) return res.status(200).json({ ok: true, duplicate: true });
+
+    let updated = { ...before, status: 'paid', paymentMethod: 'yoco', yocoPaymentId: String(payment.id || '') };
+    if (before.status === 'cancelled') {
+      // They paid after the checkout was cancelled (stock was released). Re-reserve what we can and tell the admin.
+      const short = await reclaimStock(before.items);
+      if (short.length) {
+        const note = `Paid after the checkout was cancelled; stock could not be re-reserved for: ${short.join(', ')}. Check availability before shipping.`;
+        await Order.updateOne({ id: order.id }, { $set: { adminNote: note } });
+        updated.adminNote = note;
+      }
+      await dbLog({ id: `log-${Date.now()}-yoco-late`, type: 'warn', message: `Yoco payment arrived for cancelled order ${order.id}${short.length ? ' (some stock short)' : ''}`, context: 'PAYMENT', data: { orderId: order.id, short } });
+    }
+
+    emitOrderEvent('paid', updated);
+    await dbLog({ id: `log-${Date.now()}-pay-ok`, type: 'info', message: `Payment completed for order ${order.id}`, context: 'PAYMENT', data: { orderId: order.id, method: 'yoco', paymentId: payment.id } });
+    const base = (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+    sendOrderNotification(updated, base).catch(e => console.error('Error sending Yoco admin notification:', e));
+    sendCustomerStatusEmail(updated, base).catch(e => console.error('Error sending Yoco customer email:', e));
+    console.log(`✓ Yoco: order ${order.id} marked PAID (payment ${payment.id})`);
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error('Yoco webhook processing error:', err.message);
+    return res.status(500).json({ error: 'Processing failed, retry.' }); // → Yoco retries
+  }
+});
+
 app.post('/api/payfast/itn', async (req, res) => {
   // Step 1 — Respond 200 immediately so PayFast does not retry
   console.log(`[ITN] Request received from PayFast (IP: ${req.headers["x-forwarded-for"] || req.socket.remoteAddress})`);
@@ -2292,7 +2549,7 @@ app.post('/api/payfast/itn', async (req, res) => {
         try {
           updated = await Order.findOneAndUpdate(
             { id: orderId },
-            { $set: { status: 'paid', payfastId: pf_payment_id || '' } },
+            { $set: { status: 'paid', paymentMethod: 'payfast', payfastId: pf_payment_id || '' } },
             { returnDocument: 'after', maxTimeMS: 2000 }
           );
         } catch (e) {

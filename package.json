@@ -6,8 +6,7 @@
   "scripts": {
     "build": "rollup -c",
     "start": "node server.js",
-    "migrate": "node scripts/migrate.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "migrate": "node scripts/migrate.js"
   },
   "keywords": [],
   "author": "",

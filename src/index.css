@@ -118,6 +118,28 @@
     background: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+  /* Dark admin theme (zinc). Toggled by lib/adminTheme.js. */
+  .admin-root.dark {
+    --background: 240 10% 5%;
+    --foreground: 0 0% 96%;
+    --card: 240 8% 8%;
+    --card-foreground: 0 0% 96%;
+    --popover: 240 8% 8%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 0% 96%;
+    --primary-foreground: 240 6% 10%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 240 4% 14%;
+    --muted-foreground: 240 5% 66%;
+    --accent: 240 4% 18%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 84% 68%;
+    --destructive-foreground: 240 10% 5%;
+    --border: 240 4% 20%;
+    --input: 240 4% 22%;
+    --ring: 240 5% 70%;
+  }
   .admin-root h1, .admin-root h2, .admin-root h3, .admin-root h4,
   .admin-root .font-display, .admin-root .font-sans {
     font-family: inherit;

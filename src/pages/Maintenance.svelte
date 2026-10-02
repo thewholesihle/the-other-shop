@@ -152,11 +152,6 @@
       </div>
     {/if}
 
-    <div
-      class="w-12 h-px mx-auto mt-12 {background ? 'bg-white/30' : 'bg-border'}"
-    ></div>
-    <p class="text-xs mt-4 opacity-40 tracking-widest uppercase">Back Soon</p>
-
     <!-- Social Links -->
     {#if socials && (socials.instagram?.trim() || socials.twitter?.trim() || socials.tiktok?.trim() || socials.youtube?.trim())}
       <div class="flex items-center justify-center gap-6 mt-10">

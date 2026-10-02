@@ -27,6 +27,12 @@ const SettingsSchema = new mongoose.Schema({
     image:      { type: String, default: '' },
     video:      { type: String, default: '' },
   },
+  // Which payment methods the storefront offers. A method is only really offered when it is both
+  // switched on here AND configured on the server (keys in the environment) — see /api/payment-methods.
+  payments: {
+    payfast: { enabled: { type: Boolean, default: true } },
+    yoco:    { enabled: { type: Boolean, default: false } },
+  },
   shipping: {
     freeMinimum:  { type: Number, default: 500 },
     standardRate: { type: Number, default: 99 },
@@ -137,6 +143,10 @@ const OrderSchema = new mongoose.Schema({
   shippingCost: { type: Number, default: 0 },
   status:       { type: String, default: 'pending', enum: ['pending', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] },
   payfastId:    { type: String, default: '' },
+  // How this order is paid. '' on orders created before online methods were recorded.
+  paymentMethod: { type: String, default: '', enum: ['', 'payfast', 'yoco'] },
+  yocoCheckoutId: { type: String, default: '', index: true }, // links Yoco's webhook back to the order
+  yocoPaymentId:  { type: String, default: '' },
   adminNote:    { type: String, default: '' },
   // Shipment details — entered manually by the admin when marking an order 'shipped',
   // and surfaced as reference info in the customer status email.

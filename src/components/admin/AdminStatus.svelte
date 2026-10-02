@@ -188,10 +188,10 @@
           </Button>
         </div>
         {#if status.emailSandbox}
-          <p class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900">You are sending from Resend’s shared sandbox address. It can only deliver to your own Resend account’s email, so <strong>customers will not receive order emails</strong> until you verify a domain in Resend and set <span class="font-mono text-xs">SMTP_FROM</span> to an address on it.</p>
+          <p class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">You are sending from Resend’s shared sandbox address. It can only deliver to your own Resend account’s email, so <strong>customers will not receive order emails</strong> until you verify a domain in Resend and set <span class="font-mono text-xs">SMTP_FROM</span> to an address on it.</p>
         {/if}
         {#if testResult}
-          <p role="status" class="rounded-md border px-3 py-2 {testResult.ok ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-destructive/40 bg-destructive/10 text-destructive'}">
+          <p role="status" class="rounded-md border px-3 py-2 {testResult.ok ? 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200' : 'border-destructive/40 bg-destructive/10 text-destructive'}">
             {testResult.message}{#if testResult.hint}<span class="mt-1 block opacity-90">{testResult.hint}</span>{/if}
           </p>
         {/if}
@@ -271,14 +271,14 @@
     <div class="mt-4 border-t border-border">
       {#if logs.length === 0}
         <div class="flex flex-col items-center gap-2 py-14 text-center">
-          <CircleCheck size={28} class="text-emerald-600" />
+          <CircleCheck size={28} class="text-emerald-600 dark:text-emerald-400" />
           <p class="text-sm text-muted-foreground">No system events logged.</p>
         </div>
       {:else}
         <ul class="max-h-[480px] divide-y divide-border overflow-y-auto">
           {#each logs as log}
             <li class="flex gap-3 px-6 py-4">
-              <span class="mt-0.5 shrink-0 {log.type === 'error' ? 'text-destructive' : log.type === 'warn' ? 'text-amber-600' : 'text-blue-600'}">
+              <span class="mt-0.5 shrink-0 {log.type === 'error' ? 'text-destructive' : log.type === 'warn' ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}">
                 {#if log.type === 'error'}<CircleAlert size={16} />{:else if log.type === 'warn'}<TriangleAlert size={16} />{:else}<Info size={16} />{/if}
               </span>
               <div class="min-w-0 flex-1">
@@ -300,7 +300,7 @@
                 {#if log.data?.stack}
                   <details class="mt-2 text-xs text-muted-foreground">
                     <summary class="cursor-pointer hover:text-foreground">Stack trace</summary>
-                    <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded-md bg-zinc-950 p-3 font-mono leading-tight text-zinc-100">{log.data.stack}</pre>
+                    <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded-md bg-zinc-950 p-3 ring-1 ring-border font-mono leading-tight text-zinc-100">{log.data.stack}</pre>
                   </details>
                 {/if}
               </div>

@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { adminThemeClass } from '../lib/adminTheme.js';
   import AdminLayout from '../components/admin/AdminLayout.svelte';
   import AdminLogin from '../components/admin/AdminLogin.svelte';
   import AdminDashboard from '../components/admin/AdminDashboard.svelte';
@@ -262,7 +263,7 @@
   <title>Admin — Others.</title>
 </svelte:head>
 
-<div class="admin-root min-h-screen">
+<div class="admin-root min-h-screen" use:adminThemeClass>
 {#if authState === 'checking'}
   <Loader />
 {:else if authState === 'login'}

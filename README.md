@@ -16,7 +16,7 @@ Single codebase, single deploy: Express serves both the API and the built SPA.
 | Backend | Express 5, Mongoose 9 / MongoDB |
 | Bundler | Rollup |
 | Images/video | Cloudinary |
-| Payments | PayFast (South African gateway) |
+| Payments | PayFast and Yoco (South African gateways), each switchable in the admin |
 | Transactional email | Resend (HTTPS API — not SMTP) |
 | Auth | Session login (HttpOnly cookie, CSRF token, optional TOTP 2FA) on all admin API routes |
 
@@ -55,7 +55,7 @@ npm run build               # builds public/build/bundle.js + bundle.css
 npm start                   # node server.js → http://localhost:3000
 ```
 
-The server will refuse to start (`FATAL`, exit 1) without `ADMIN_USER` plus `ADMIN_PASS_HASH` (or `ADMIN_PASS`) and a matching PayFast credential pair for whichever `PAYFAST_SANDBOX` mode is active. Everything else is optional and feature-gates itself off when unset.
+The server will refuse to start (`FATAL`, exit 1) without `ADMIN_USER` plus `ADMIN_PASS_HASH` (or `ADMIN_PASS`) (or `ADMIN_PASS`). Everything else is optional and feature-gates itself off when unset — including each payment provider: one with no credentials is simply not offered at checkout (the server warns at startup if neither is configured).
 
 Admin panel: `http://localhost:3000/admin` — sign in with the credentials from `.env` (see **Admin security** below).
 
@@ -85,7 +85,9 @@ See [`.env.example`](.env.example) for the full annotated list. Summary:
 | Variable | Enables |
 |---|---|
 | `RESEND_API_KEY`, `SMTP_FROM`, `ADMIN_EMAIL`, `UNSUBSCRIBE_SECRET` | Order-status emails, admin notifications, newsletter broadcasts, critical-error alerts |
+| `PAYFAST_MERCHANT_ID_*`, `PAYFAST_MERCHANT_KEY_*` (`_SANDBOX` / `_LIVE`, chosen by `PAYFAST_SANDBOX`) | PayFast at checkout |
 | `PAYFAST_PASSPHRASE_SANDBOX` / `_LIVE` | Only if your PayFast account has a passphrase configured |
+| `YOCO_SECRET_KEY_*`, `YOCO_WEBHOOK_SECRET_*` (`_TEST` / `_LIVE`, chosen by `YOCO_SANDBOX`) | Yoco at checkout — see **Payments** below |
 
 Missing MongoDB doesn't crash the server — see **Resilience** below.
 
@@ -117,9 +119,33 @@ Most sections save via a full-data-blob endpoint (`GET`/`POST /api/data`); Order
 
 ---
 
+## Payments
+
+Two providers sit side by side at checkout — **PayFast** and **Yoco** — and the admin controls them in **Settings → Payments**. A method reaches customers only when it is **switched on there *and* its credentials are set on the server**; the same check runs on the server for every checkout, so a hidden method can't be used by calling the API directly. If exactly one method is available it's preselected; if both are, customers choose. If none are, checkout says so instead of failing, and Settings warns you (use Maintenance mode if you actually want to pause the store). PayFast is on by default and Yoco is opt-in, so existing stores behave exactly as before.
+
+**Yoco** uses the [Checkout API](https://developer.yoco.com/docs/checkout-api): the server creates a hosted checkout (amount in cents, ZAR, with the order reference and line items), the customer is redirected to Yoco, and the result is confirmed by a **signed webhook** — the success redirect is never trusted.
+
+Setup:
+
+1. In the Yoco app, get your Checkout API **secret key** (test keys work immediately; live keys need a verified domain). Set `YOCO_SANDBOX`, `YOCO_SECRET_KEY_TEST` / `_LIVE` in the environment. A live key in test mode (or the reverse) is refused.
+2. Register the webhook once: `node scripts/yoco-webhook.js https://your-store.example.com/api/yoco/webhook` (https, publicly reachable — Settings → Payments shows the exact address). It prints a `whsec_…` secret **once**; save it as `YOCO_WEBHOOK_SECRET_TEST` / `_LIVE` and restart.
+3. Switch Yoco on in **Settings → Payments**. The card shows *Ready* when the key and webhook secret are in place.
+
+How it stays safe:
+
+- Webhook signatures are verified (HMAC-SHA256 over `id.timestamp.body`, constant-time compare, 3-minute replay window) against the raw request body. Forged, tampered, stale or unsigned calls get 401/400 and are logged (and counted in the weekly summary's suspicious-activity list).
+- A verified payment is still checked against the order: matching amount in cents, ZAR, and the right test/live mode. Mismatches are logged as errors and never mark an order paid.
+- Marking paid is one atomic status change, so Yoco's retries and duplicate deliveries are harmless (one email, one paid transition). Transient problems (database down) answer 5xx so Yoco retries; permanent ones (unknown checkout) answer 200 so it doesn't.
+- If creating the checkout fails (Yoco down, bad key), the order is cancelled and its stock released straight away, the customer sees a plain "try again or use another method" message, and a rejected key emails the admin.
+- Customers who cancel or fail a payment land back on the cart **with their cart intact** (it's emptied only once payment succeeds). A payment that arrives after its checkout was cancelled still marks the order paid and re-reserves stock; if the stock is gone the order carries an admin note saying so.
+- The "payment successful" page waits for the webhook (polling a status endpoint that returns only paid / pending) rather than assuming success from the URL.
+- Orders record which method paid and its reference; both appear in the order detail and on the invoice PDF.
+
+---
+
 ## Order fulfillment
 
-Checkout deducts stock per size/color variant atomically (a conditional `$inc` guard), so two simultaneous checkouts can't both claim the last unit of the same variant. PayFast confirms payment via a server-to-server ITN webhook, independently verified against PayFast's own servers rather than trusted at face value.
+Checkout deducts stock per size/color variant atomically (a conditional `$inc` guard), so two simultaneous checkouts can't both claim the last unit of the same variant. PayFast confirms payment via a server-to-server ITN webhook, independently verified against PayFast's own servers rather than trusted at face value; Yoco confirms via a signed webhook (see **Payments**).
 
 Shipping is handled manually. Once an order is paid, the admin Orders tab shows the customer's delivery address (also stored as separate street/city/province/postal-code fields) so the parcel can be packed and sent by hand. Marking an order **shipped** lets the admin enter a carrier, tracking number and estimated delivery, which are emailed to the customer.
 

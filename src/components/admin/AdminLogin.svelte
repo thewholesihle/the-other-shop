@@ -53,13 +53,18 @@
         body: JSON.stringify({ username: username.trim(), password, code: code.replace(/\s/g, '') }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || 'Sign-in failed. Please try again.');
+      if (!res.ok) { const err = new Error(body.error || 'Sign-in failed. Please try again.'); err.field = body.field; throw err; }
       password = ''; code = '';
       onSuccess(body.csrf);
     } catch (err) {
       error = err.message;
-      password = '';
       code = '';
+      if (err.field === 'code') {
+        // password was right — keep it, just ask for a fresh code
+        document.getElementById('login-code')?.focus();
+      } else {
+        password = '';
+      }
     } finally {
       submitting = false;
     }
@@ -127,13 +132,8 @@
 
         <div class="relative hidden bg-primary md:block">
           {#if heroImage}
-            <img src={getOptimizedUrl(heroImage, 960)} decoding="async" alt="" class="absolute inset-0 h-full w-full object-cover opacity-70" />
-            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+            <img src={getOptimizedUrl(heroImage, 960)} decoding="async" alt="" class="absolute inset-0 h-full w-full object-cover" />
           {/if}
-          <div class="absolute inset-x-0 bottom-0 p-8 text-primary-foreground">
-            <p class="text-3xl font-bold tracking-tight">{siteName}</p>
-            <p class="mt-1 text-sm opacity-70">Store admin</p>
-          </div>
         </div>
       </div>
     </Card>

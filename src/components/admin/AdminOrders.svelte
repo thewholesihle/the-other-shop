@@ -240,6 +240,11 @@
   // so thousands are grouped by hand with a plain space.
   const pdfMoney = (n) => `${currency}${Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
 
+  // Which provider took the payment, and its reference — orders from before this was recorded fall back to PayFast's id.
+  const PAY_LABELS = { payfast: 'PayFast', yoco: 'Yoco' };
+  const payMethodLabel = (o) => PAY_LABELS[o.paymentMethod] || (o.payfastId ? 'PayFast' : '');
+  const payRef = (o) => o.yocoPaymentId || o.payfastId || '';
+
   async function buildInvoice(order) {
     const { jsPDF } = window.jspdf;
     let logoOnTile = false;
@@ -319,7 +324,7 @@
     const meta = [
       ['Issued', issued.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })],
       ['Order', order.id],
-      ['Payment reference', order.payfastId || '\u2014'],
+      [`Payment reference${payMethodLabel(order) ? ` (${payMethodLabel(order)})` : ''}`, payRef(order) || '\u2014'],
     ];
     const colW = CW / 3;
     meta.forEach(([k, v], i) => {
@@ -402,8 +407,8 @@
         type('medium', 9.5, FG); doc.text(wrap(v || '\u2014', shipW - 40)[0], M + 34, ty + 17 + i * 6.5);
       });
     } else {
-      type('medium', 10, FG); doc.text(order.payfastId ? 'Paid online via PayFast' : (order.status === 'pending_payment' ? 'Awaiting payment' : 'Payment recorded'), M + 6, ty + 18);
-      type('regular', 9, MUTED_FG); doc.text(wrap(order.payfastId ? `Reference ${order.payfastId}` : 'No payment reference on file', shipW - 12), M + 6, ty + 24);
+      type('medium', 10, FG); doc.text(payRef(order) ? `Paid online${payMethodLabel(order) ? ` via ${payMethodLabel(order)}` : ''}` : (order.status === 'pending_payment' ? 'Awaiting payment' : 'Payment recorded'), M + 6, ty + 18);
+      type('regular', 9, MUTED_FG); doc.text(wrap(payRef(order) ? `Reference ${payRef(order)}` : 'No payment reference on file', shipW - 12), M + 6, ty + 24);
     }
 
     // ── Footer on every page ──
@@ -513,6 +518,7 @@
       <dl class="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
         <div><dt class="text-xs text-muted-foreground mb-0.5">Email</dt><dd class="break-all">{selected.email || '—'}</dd></div>
         <div><dt class="text-xs text-muted-foreground mb-0.5">Phone</dt><dd>{selected.phone || '—'}</dd></div>
+        <div class="col-span-2"><dt class="text-xs text-muted-foreground mb-0.5">Payment</dt><dd>{payMethodLabel(selected) || (selected.status === 'pending_payment' ? 'Awaiting payment' : '—')}{#if payRef(selected)} <span class="ml-1 break-all font-mono text-xs text-muted-foreground">{payRef(selected)}</span>{/if}</dd></div>
         <div class="col-span-2"><dt class="text-xs text-muted-foreground mb-0.5">Deliver to</dt><dd class="whitespace-pre-line">{selected.address || '—'}</dd></div>
       </dl>
 
