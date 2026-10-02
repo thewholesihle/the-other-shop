@@ -78,6 +78,16 @@
     ? (missingSize || missingColor ? null : (findVariant(selectedSize, selectedColor)?.stock ?? 0))
     : (product?.stock ?? 0);
   $: disabledAdd = product?.stock === 0 || missingSize || missingColor || currentVariantStock === 0;
+
+  // Stock status, shown right under the price and again next to the add-to-cart button. Once a size
+  // and colour are picked it reflects that exact variant; before that it reflects the product as a whole.
+  const LOW_STOCK = 5;
+  $: stockInfo = !product ? null
+    : product.stock === 0 ? { level: 'out', text: 'Sold out' }
+    : currentVariantStock === 0 ? { level: 'out', text: 'Sold out in this size / colour' }
+    : currentVariantStock !== null && currentVariantStock <= LOW_STOCK ? { level: 'low', text: `Only ${currentVariantStock} left — selling fast` }
+    : currentVariantStock === null && product.stock <= LOW_STOCK ? { level: 'low', text: `Only ${product.stock} left in total` }
+    : { level: 'ok', text: 'In stock' };
 </script>
 
 <svelte:head>
@@ -150,6 +160,16 @@
             {/if}
             <h1 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight mb-2">{product.name}</h1>
             <p class="text-2xl font-medium tabular-nums">{data.site.currency}{product.price.toFixed(2)}</p>
+            {#if stockInfo}
+              <p
+                class="mt-3 inline-flex items-center gap-2 text-sm font-medium px-3 py-1.5 border
+                  {stockInfo.level === 'low' ? 'border-destructive/50 bg-destructive/10 text-destructive' : stockInfo.level === 'out' ? 'border-border bg-muted text-foreground' : 'border-transparent text-success px-0'}"
+                role="status"
+              >
+                <span class="h-2 w-2 rounded-full {stockInfo.level === 'low' ? 'bg-destructive animate-pulse' : stockInfo.level === 'out' ? 'bg-muted-foreground' : 'bg-success'}"></span>
+                {stockInfo.text}
+              </p>
+            {/if}
           </div>
 
           <p class="text-sm text-muted-foreground leading-relaxed">{product.description}</p>
@@ -190,6 +210,9 @@
 
           <!-- Add to cart -->
           <div class="space-y-3 pt-2">
+            {#if stockInfo?.level === 'low'}
+              <p class="text-sm font-medium text-destructive flex items-center gap-2"><span class="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse"></span>{stockInfo.text}</p>
+            {/if}
             <button
               onclick={addToCart}
               disabled={disabledAdd}
@@ -215,10 +238,6 @@
             </a>
           </div>
 
-          <!-- Stock note -->
-          {#if currentVariantStock !== null && currentVariantStock > 0 && currentVariantStock <= 5}
-            <p class="text-xs text-destructive font-medium">Only {currentVariantStock} left in stock</p>
-          {/if}
         </div>
       </div>
     </div>
