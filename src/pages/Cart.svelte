@@ -5,6 +5,7 @@
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
   import Loader from '../components/Loader.svelte';
+  import PaymentLogo from '../components/PaymentLogo.svelte';
   import { cart, cartTotal, cartCount } from '../stores/cart.js';
 
   import { loadStoreData } from '../lib/storeData.js';
@@ -432,10 +433,11 @@
                   {#each methods as m (m.id)}
                     <label class="flex items-start gap-3 border px-4 py-3 cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-foreground/40 {paymentMethod === m.id ? 'border-foreground bg-muted/40' : 'border-border hover:border-foreground/50'}">
                       <input type="radio" name="payment-method" value={m.id} bind:group={paymentMethod} class="mt-1 accent-foreground" />
-                      <span>
+                      <span class="min-w-0 flex-1">
                         <span class="block text-sm font-medium">{m.label}</span>
                         <span class="block text-xs text-muted-foreground">{m.description}</span>
                       </span>
+                      <span class="self-center"><PaymentLogo id={m.id} height={m.id === 'yoco' ? 14 : 18} /></span>
                     </label>
                   {/each}
                 </div>

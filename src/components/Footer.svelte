@@ -1,6 +1,7 @@
 <script>
   import LetterSwap from './LetterSwap.svelte';
   import Img from './Img.svelte';
+  import PaymentLogo from './PaymentLogo.svelte';
   export let data = { site: {}, categories: [] };
   
   $: site = data.site || {};
@@ -9,6 +10,14 @@
   // category has nothing to show at /shop?category=x, so it's left off both
   // the shop filter tabs and here rather than linking to an empty result.
   $: categories = (data.categories || []).filter(c => products.some(p => p.category === c.id));
+
+  // Payment brands shown in the footer: the providers the admin has switched on, then the cards and
+  // wallets they take (same switches as Settings → Payments; PayFast on / Yoco off until enabled).
+  $: paymentLogos = [
+    site.payments?.yoco?.enabled === true && 'yoco',
+    site.payments?.payfast?.enabled !== false && 'payfast',
+    'applepay', 'googlepay', 'visa', 'mastercard', 'amex',
+  ].filter(Boolean);
 
   $: footerLinks = {
     Shop: [
@@ -117,6 +126,15 @@
         {/if}
       </div>
     {/if}
+  </div>
+
+  <div role="group" aria-label="Accepted payment methods" class="border-t border-primary-foreground/10 pt-6 pb-6 flex flex-col md:flex-row items-center justify-between gap-x-8 gap-y-4">
+    <p class="text-xs text-on-dark">Secure payments</p>
+    <ul class="flex flex-wrap items-center justify-center md:justify-end gap-x-6 gap-y-3 text-on-dark">
+      {#each paymentLogos as id (id)}
+        <li class="flex items-center"><PaymentLogo {id} height={id === 'yoco' ? 14 : id === 'amex' ? 22 : id === 'applepay' ? 22 : 18} /></li>
+      {/each}
+    </ul>
   </div>
 
   <div class="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
