@@ -175,7 +175,7 @@ const hardMaintenanceHTML = `
 app.use((req, res, next) => {
   // If DB is down, intercept public routes
   // Bypass if: Admin route OR API route OR static asset
-  const isAsset = /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|json|woff2?|mp4|webm|map)$/i.test(req.path);
+  const isAsset = /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|json|woff2?|ttf|otf|mp4|webm|map)$/i.test(req.path);
   const isAdmin = req.path.startsWith('/admin') || req.path.startsWith('/api/admin');
   const isApi = req.path.startsWith('/api/');
 

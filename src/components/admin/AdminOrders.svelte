@@ -175,15 +175,43 @@
   // ── Invoice PDF ───────────────────────────────────────────────────────────
   // Same visual language as the admin: zinc neutrals, hairline rules, a dark brand band
   // (the same treatment as the order emails, so the same logo file works on it).
-  const INK = [9, 9, 11], MUTED = [113, 113, 122], RULE = [228, 228, 231], SOFT = [244, 244, 245];
+  // shadcn/ui "zinc" tokens, converted to RGB for jsPDF.
+  const FG = [9, 9, 11];            // --foreground
+  const MUTED_FG = [113, 113, 122]; // --muted-foreground
+  const BORDER = [228, 228, 231];   // --border
+  const MUTED = [244, 244, 245];    // --muted / --secondary
+  const PRIMARY = [24, 24, 27];     // --primary
+  const RADIUS = 2.5;               // mm, ≈ --radius (0.5rem)
+
+  // Status badges — the same tints as the admin's <Badge> variants.
   const PILL = {
-    paid: { bg: [220, 252, 231], fg: [22, 101, 52], label: 'PAID' },
-    processing: { bg: [237, 233, 254], fg: [91, 33, 182], label: 'PROCESSING' },
-    shipped: { bg: [219, 234, 254], fg: [30, 64, 175], label: 'SHIPPED' },
-    delivered: { bg: [244, 244, 245], fg: [63, 63, 70], label: 'DELIVERED' },
-    pending_payment: { bg: [254, 243, 199], fg: [146, 64, 14], label: 'AWAITING PAYMENT' },
-    cancelled: { bg: [254, 226, 226], fg: [153, 27, 27], label: 'CANCELLED' },
+    paid: { bg: [220, 252, 231], fg: [22, 101, 52], label: 'Paid' },
+    processing: { bg: [237, 233, 254], fg: [91, 33, 182], label: 'Processing' },
+    shipped: { bg: [219, 234, 254], fg: [30, 64, 175], label: 'Shipped' },
+    delivered: { bg: [244, 244, 245], fg: [63, 63, 70], label: 'Delivered' },
+    pending_payment: { bg: [254, 243, 199], fg: [146, 64, 14], label: 'Awaiting payment' },
+    cancelled: { bg: [254, 226, 226], fg: [153, 27, 27], label: 'Cancelled' },
   };
+
+  // Geist — the admin's typeface — is embedded so the PDF matches the UI. The three weights are
+  // self-hosted (public/vendor/fonts, SIL OFL) and fetched once per session; if they can't be
+  // loaded the invoice falls back to Helvetica.
+  const GEIST = [['Regular', 'normal'], ['Medium', 'medium'], ['SemiBold', 'semibold']];
+  let geistFiles = null;
+  async function loadGeist() {
+    geistFiles ??= (async () => {
+      const out = [];
+      for (const [file, style] of GEIST) {
+        const buf = await (await fetch(`/vendor/fonts/Geist-${file}.ttf?v=2`)).arrayBuffer();
+        let bin = '';
+        const bytes = new Uint8Array(buf);
+        for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        out.push({ file: `Geist-${file}.ttf`, style, b64: btoa(bin) });
+      }
+      return out;
+    })().catch((e) => { geistFiles = null; throw e; });
+    return geistFiles;
+  }
 
   // Rasterises the logo so jsPDF can embed it. Cloudinary is asked for a PNG (jsPDF can't
   // embed webp/avif) and served with CORS headers, so the canvas stays readable.
@@ -214,155 +242,170 @@
 
   async function buildInvoice(order) {
     const { jsPDF } = window.jspdf;
-    const logo = await loadLogo(site?.emailLogo || site?.logo);
+    const [logo, fonts] = await Promise.all([loadLogo(site?.emailLogo || site?.logo), loadGeist().catch(() => null)]);
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const W = 210, M = 18, R = W - M;
+    if (fonts) for (const f of fonts) { doc.addFileToVFS(f.file, f.b64); doc.addFont(f.file, 'Geist', f.style); }
+    const FAMILY = fonts ? 'Geist' : 'helvetica';
+    const WEIGHT = fonts ? { regular: 'normal', medium: 'medium', semibold: 'semibold' } : { regular: 'normal', medium: 'normal', semibold: 'bold' };
+    const type = (weight, size, color) => { doc.setFont(FAMILY, WEIGHT[weight]); doc.setFontSize(size); doc.setTextColor(...color); };
+
+    const W = 210, H = 297, M = 16, R = W - M, CW = R - M;
     const siteName = site?.name || 'Others.';
     const issued = dateOf(order);
-    const pill = PILL[order.status] || { bg: SOFT, fg: INK, label: String(order.status || '').toUpperCase() };
+    const pill = PILL[order.status] || { bg: MUTED, fg: FG, label: String(order.status || '') };
 
-    // Brand band
-    doc.setFillColor(...INK);
-    doc.rect(0, 0, W, 30, 'F');
+    // shadcn <Card>: white, 1px border, rounded, no shadow needed in print.
+    const card = (x, y, w, h) => { doc.setDrawColor(...BORDER); doc.setLineWidth(0.25); doc.setFillColor(255, 255, 255); doc.roundedRect(x, y, w, h, RADIUS, RADIUS, 'FD'); };
+    const rule = (x1, y, x2) => { doc.setDrawColor(...BORDER); doc.setLineWidth(0.25); doc.line(x1, y, x2, y); };
+    const wrap = (text, width) => doc.splitTextToSize(String(text), width);
+
+    // ── Header: logo tile + title ──
+    let y = 18;
     if (logo) {
-      const maxH = 11, maxW = 56;
-      let h = maxH, w = (logo.w / logo.h) * h;
-      if (w > maxW) { w = maxW; h = (logo.h / logo.w) * w; }
-      doc.addImage(logo.data, 'PNG', M, (30 - h) / 2, w, h);
+      const maxH = 9, maxW = 44;
+      let lh = maxH, lw = (logo.w / logo.h) * lh;
+      if (lw > maxW) { lw = maxW; lh = (logo.h / logo.w) * lw; }
+      const padX = 4, tileH = 14;
+      doc.setFillColor(...PRIMARY);
+      doc.roundedRect(M, y - 3, lw + padX * 2, tileH, RADIUS, RADIUS, 'F'); // dark tile: light logos stay visible on white paper
+      doc.addImage(logo.data, 'PNG', M + padX, y - 3 + (tileH - lh) / 2, lw, lh);
     } else {
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
-      doc.text(siteName, M, 18.5);
+      type('semibold', 16, FG);
+      doc.text(siteName, M, y + 6);
     }
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-    doc.text('INVOICE', R, 14.5, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(212, 212, 216);
-    doc.text(order.id, R, 20, { align: 'right' });
+    type('semibold', 22, FG);
+    doc.text('Invoice', R, y + 4, { align: 'right' });
+    type('regular', 9, MUTED_FG);
+    doc.text(order.id, R, y + 10, { align: 'right' });
 
-    // Title row: amount + status pill
-    let y = 46;
-    doc.setTextColor(...MUTED); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-    doc.text('Amount', M, y);
-    doc.setTextColor(...INK); doc.setFont('helvetica', 'bold'); doc.setFontSize(26);
-    doc.text(pdfMoney(order.total), M, y + 11);
+    // ── Summary card: amount + status, then issued / order / payment ──
+    y = 42;
+    const sumH = 44;
+    card(M, y, CW, sumH);
+    type('medium', 8.5, MUTED_FG);
+    doc.text('Amount', M + 6, y + 9);
+    type('semibold', 26, FG);
+    doc.text(pdfMoney(order.total), M + 6, y + 21);
 
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-    const pw = doc.getTextWidth(pill.label) + 8;
+    type('medium', 8, pill.fg);
+    const label = pill.label;
+    const pw = doc.getTextWidth(label) + 10;
     doc.setFillColor(...pill.bg);
-    doc.roundedRect(R - pw, y + 3.2, pw, 7, 3.5, 3.5, 'F');
-    doc.setTextColor(...pill.fg);
-    doc.text(pill.label, R - pw / 2, y + 7.9, { align: 'center' });
+    doc.roundedRect(R - 6 - pw, y + 7, pw, 6.4, 3.2, 3.2, 'F');
+    doc.setFillColor(...pill.fg);
+    doc.circle(R - 6 - pw + 3.6, y + 10.2, 0.8, 'F');
+    doc.text(label, R - 6 - pw + 6, y + 11.6);
 
-    // Meta (issued / reference / payment)
-    y += 24;
-    doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
-    doc.line(M, y, R, y);
-    y += 7;
+    rule(M, y + 27, R);
     const meta = [
       ['Issued', issued.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })],
       ['Order', order.id],
-      ['Payment ref', order.payfastId || '—'],
+      ['Payment reference', order.payfastId || '\u2014'],
     ];
-    const colW = (R - M) / 3;
-    meta.forEach(([label, value], i) => {
-      const x = M + i * colW;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-      doc.text(label, x, y);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK);
-      doc.text(doc.splitTextToSize(String(value), colW - 4), x, y + 5.5);
+    const colW = CW / 3;
+    meta.forEach(([k, v], i) => {
+      const x = M + 6 + i * colW;
+      type('medium', 8, MUTED_FG); doc.text(k, x, y + 33.5);
+      type('medium', 10, FG); doc.text(wrap(v, colW - 8)[0], x, y + 39.5);
     });
 
-    // Billed to / From
-    y += 18;
-    doc.line(M, y, R, y);
-    y += 8;
-    const block = (x, heading, lines) => {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-      doc.text(heading, x, y);
-      let yy = y + 5.5;
-      lines.filter(Boolean).forEach((line, i) => {
-        doc.setFont('helvetica', i === 0 ? 'bold' : 'normal'); doc.setFontSize(10); doc.setTextColor(...(i === 0 ? INK : [63, 63, 70]));
-        const wrapped = doc.splitTextToSize(String(line), (R - M) / 2 - 8);
-        doc.text(wrapped, x, yy);
-        yy += wrapped.length * 4.6;
+    // ── Billed to / From card ──
+    y += sumH + 8;
+    const addressLines = (order.address || '').split(',').map(t => t.trim()).filter(Boolean);
+    const fromLines = [siteName, ...String(contactAddress || '').split(/\n|,/).map(t => t.trim()), (site?.adminNotificationEmails || '').split(',')[0]?.trim()].filter(Boolean);
+    // The address is one comma-separated string; keep it as a single wrapped paragraph rather than one line per part.
+    const toLines = [order.customer || 'Customer', order.email, order.phone, addressLines.join(', ')].filter(Boolean);
+    const colText = (lines, x, top) => {
+      let yy = top;
+      lines.forEach((line, i) => {
+        type(i === 0 ? 'semibold' : 'regular', 10, i === 0 ? FG : [63, 63, 70]);
+        const w = wrap(line, CW / 2 - 12);
+        doc.text(w, x, yy);
+        yy += w.length * 4.8;
       });
       return yy;
     };
-    const addressLines = (order.address || '').split(',').map(t => t.trim()).filter(Boolean).join('\n').split('\n');
-    const endLeft = block(M, 'BILLED TO', [order.customer || 'Customer', order.email, order.phone, ...addressLines]);
-    const endRight = block(M + (R - M) / 2 + 4, 'FROM', [siteName, ...String(contactAddress || '').split(/\n|,/).map(t => t.trim()), (site?.adminNotificationEmails || '').split(',')[0]?.trim()]);
-    y = Math.max(endLeft, endRight) + 4;
+    const lineHeight = (lines) => lines.reduce((t, l) => t + wrap(l, CW / 2 - 12).length * 4.8, 0);
+    const adrH = 18 + Math.max(lineHeight(toLines), lineHeight(fromLines));
+    card(M, y, CW, adrH);
+    doc.setDrawColor(...BORDER); doc.line(M + CW / 2, y + 5, M + CW / 2, y + adrH - 5);
+    type('medium', 8.5, MUTED_FG); doc.text('Billed to', M + 6, y + 9); doc.text('From', M + CW / 2 + 6, y + 9);
+    colText(toLines, M + 6, y + 15.5);
+    colText(fromLines, M + CW / 2 + 6, y + 15.5);
 
-    // Items
+    // ── Items table (shadcn <Table>: muted header text, hairline row borders) ──
+    y += adrH + 8;
+    const tableTop = y;
+    const pagesBefore = doc.getNumberOfPages();
     doc.autoTable({
       startY: y,
       margin: { left: M, right: M },
+      tableWidth: CW,
       head: [['Item', 'Qty', 'Unit price', 'Amount']],
       body: (order.items || []).map(item => [
-        { content: item.name + ([item.size, item.color].filter(Boolean).length ? '\n' + [item.size, item.color].filter(Boolean).join(' / ') : ''), styles: {} },
+        item.name + ([item.size, item.color].filter(Boolean).length ? '\n' + [item.size, item.color].filter(Boolean).join(' / ') : ''),
         String(item.quantity),
         pdfMoney(item.price),
         pdfMoney(item.price * item.quantity),
       ]),
       theme: 'plain',
-      styles: { font: 'helvetica', fontSize: 9.5, textColor: INK, cellPadding: { top: 4, bottom: 4, left: 3, right: 3 }, lineColor: RULE, lineWidth: 0 },
-      headStyles: { fillColor: SOFT, textColor: MUTED, fontStyle: 'bold', fontSize: 8, cellPadding: { top: 3.2, bottom: 3.2, left: 3, right: 3 } },
-      columnStyles: { 0: { cellWidth: 'auto' }, 1: { halign: 'center', cellWidth: 16 }, 2: { halign: 'right', cellWidth: 32 }, 3: { halign: 'right', cellWidth: 32, fontStyle: 'bold' } },
-      didParseCell: (d) => { if (d.section === 'head' && d.column.index > 0) d.cell.styles.halign = d.column.index === 1 ? 'center' : 'right'; },
+      styles: { font: FAMILY, fontStyle: WEIGHT.regular, fontSize: 9.5, textColor: FG, cellPadding: { top: 4.2, bottom: 4.2, left: 6, right: 6 }, valign: 'middle' },
+      headStyles: { fontStyle: WEIGHT.medium, fontSize: 8.5, textColor: MUTED_FG, cellPadding: { top: 4, bottom: 4, left: 6, right: 6 } },
+      columnStyles: { 0: { cellWidth: 'auto', fontStyle: WEIGHT.medium }, 1: { halign: 'center', cellWidth: 18 }, 2: { halign: 'right', cellWidth: 34 }, 3: { halign: 'right', cellWidth: 34, fontStyle: WEIGHT.medium } },
+      didParseCell: (d) => {
+        if (d.section === 'head' && d.column.index > 0) d.cell.styles.halign = d.column.index === 1 ? 'center' : 'right';
+      },
       didDrawCell: (d) => {
-        if (d.section === 'body') {
-          doc.setDrawColor(...RULE); doc.setLineWidth(0.2);
-          doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height);
-        }
+        // a hairline under the header and between rows (not under the last row — the card edge does that)
+        const last = d.section === 'body' && d.row.index === (order.items || []).length - 1;
+        if (!last) { doc.setDrawColor(...BORDER); doc.setLineWidth(0.2); doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height); }
       },
     });
-
-    // Totals
-    let ty = (doc.lastAutoTable?.finalY || y) + 8;
-    if (ty > 245) { doc.addPage(); ty = 24; }
-    const subtotal = (order.total || 0) - (order.shippingCost || 0);
-    const labelX = R - 70;
-    const row = (label, value, strong = false) => {
-      doc.setFont('helvetica', strong ? 'bold' : 'normal'); doc.setFontSize(strong ? 12 : 9.5);
-      doc.setTextColor(...(strong ? INK : MUTED));
-      doc.text(label, labelX, ty);
-      doc.setTextColor(...INK);
-      doc.text(value, R, ty, { align: 'right' });
-      ty += strong ? 0 : 6.5;
-    };
-    row('Subtotal', pdfMoney(subtotal));
-    row('Shipping', order.shippingCost ? pdfMoney(order.shippingCost) : 'Free');
-    doc.setDrawColor(...INK); doc.setLineWidth(0.4);
-    doc.line(labelX, ty - 2.5, R, ty - 2.5);
-    ty += 4;
-    row('Total', pdfMoney(order.total), true);
-
-    // Delivery / tracking
-    if (order.carrier || order.trackingNumber || order.estimatedDelivery) {
-      ty += 14;
-      doc.setFillColor(...SOFT);
-      doc.roundedRect(M, ty, R - M, 20, 2, 2, 'F');
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-      const cells = [['CARRIER', order.carrier], ['TRACKING NO.', order.trackingNumber], ['EST. DELIVERY', order.estimatedDelivery]];
-      cells.forEach(([label, value], i) => {
-        const x = M + 6 + i * ((R - M - 6) / 3);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-        doc.text(label, x, ty + 7);
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK);
-        doc.text(String(value || '—'), x, ty + 13.5);
-      });
+    const tableEnd = doc.lastAutoTable?.finalY || y;
+    // Card outline around the table (skipped if a very long order spilled onto another page).
+    if (doc.getNumberOfPages() === pagesBefore) {
+      doc.setDrawColor(...BORDER); doc.setLineWidth(0.25);
+      doc.roundedRect(M, tableTop, CW, tableEnd - tableTop, RADIUS, RADIUS, 'S');
     }
 
-    // Footer on every page
+    // ── Shipment card (left) + totals card (right) ──
+    let ty = tableEnd + 8;
+    if (ty > 232) { doc.addPage(); ty = 20; }
+    const subtotal = (order.total || 0) - (order.shippingCost || 0);
+    const totW = 80, totH = 38;
+    const totX = R - totW;
+    card(totX, ty, totW, totH);
+    const trow = (k, v, yy, strong = false) => {
+      type(strong ? 'semibold' : 'regular', strong ? 11 : 9.5, strong ? FG : MUTED_FG); doc.text(k, totX + 6, yy);
+      type(strong ? 'semibold' : 'medium', strong ? 11 : 9.5, FG); doc.text(v, totX + totW - 6, yy, { align: 'right' });
+    };
+    trow('Subtotal', pdfMoney(subtotal), ty + 10);
+    trow('Shipping', order.shippingCost ? pdfMoney(order.shippingCost) : 'Free', ty + 18);
+    rule(totX, ty + 23, totX + totW);
+    trow('Total', pdfMoney(order.total), ty + 31, true);
+
+    const hasShipment = order.carrier || order.trackingNumber || order.estimatedDelivery;
+    const shipW = CW - totW - 8;
+    card(M, ty, shipW, totH);
+    type('medium', 8.5, MUTED_FG); doc.text(hasShipment ? 'Shipment' : 'Payment', M + 6, ty + 9);
+    if (hasShipment) {
+      [['Carrier', order.carrier], ['Tracking no.', order.trackingNumber], ['Est. delivery', order.estimatedDelivery]].forEach(([k, v], i) => {
+        type('regular', 9, MUTED_FG); doc.text(k, M + 6, ty + 17 + i * 6.5);
+        type('medium', 9.5, FG); doc.text(wrap(v || '\u2014', shipW - 40)[0], M + 34, ty + 17 + i * 6.5);
+      });
+    } else {
+      type('medium', 10, FG); doc.text(order.payfastId ? 'Paid online via PayFast' : (order.status === 'pending_payment' ? 'Awaiting payment' : 'Payment recorded'), M + 6, ty + 18);
+      type('regular', 9, MUTED_FG); doc.text(wrap(order.payfastId ? `Reference ${order.payfastId}` : 'No payment reference on file', shipW - 12), M + 6, ty + 24);
+    }
+
+    // ── Footer on every page ──
     const pages = doc.getNumberOfPages();
     for (let p = 1; p <= pages; p++) {
       doc.setPage(p);
-      doc.setDrawColor(...RULE); doc.setLineWidth(0.3);
-      doc.line(M, 280, R, 280);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-      doc.text(`Thank you for shopping with ${siteName}.`, M, 285);
-      doc.text(`Page ${p} of ${pages}`, R, 285, { align: 'right' });
+      rule(M, H - 20, R);
+      type('regular', 8.5, MUTED_FG);
+      doc.text(`Thank you for shopping with ${siteName}.`, M, H - 13.5);
+      doc.text(`Page ${p} of ${pages}`, R, H - 13.5, { align: 'right' });
     }
 
     doc.save(`Invoice-${order.id}.pdf`);
