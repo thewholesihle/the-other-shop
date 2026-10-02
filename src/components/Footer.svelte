@@ -61,18 +61,18 @@
       {:else}
         <h3 class="font-display text-2xl font-bold mb-4">{site.name}</h3>
       {/if}
-      <p class="text-sm text-primary-foreground/60 max-w-xs leading-relaxed">{site.footerTagline || site.description}</p>
+      <p class="text-sm text-on-dark max-w-xs leading-relaxed">{site.footerTagline || site.description}</p>
     </div>
     {#each Object.entries(footerLinks) as [title, links]}
       <div>
-        <p class="text-label text-primary-foreground/40 mb-4">{title.toUpperCase()}</p>
+        <p class="text-label text-on-dark mb-4">{title.toUpperCase()}</p>
         <ul class="space-y-2.5">
           {#each links as link}
             <li>
               <a
                 href={link.href}
                 onclick={(e) => nav(e, link.href)}
-                class="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors duration-200"
+                class="text-sm text-on-dark hover:text-primary-foreground transition-colors duration-200"
               >{link.label}</a>
             </li>
           {/each}
@@ -84,16 +84,16 @@
   <!-- Newsletter -->
   <div class="border-t border-primary-foreground/10 pt-10 pb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
     <div>
-      <p class="text-label text-primary-foreground/40 mb-2">NEWSLETTER</p>
-      <p class="text-sm text-primary-foreground/60">Sign up for drops, exclusives &amp; community news.</p>
+      <p class="text-label text-on-dark mb-2">NEWSLETTER</p>
+      <p class="text-sm text-on-dark">Sign up for drops, exclusives &amp; community news.</p>
     </div>
     {#if subState === 'done'}
-      <div class="flex items-center gap-2 text-sm text-primary-foreground/70">
+      <div class="flex items-center gap-2 text-sm text-on-dark">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
         You're subscribed!
       </div>
     {:else if subState === 'exists'}
-      <p class="text-sm text-primary-foreground/50">Already subscribed.</p>
+      <p class="text-sm text-on-dark">Already subscribed.</p>
     {:else}
       <div class="flex w-full md:w-auto flex-col gap-1">
         <div class="flex">
@@ -102,7 +102,7 @@
             placeholder="Email address"
             bind:value={email}
             onkeydown={(e) => e.key === 'Enter' && subscribe()}
-            class="bg-transparent border border-primary-foreground/20 px-4 py-3 text-sm text-primary-foreground placeholder:text-primary-foreground/30 flex-1 md:w-64 focus:outline-none focus:border-primary-foreground/50 transition-colors"
+            class="bg-transparent border border-primary-foreground/20 px-4 py-3 text-sm text-primary-foreground placeholder:text-on-dark flex-1 md:w-64 focus:outline-none focus:border-primary-foreground/50 transition-colors"
           />
           <button
             onclick={subscribe}
@@ -112,17 +112,17 @@
           </button>
         </div>
         {#if subState === 'error'}
-          <p class="text-xs text-red-400">Something went wrong. Try again.</p>
+          <p class="text-xs text-destructive-on-dark">Something went wrong. Try again.</p>
         {/if}
       </div>
     {/if}
   </div>
 
   <div class="border-t border-primary-foreground/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-    <p class="text-xs text-primary-foreground/30">© 2026 {site.name} All rights reserved.</p>
+    <p class="text-xs text-on-dark">© 2026 {site.name} All rights reserved.</p>
     <div class="flex gap-6">
       {#each socials as [name, href]}
-        <a {href} target="_blank" rel="noopener noreferrer" class="text-xs text-primary-foreground/30 hover:text-primary-foreground/60 transition-colors capitalize">{name}</a>
+        <a {href} target="_blank" rel="noopener noreferrer" class="text-xs text-on-dark hover:text-primary-foreground transition-colors capitalize">{name}</a>
       {/each}
     </div>
   </div>

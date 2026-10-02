@@ -3,12 +3,16 @@
   import ImageUpload from './ImageUpload.svelte';
   import Button from '../ui/Button.svelte';
   import Card from '../ui/Card.svelte';
+  import Badge from '../ui/Badge.svelte';
   import Switch from '../ui/Switch.svelte';
   import { inputCls, textareaCls, selectCls, labelCls, hintCls } from '../../lib/ui.js';
   import { toast } from '../../lib/toast.js';
   import { confirmDialog } from '../../lib/confirm.js';
   import LoaderCircle from 'lucide-svelte/icons/loader-circle';
   import Upload from 'lucide-svelte/icons/upload';
+  import { buildTheme } from '../../lib/theme.js';
+  import Check from 'lucide-svelte/icons/check';
+  import Wand from 'lucide-svelte/icons/wand-sparkles';
 
   let { site = {}, onUpdate = () => {}, lookbooks = [], articles = [] } = $props();
 
@@ -53,6 +57,10 @@
   let saving = $state(false);
   let uploadingVideo = $state(false);
   let dirty = $derived(JSON.stringify(form) !== snapshot);
+
+  // What the storefront will actually render: the picked colours, adjusted where needed so text stays readable.
+  let theme = $derived(buildTheme(form.colors));
+  let adjusted = $derived(theme.checks.filter(c => !c.pass).length);
 
   async function handleSave() {
     if (saving) return;
@@ -196,6 +204,34 @@
               </div>
             </div>
           {/each}
+        </div>
+
+        <!-- Contrast checker: every pair the storefront actually uses, before and after automatic correction -->
+        <div class="space-y-4 border-t border-border p-6">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-sm font-semibold">Readability check</p>
+            <Badge variant={adjusted ? 'warning' : 'success'}>
+              {#if adjusted}<Wand size={12} class="mr-1" /> {adjusted} colour{adjusted === 1 ? '' : 's'} auto-adjusted{:else}<Check size={12} class="mr-1" /> All combinations pass{/if}
+            </Badge>
+          </div>
+          <p class="text-sm text-muted-foreground">Colours are tested against WCAG contrast guidelines. Where a combination would be hard to read (or invisible to low-vision visitors) the storefront quietly uses the closest colour that passes, so you can pick freely.</p>
+          <ul class="divide-y divide-border rounded-lg border border-border text-sm">
+            {#each theme.checks as c}
+              <li class="flex items-center gap-3 px-4 py-2.5">
+                <span class="h-3 w-3 shrink-0 rounded-full border border-border" style="background:{c.applied}"></span>
+                <span class="flex-1">{c.label}</span>
+                <span class="tabular-nums text-muted-foreground">{c.ratio}:1 <span class="text-xs">(needs {c.min}:1)</span></span>
+                {#if c.pass}<Badge variant="success">Pass</Badge>{:else}<Badge variant="warning">Adjusted → {c.appliedRatio}:1</Badge>{/if}
+              </li>
+            {/each}
+          </ul>
+
+          <div class="rounded-lg border border-border p-5" style="background:{theme.hex.background}; color:{theme.hex.foreground}">
+            <p class="text-xs uppercase tracking-widest" style="color:{theme.hex.mutedForeground}">Preview</p>
+            <p class="mt-1 text-xl font-bold">New season, new pieces</p>
+            <p class="mt-1 text-sm" style="color:{theme.hex.mutedForeground}">Muted text such as product descriptions and captions.</p>
+            <p class="mt-3 text-sm"><span class="underline" style="color:{theme.hex.hover}">A link in its hover colour</span></p>
+          </div>
         </div>
       </Card>
 

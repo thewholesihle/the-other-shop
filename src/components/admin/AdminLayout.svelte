@@ -13,11 +13,17 @@
   import Activity from 'lucide-svelte/icons/activity';
   import ArrowUpRight from 'lucide-svelte/icons/arrow-up-right';
   import LogOut from 'lucide-svelte/icons/log-out';
+  import { getOptimizedUrl } from '../../lib/cloudinary.js';
   import Menu from 'lucide-svelte/icons/menu';
   import X from 'lucide-svelte/icons/x';
 
   // `badges` maps a section key to a count shown beside its nav label (e.g. orders to ship).
-  let { activeSection = 'dashboard', navigate = () => {}, badges = {}, onLogout = null, children } = $props();
+  let { activeSection = 'dashboard', navigate = () => {}, badges = {}, onLogout = null, site = {}, children } = $props();
+
+  // The store's own logo (falls back to its name if none is set or it fails to load).
+  let logoFailed = $state(false);
+  let logoSrc = $derived(site?.logo && !logoFailed ? getOptimizedUrl(site.logo, 360) : '');
+  let brandName = $derived(site?.name || 'Others.');
 
   let sidebarOpen = $state(false);
 
@@ -58,9 +64,13 @@
 {#snippet nav()}
   <div class="flex h-full flex-col">
     <div class="flex h-14 items-center justify-between px-5">
-      <a href="/admin" onclick={(e) => go(e, 'dashboard')} class="flex items-baseline gap-2">
-        <span class="text-lg font-bold tracking-tight">Others.</span>
-        <span class="text-xs text-muted-foreground">Admin</span>
+      <a href="/admin" onclick={(e) => go(e, 'dashboard')} class="flex items-center gap-2.5" aria-label="{brandName} admin — dashboard">
+        {#if logoSrc}
+          <img src={logoSrc} alt={brandName} class="h-7 w-auto max-w-[140px] object-contain" decoding="async" onerror={() => (logoFailed = true)} />
+        {:else}
+          <span class="text-lg font-bold tracking-tight">{brandName}</span>
+        {/if}
+        <span class="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Admin</span>
       </a>
       <button type="button" class="md:hidden rounded-md p-1.5 text-muted-foreground hover:bg-accent" aria-label="Close menu" onclick={() => (sidebarOpen = false)}><X size={18} /></button>
     </div>
@@ -123,6 +133,7 @@
   <div class="md:pl-60">
     <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur md:px-8">
       <button type="button" class="md:hidden rounded-md p-1.5 hover:bg-accent" aria-label="Open menu" onclick={() => (sidebarOpen = true)}><Menu size={20} /></button>
+      {#if logoSrc}<img src={logoSrc} alt={brandName} class="h-6 w-auto max-w-[110px] object-contain md:hidden" decoding="async" />{/if}
       <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm">
         <span class="text-muted-foreground">Admin</span>
         <span class="text-muted-foreground">/</span>

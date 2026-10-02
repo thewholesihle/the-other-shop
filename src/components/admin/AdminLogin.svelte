@@ -20,6 +20,8 @@
   let error = $state('');
   let heroImage = $state('');
   let siteName = $state('Others.');
+  let logo = $state('');
+  let logoFailed = $state(false);
 
   // Two things worth knowing before the user types anything: whether a second factor is
   // required, and (purely cosmetic) the store's hero image for the side panel.
@@ -32,6 +34,7 @@
       const d = await (await fetch('/api/data')).json();
       heroImage = d?.site?.hero?.image || '';
       siteName = d?.site?.name || 'Others.';
+      logo = d?.site?.logo || '';
     } catch { /* plain panel */ }
   });
 
@@ -70,6 +73,9 @@
         <form class="p-6 md:p-8" onsubmit={submit} novalidate>
           <div class="flex flex-col gap-6">
             <div class="flex flex-col items-center gap-2 text-center">
+              {#if logo && !logoFailed}
+                <img src={getOptimizedUrl(logo, 440)} alt={siteName} class="mb-3 h-9 w-auto max-w-[180px] object-contain" decoding="async" onerror={() => (logoFailed = true)} />
+              {/if}
               <h1 class="text-2xl font-bold tracking-tight">Welcome back</h1>
               <p class="text-balance text-sm text-muted-foreground">Sign in to the {siteName} admin panel</p>
             </div>

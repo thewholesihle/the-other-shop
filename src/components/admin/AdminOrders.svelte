@@ -242,7 +242,9 @@
 
   async function buildInvoice(order) {
     const { jsPDF } = window.jspdf;
-    const [logo, fonts] = await Promise.all([loadLogo(site?.emailLogo || site?.logo), loadGeist().catch(() => null)]);
+    let logoOnTile = false;
+    let [logo, fonts] = await Promise.all([loadLogo(site?.logo), loadGeist().catch(() => null)]);
+    if (!logo && site?.emailLogo) { logo = await loadLogo(site.emailLogo); logoOnTile = true; }
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     if (fonts) for (const f of fonts) { doc.addFileToVFS(f.file, f.b64); doc.addFont(f.file, 'Geist', f.style); }
     const FAMILY = fonts ? 'Geist' : 'helvetica';
@@ -259,44 +261,61 @@
     const rule = (x1, y, x2) => { doc.setDrawColor(...BORDER); doc.setLineWidth(0.25); doc.line(x1, y, x2, y); };
     const wrap = (text, width) => doc.splitTextToSize(String(text), width);
 
-    // ── Header: logo tile + title ──
-    let y = 18;
+    // ── Letterhead: logo (left) · sender details (right) ──
+    let y = 16;
+    const LH = 14; // letterhead height
     if (logo) {
-      const maxH = 9, maxW = 44;
+      const maxH = 12, maxW = 54;
       let lh = maxH, lw = (logo.w / logo.h) * lh;
       if (lw > maxW) { lw = maxW; lh = (logo.h / logo.w) * lw; }
-      const padX = 4, tileH = 14;
-      doc.setFillColor(...PRIMARY);
-      doc.roundedRect(M, y - 3, lw + padX * 2, tileH, RADIUS, RADIUS, 'F'); // dark tile: light logos stay visible on white paper
-      doc.addImage(logo.data, 'PNG', M + padX, y - 3 + (tileH - lh) / 2, lw, lh);
+      if (logoOnTile) {
+        doc.setFillColor(...PRIMARY);
+        doc.roundedRect(M, y, lw + 8, LH, RADIUS, RADIUS, 'F');
+        doc.addImage(logo.data, 'PNG', M + 4, y + (LH - lh) / 2, lw, lh);
+      } else {
+        doc.addImage(logo.data, 'PNG', M, y + (LH - lh) / 2, lw, lh);
+      }
     } else {
-      type('semibold', 16, FG);
-      doc.text(siteName, M, y + 6);
+      type('semibold', 18, FG);
+      doc.text(siteName, M, y + 9);
     }
+    const sender = [
+      ...String(contactAddress || '').split(/\n|,/).map(t => t.trim()).filter(Boolean).slice(0, 3),
+      (site?.adminNotificationEmails || '').split(',')[0]?.trim(),
+    ].filter(Boolean);
+    type('semibold', 9.5, FG);
+    doc.text(siteName, R, y + 3.5, { align: 'right' });
+    type('regular', 8.5, MUTED_FG);
+    sender.forEach((line, i) => doc.text(line, R, y + 8 + i * 4, { align: 'right' }));
+    y += Math.max(LH, 8 + sender.length * 4) + 5;
+    rule(M, y, R);
+
+    // ── Title row ──
+    y += 12;
     type('semibold', 22, FG);
-    doc.text('Invoice', R, y + 4, { align: 'right' });
-    type('regular', 9, MUTED_FG);
-    doc.text(order.id, R, y + 10, { align: 'right' });
+    doc.text('Invoice', M, y);
+    type('regular', 9.5, MUTED_FG);
+    doc.text(order.id, R, y, { align: 'right' });
 
     // ── Summary card: amount + status, then issued / order / payment ──
-    y = 42;
-    const sumH = 44;
+    y += 8;
+    const sumH = 40;
     card(M, y, CW, sumH);
     type('medium', 8.5, MUTED_FG);
-    doc.text('Amount', M + 6, y + 9);
-    type('semibold', 26, FG);
-    doc.text(pdfMoney(order.total), M + 6, y + 21);
+    doc.text('Amount', M + 6, y + 8.5);
+    type('semibold', 24, FG);
+    doc.text(pdfMoney(order.total), M + 6, y + 19);
 
     type('medium', 8, pill.fg);
     const label = pill.label;
     const pw = doc.getTextWidth(label) + 10;
     doc.setFillColor(...pill.bg);
-    doc.roundedRect(R - 6 - pw, y + 7, pw, 6.4, 3.2, 3.2, 'F');
+    doc.roundedRect(R - 6 - pw, y + 6.5, pw, 6.4, 3.2, 3.2, 'F');
     doc.setFillColor(...pill.fg);
-    doc.circle(R - 6 - pw + 3.6, y + 10.2, 0.8, 'F');
-    doc.text(label, R - 6 - pw + 6, y + 11.6);
+    doc.circle(R - 6 - pw + 3.6, y + 9.7, 0.8, 'F');
+    doc.text(label, R - 6 - pw + 6, y + 11.1);
 
-    rule(M, y + 27, R);
+    rule(M, y + 24, R);
     const meta = [
       ['Issued', issued.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })],
       ['Order', order.id],
@@ -305,36 +324,25 @@
     const colW = CW / 3;
     meta.forEach(([k, v], i) => {
       const x = M + 6 + i * colW;
-      type('medium', 8, MUTED_FG); doc.text(k, x, y + 33.5);
-      type('medium', 10, FG); doc.text(wrap(v, colW - 8)[0], x, y + 39.5);
+      type('medium', 8, MUTED_FG); doc.text(k, x, y + 30);
+      type('medium', 10, FG); doc.text(wrap(v, colW - 8)[0], x, y + 35.5);
     });
 
-    // ── Billed to / From card ──
-    y += sumH + 8;
-    const addressLines = (order.address || '').split(',').map(t => t.trim()).filter(Boolean);
-    const fromLines = [siteName, ...String(contactAddress || '').split(/\n|,/).map(t => t.trim()), (site?.adminNotificationEmails || '').split(',')[0]?.trim()].filter(Boolean);
-    // The address is one comma-separated string; keep it as a single wrapped paragraph rather than one line per part.
-    const toLines = [order.customer || 'Customer', order.email, order.phone, addressLines.join(', ')].filter(Boolean);
-    const colText = (lines, x, top) => {
-      let yy = top;
-      lines.forEach((line, i) => {
-        type(i === 0 ? 'semibold' : 'regular', 10, i === 0 ? FG : [63, 63, 70]);
-        const w = wrap(line, CW / 2 - 12);
-        doc.text(w, x, yy);
-        yy += w.length * 4.8;
-      });
-      return yy;
-    };
-    const lineHeight = (lines) => lines.reduce((t, l) => t + wrap(l, CW / 2 - 12).length * 4.8, 0);
-    const adrH = 18 + Math.max(lineHeight(toLines), lineHeight(fromLines));
+    // ── Billed to / Delivery card ──
+    y += sumH + 7;
+    const addressText = (order.address || '').split(',').map(t => t.trim()).filter(Boolean).join(', ') || '\u2014';
+    const billLines = [order.customer || 'Customer', order.email, order.phone].filter(Boolean);
+    const colTextW = CW / 2 - 12;
+    const addrWrapped = wrap(addressText, colTextW);
+    const adrH = 17 + Math.max(billLines.length * 4.8, addrWrapped.length * 4.8);
     card(M, y, CW, adrH);
     doc.setDrawColor(...BORDER); doc.line(M + CW / 2, y + 5, M + CW / 2, y + adrH - 5);
-    type('medium', 8.5, MUTED_FG); doc.text('Billed to', M + 6, y + 9); doc.text('From', M + CW / 2 + 6, y + 9);
-    colText(toLines, M + 6, y + 15.5);
-    colText(fromLines, M + CW / 2 + 6, y + 15.5);
+    type('medium', 8.5, MUTED_FG); doc.text('Billed to', M + 6, y + 8.5); doc.text('Delivery address', M + CW / 2 + 6, y + 8.5);
+    billLines.forEach((line, i) => { type(i === 0 ? 'semibold' : 'regular', 10, i === 0 ? FG : [63, 63, 70]); doc.text(wrap(line, colTextW)[0], M + 6, y + 15 + i * 4.8); });
+    type('regular', 10, [63, 63, 70]); doc.text(addrWrapped, M + CW / 2 + 6, y + 15);
 
+    y += adrH + 7;
     // ── Items table (shadcn <Table>: muted header text, hairline row borders) ──
-    y += adrH + 8;
     const tableTop = y;
     const pagesBefore = doc.getNumberOfPages();
     doc.autoTable({

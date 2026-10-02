@@ -161,7 +161,7 @@
                   <button
                     onclick={() => (selectedColor = color)}
                     disabled={!colorHasStock(color)}
-                    class="text-xs border transition-colors px-3 py-1.5 {selectedColor === color ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'} {!colorHasStock(color) ? 'opacity-40 cursor-not-allowed line-through' : ''}">
+                    class="text-xs border transition-colors px-3 py-1.5 {selectedColor === color ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'} {!colorHasStock(color) ? 'text-muted-foreground border-dashed cursor-not-allowed line-through' : ''}">
                     {color}
                   </button>
                 {/each}
@@ -178,7 +178,7 @@
                   <button
                     onclick={() => (selectedSize = size)}
                     disabled={product.stock === 0 || !sizeHasStock(size)}
-                    class="border px-4 py-2 text-sm transition-colors {selectedSize === size ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'} {product.stock === 0 || !sizeHasStock(size) ? 'opacity-40 cursor-not-allowed line-through' : ''}">
+                    class="border px-4 py-2 text-sm transition-colors {selectedSize === size ? 'bg-foreground text-primary-foreground border-foreground' : 'border-border hover:border-foreground'} {product.stock === 0 || !sizeHasStock(size) ? 'text-muted-foreground border-dashed cursor-not-allowed line-through' : ''}">
                     {size}
                   </button>
                 {/each}
@@ -191,7 +191,7 @@
             <button
               onclick={addToCart}
               disabled={disabledAdd}
-              class="w-full py-4 text-label tracking-[0.25em] transition-all duration-300 {product.stock === 0 ? 'bg-muted text-muted-foreground cursor-not-allowed' : added ? 'bg-green-700 text-white' : disabledAdd ? 'bg-muted text-foreground cursor-not-allowed border border-border' : 'bg-foreground text-primary-foreground hover:bg-foreground/90 active:scale-[0.97]'}">
+              class="w-full py-4 text-label tracking-[0.25em] transition-all duration-300 {product.stock === 0 ? 'bg-muted text-muted-foreground cursor-not-allowed' : added ? 'bg-success text-success-foreground' : disabledAdd ? 'bg-muted text-foreground cursor-not-allowed border border-border' : 'bg-foreground text-primary-foreground hover:bg-foreground/90 active:scale-[0.97]'}">
               {#if product.stock === 0}
                 SOLD OUT
               {:else if added}
@@ -215,7 +215,7 @@
 
           <!-- Stock note -->
           {#if currentVariantStock !== null && currentVariantStock > 0 && currentVariantStock <= 5}
-            <p class="text-xs text-store-rust font-medium">Only {currentVariantStock} left in stock</p>
+            <p class="text-xs text-destructive font-medium">Only {currentVariantStock} left in stock</p>
           {/if}
         </div>
       </div>

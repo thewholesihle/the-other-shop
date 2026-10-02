@@ -45,7 +45,7 @@
     {/if}
 
     {#if isOutOfStock}
-      <span class="absolute top-3 left-3 bg-store-rust text-accent-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">Sold Out</span>
+      <span class="absolute top-3 left-3 bg-destructive text-destructive-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">Sold Out</span>
     {:else if product.isNew}
       <span class="absolute top-3 left-3 bg-foreground text-primary-foreground text-[10px] tracking-[0.2em] uppercase px-3 py-1 font-medium">New</span>
     {/if}

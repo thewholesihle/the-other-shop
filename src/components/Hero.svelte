@@ -30,7 +30,9 @@
   {/if}
 
   <!-- Dark overlay for legibility -->
-  <div class="absolute inset-0 bg-black/20"></div>
+  <div class="absolute inset-0 bg-black/25"></div>
+  <!-- Bottom-up scrim: the headline and CTA sit low, so that is where light text needs the most help on bright photos. -->
+  <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent"></div>
 
   <div class="absolute inset-0 flex items-end">
     <div class="px-6 md:px-10 pb-16 md:pb-20 max-w-lg">

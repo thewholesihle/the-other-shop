@@ -152,7 +152,7 @@
 
       {#if step === 'success'}
         <div class="text-center py-24">
-          <div class="w-16 h-16 border-2 border-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
+          <div class="w-16 h-16 border-2 border-success rounded-full flex items-center justify-center mx-auto mb-6 text-success">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
           </div>
           <h1 class="text-3xl font-display font-bold mb-3">Payment Successful</h1>
@@ -214,7 +214,7 @@
                   <span class="text-muted-foreground">Shipping</span>
                   <span>
                     {#if shippingCost === 0}
-                      <span class="text-green-600">Free</span>
+                      <span class="text-success">Free</span>
                     {:else}
                       {currency}{shippingCost.toFixed(2)}
                     {/if}

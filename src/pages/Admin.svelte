@@ -18,6 +18,7 @@
   import ConfirmDialog from '../components/ui/ConfirmDialog.svelte';
   import { toast } from '../lib/toast.js';
   import { notifyDesktop, beep } from '../lib/alerts.js';
+  import { saveBrand } from '../lib/brand.js';
 
   const SECTIONS = ['dashboard', 'products', 'categories', 'orders', 'status', 'lookbook', 'community', 'pages', 'subscribers', 'newsletter', 'settings'];
 
@@ -157,6 +158,7 @@
     loading = true;
     try {
       data = await loadData();
+      saveBrand(data?.site);
     } catch (e) {
       console.error('Admin load error:', e);
       saveError = e.message;
@@ -271,7 +273,7 @@
     <button onclick={() => location.reload()} class="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm hover:bg-accent transition-colors">Retry</button>
   </div>
 {:else}
-  <AdminLayout {activeSection} {navigate} {badges} onLogout={logout}>
+  <AdminLayout {activeSection} {navigate} {badges} site={data.site} onLogout={logout}>
     {#if activeSection === 'dashboard'}
       <AdminDashboard {data} {navigate} />
     {:else if activeSection === 'products'}

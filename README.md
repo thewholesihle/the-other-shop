@@ -135,6 +135,12 @@ Shipping is handled manually. Once an order is paid, the admin Orders tab shows 
 - **Strict CSP** on admin pages (scripts only from this site; the PDF libraries are self-hosted in `public/vendor/`), no framing, `noindex`.
 - `/api/data` only returns orders, subscribers and admin-only settings to a signed-in admin.
 
+## Branding & accessibility
+
+- **Logo everywhere:** the store's logo is used on the loading screen (a static on-brand screen baked into the first HTML by the server, then the in-app `<Loader>`), the admin sidebar/mobile header and sign-in page, and the invoice letterhead. Without a logo the store name is used.
+- **Favicon:** the tab icon, apple-touch icon and PWA manifest come from **Settings → Store identity** (favicon, else logo), injected by the server into every page. `/favicon.ico` redirects to it; before a logo is uploaded a generated monogram is shown. No icon file is bundled with the project. (Browsers cache favicons aggressively — hard-refresh or reopen the tab to see a change.)
+- **Colours:** the five palette colours are turned into a full token set by `src/lib/theme.js`, which guarantees WCAG contrast for body text (7:1), muted text, link/button hover (including on the dark footer), form borders and focus rings (3:1), and error/success colours — automatically adjusting a colour that would fail. **Settings → Colour palette** shows a live readability check. Keyboard focus is a visible two-tone ring everywhere.
+
 ## Media & performance
 
 - **Images:** every Cloudinary image is served through `<Img>` (`src/components/Img.svelte`): responsive `srcset`/`sizes`, AVIF/WebP via `f_auto`, `q_auto`, lazy-loaded and async-decoded, with a fade-in. The hero and main product/article image are `priority` (eager, high fetch priority), and the home hero is also preloaded from the server-rendered HTML.

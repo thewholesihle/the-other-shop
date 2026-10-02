@@ -1683,6 +1683,25 @@ app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
 
 // ─── API: Store Data ──────────────────────────────────────────────────────────
 
+// ─── Favicon ─────────────────────────────────────────────────────────────────
+// Browsers (and crawlers) request /favicon.ico on their own, whatever the HTML says. It resolves to
+// the store's own favicon/logo — never a file bundled with the project — and falls back to a
+// generated monogram until a logo is uploaded.
+app.get('/favicon.ico', async (_req, res) => {
+  const info = await getBrandInfo();
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.redirect(302, brandIconUrl(info, 64) || '/favicon.svg');
+});
+
+app.get('/favicon.svg', async (_req, res) => {
+  const info = await getBrandInfo();
+  const ok = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : null);
+  const letter = escapeHtmlAttr((info.name || 'O').trim().charAt(0).toUpperCase() || 'O');
+  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=3600').send(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${ok(info.fg) || '#211c1a'}"/><text x="32" y="45" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-weight="700" font-size="38" fill="${ok(info.bg) || '#f8f5f2'}">${letter}</text></svg>`
+  );
+});
+
 // ─── PWA & Favicon Manifest ───────────────────────────────────────────────────
 app.get('/manifest.json', async (req, res) => {
   try {
@@ -1693,7 +1712,9 @@ app.get('/manifest.json', async (req, res) => {
     const iconBase = site.favicon || site.logo || '';
     
     let icons = [];
-    if (iconBase.includes('cloudinary.com')) {
+    if (iconBase && !iconBase.includes('cloudinary.com')) {
+      icons = [{ src: iconBase, sizes: '512x512', type: 'image/png' }];
+    } else if (iconBase.includes('cloudinary.com')) {
       icons = [
         { src: iconBase.replace('/upload/', '/upload/c_pad,f_png,q_auto,w_192,h_192/'), sizes: '192x192', type: 'image/png' },
         { src: iconBase.replace('/upload/', '/upload/c_pad,f_png,q_auto,w_512,h_512/'), sizes: '512x512', type: 'image/png' },
@@ -2366,17 +2387,86 @@ function renderMetaTags({ siteName, title, description, image, url, type = 'webs
   ${extra}`;
 }
 
-function serveWithMeta(res, metaOptions) {
+// The static loading screen in index.html (#boot) is filled in with the store's own logo/name and
+// colours, so the very first paint is already on-brand. Cached briefly — it's on every page view.
+let bootCache = { at: 0, admin: null, store: null };
+
+/** The store's brand icon (favicon, else logo) as a square PNG of the given size; '' if none is set. */
+function brandIconUrl(site, size) {
+  const base = site?.favicon || site?.logo || '';
+  if (!base) return '';
+  return base.includes('res.cloudinary.com') && base.includes('/upload/')
+    ? base.replace('/upload/', `/upload/c_pad,f_png,q_auto,w_${size},h_${size}/`)
+    : base;
+}
+
+/** Name/logo/colours/favicon for the HTML shell, cached for a minute (it's read on every page view). */
+let brandInfoCache = { at: 0, info: null };
+async function getBrandInfo() {
+  if (brandInfoCache.info && Date.now() - brandInfoCache.at < 60000) return brandInfoCache.info;
+  const info = { name: 'Others.', logo: '', favicon: '', bg: '#f8f5f2', fg: '#211c1a' };
+  if (getIsConnected()) {
+    try {
+      const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(800).lean();
+      info.name = site?.name || info.name;
+      info.logo = site?.logo || '';
+      info.favicon = site?.favicon || '';
+      info.bg = site?.colors?.background || info.bg;
+      info.fg = site?.colors?.foreground || info.fg;
+    } catch { /* defaults */ }
+  }
+  brandInfoCache = { at: Date.now(), info };
+  return info;
+}
+
+/** <link>/<meta> tags for the browser tab, home-screen and PWA install — always the store's own icon. */
+function iconHead(info, bg) {
+  const icon32 = brandIconUrl(info, 64);
+  const apple = brandIconUrl(info, 180);
+  const safeBg = /^#[0-9a-f]{3,8}$/i.test(bg || '') ? bg : '#ffffff';
+  return [
+    icon32 ? `<link rel="icon" type="image/png" href="${escapeHtmlAttr(icon32)}">` : '<link rel="icon" type="image/svg+xml" href="/favicon.svg">',
+    apple ? `<link rel="apple-touch-icon" href="${escapeHtmlAttr(apple)}">` : '',
+    '<link rel="manifest" href="/manifest.json">',
+    `<meta name="theme-color" content="${safeBg}">`,
+  ].join('\n  ');
+}
+
+async function bootBrand(admin) {
+  const slot = admin ? 'admin' : 'store';
+  if (bootCache[slot] && Date.now() - bootCache.at < 60000) return bootCache[slot];
+  const info = await getBrandInfo();
+  const { name, logo, bg, fg } = info;
+  const safeColor = (c, d) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : d);
+  const brand = {
+    icons: iconHead(info, admin ? '#fafafa' : safeColor(bg, '#f8f5f2')),
+    style: admin ? 'background:#fafafa;color:#09090b' : `background:${safeColor(bg, '#f8f5f2')};color:${safeColor(fg, '#211c1a')}`,
+    inner: logo
+      ? `<img class="boot-logo" src="${escapeHtmlAttr(logo.includes('res.cloudinary.com') && logo.includes('/upload/') ? logo.replace('/upload/', '/upload/c_limit,w_440,f_auto,q_auto/') : logo)}" alt="${escapeHtmlAttr(name)}">`
+      : `<span class="boot-mark">${escapeHtmlAttr(name)}</span>`,
+  };
+  bootCache = { ...bootCache, at: Date.now(), [slot]: brand };
+  return brand;
+}
+
+/** Sends the SPA shell with the brand loading screen filled in (and optional extra <head> content). */
+async function sendShell(res, { admin = false, head = '' } = {}) {
   try {
-    const indexPath = path.resolve(__dirname, 'public', 'index.html');
-    let html = fs.readFileSync(indexPath, 'utf-8');
-    html = html.replace('<title>The Other Shop</title>', '');
-    html = html.replace('<head>', `<head>${renderMetaTags(metaOptions)}`);
+    const brand = await bootBrand(admin);
+    let html = fs.readFileSync(path.resolve(__dirname, 'public', 'index.html'), 'utf-8');
+    html = html.replace('__BOOT_STYLE__', () => brand.style).replace('<!--BOOT-->', () => brand.inner);
+    html = html.replace('<head>', () => `<head>\n  ${brand.icons}`);
+    if (admin) html = html.replace('<div id="boot"', '<div id="boot" class="boot-admin"');
+    if (head) { html = html.replace('<title>The Other Shop</title>', '').replace('<head>', () => `<head>${head}`); }
     res.send(html);
   } catch (err) {
-    console.warn('Metadata injection failed:', err.message);
+    console.warn('Shell render failed:', err.message);
     res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
   }
+}
+
+async function serveWithMeta(res, metaOptions) {
+  await sendShell(res, { head: renderMetaTags(metaOptions) });
 }
 
 /** Site-wide fallbacks used whenever a specific page has nothing more specific of its own. */
@@ -2536,14 +2626,10 @@ app.get('/shipping-returns', async (req, res) => {
 // ─── Admin Routes (Basic Auth protected) ─────────────────────────────────────
 // The SPA shell is public — it renders the sign-in screen itself until /api/admin/session
 // confirms a session. All admin *data* sits behind requireAdmin.
-app.get(/^\/admin(\/.*)?$/, (_req, res) => {
-  res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
-});
+app.get(/^\/admin(\/.*)?$/, (_req, res) => sendShell(res, { admin: true }));
 
 // ─── SPA Fallback ─────────────────────────────────────────────────────────────
-app.use((_req, res) => {
-  res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
-});
+app.use((_req, res) => sendShell(res));
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 connect().catch(err => {
