@@ -1,189 +1,212 @@
 <script>
   import ImageUpload from './ImageUpload.svelte';
   import RichEditor from './RichEditor.svelte';
+  import Button from '../ui/Button.svelte';
+  import Badge from '../ui/Badge.svelte';
+  import Card from '../ui/Card.svelte';
+  import Switch from '../ui/Switch.svelte';
+  import { inputCls, textareaCls, selectCls, labelCls, hintCls, thCls, tdCls } from '../../lib/ui.js';
+  import { toast } from '../../lib/toast.js';
+  import { confirmDialog } from '../../lib/confirm.js';
+  import Plus from 'lucide-svelte/icons/plus';
+  import Pencil from 'lucide-svelte/icons/pencil';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+  import FileText from 'lucide-svelte/icons/file-text';
 
-  export let community = [];
-  export let onUpdate = () => {};
-  export let onLocalUpdate = onUpdate;
+  let { community = [], onUpdate = () => {}, onLocalUpdate = null } = $props();
+  const syncLocal = (list) => (onLocalUpdate || onUpdate)(list);
 
-  let editing = null;
-  let isNew = false;
-  let saving = false;
-  let deletingId = null;
+  let editing = $state(null);
+  let isNew = $state(false);
+  let saving = $state(false);
+  let deletingId = $state(null);
+  let snapshot = $state('');
+  let dirty = $derived(editing ? JSON.stringify(editing) !== snapshot : false);
+
+  const CATEGORIES = ['Collection', 'Community', 'News', 'Collaboration', 'Culture', 'Other'];
 
   const empty = () => ({
     id: '', slug: '', title: '', excerpt: '', content: '',
-    author: 'Others.', date: new Date().toISOString().slice(0,10),
+    author: 'Others.', date: new Date().toISOString().slice(0, 10),
     category: 'Collection', image: '', published: true,
   });
 
-  function slugify(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const slugify = (str) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  function startEditing(post) {
+    editing = post ? { ...post } : empty();
+    isNew = !post;
+    snapshot = JSON.stringify(editing);
+  }
+
+  function closeEditor() { editing = null; isNew = false; }
+
+  async function requestClose() {
+    if (dirty && !(await confirmDialog.ask({
+      title: 'Discard changes?', description: 'You have unsaved changes to this post.',
+      confirmLabel: 'Discard', destructive: true,
+    }))) return;
+    closeEditor();
   }
 
   async function handleSave() {
     if (saving) return;
+    if (!editing.title.trim()) return toast.error('Give the post a title.');
     saving = true;
     try {
       const post = { ...editing, slug: editing.slug || slugify(editing.title) };
-      if (isNew) {
-        await onUpdate([...community, { ...post, id: `post-${Date.now()}` }]);
-      } else {
-        await onUpdate(community.map(p => p.id === editing.id ? post : p));
-      }
-      editing = null; isNew = false;
+      if (isNew) await onUpdate([...community, { ...post, id: `post-${Date.now()}` }]);
+      else await onUpdate(community.map(p => p.id === editing.id ? post : p));
+      closeEditor();
+    } catch {
+      // Admin.svelte toasts the failure; keep the editor open.
     } finally {
       saving = false;
     }
   }
-  async function handleDelete(id) {
-    if (!confirm('Are you sure you want to delete this post?')) return;
-    deletingId = id;
+
+  async function handleDelete(post) {
+    const ok = await confirmDialog.ask({
+      title: `Delete “${post.title}”?`,
+      description: 'The post and its cover image are permanently removed.',
+      confirmLabel: 'Delete post', destructive: true,
+    });
+    if (!ok) return;
+    deletingId = post.id;
     try {
-      const res = await fetch('/api/community/' + id, { method: 'DELETE' });
+      const res = await fetch('/api/community/' + post.id, { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error('Failed to delete post.');
-      onLocalUpdate(community.filter(p => p.id !== id));
+      syncLocal(community.filter(p => p.id !== post.id));
+      toast.success('Post deleted');
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       deletingId = null;
     }
   }
-
-  const CATEGORIES = ['Collection', 'Community', 'News', 'Collaboration', 'Culture', 'Other'];
 </script>
 
-<div class="space-y-6">
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-2xl font-display font-bold mb-1">Community</h2>
-      <p class="text-sm text-muted-foreground">{community.length} post{community.length !== 1 ? 's' : ''}</p>
+{#if !editing}
+  <div class="space-y-6">
+    <div class="flex items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight">Community</h1>
+        <p class="text-sm text-muted-foreground">{community.length} post{community.length !== 1 ? 's' : ''} — stories, news and culture.</p>
+      </div>
+      <Button onclick={() => startEditing(null)}><Plus size={16} /> New post</Button>
     </div>
-    <button onclick={() => { editing = empty(); isNew = true; }}
-      class="flex items-center gap-2 bg-foreground text-primary-foreground px-4 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-      ADD POST
-    </button>
-  </div>
 
-  <div class="bg-card border border-border overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="border-b border-border">
-          <th class="text-left text-label p-3">TITLE</th>
-          <th class="text-left text-label p-3 hidden md:table-cell">CATEGORY</th>
-          <th class="text-left text-label p-3 hidden md:table-cell">DATE</th>
-          <th class="text-center text-label p-3">STATUS</th>
-          <th class="text-right text-label p-3">ACTIONS</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each community as post}
-          <tr class="border-b border-border/50 hover:bg-muted/50 transition-colors">
-            <td class="p-3 font-medium">{post.title}</td>
-            <td class="p-3 text-muted-foreground hidden md:table-cell">{post.category}</td>
-            <td class="p-3 text-muted-foreground hidden md:table-cell">{post.date}</td>
-            <td class="p-3 text-center">
-              <span class="inline-block text-[10px] tracking-[0.15em] uppercase px-2 py-0.5 font-medium {post.published ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}">{post.published ? 'Published' : 'Draft'}</span>
-            </td>
-            <td class="p-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <button aria-label="Edit post" onclick={() => { editing = { ...post }; isNew = false; }} class="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                </button>
-                <button aria-label="Delete post" onclick={() => handleDelete(post.id)} disabled={deletingId === post.id} class="p-1.5 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40 disabled:cursor-wait">
-                  {#if deletingId === post.id}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                  {:else}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
-                  {/if}
-                </button>
-              </div>
-            </td>
-          </tr>
-        {/each}
-        {#if !community.length}
-          <tr><td colspan="5" class="p-8 text-center text-muted-foreground text-sm">No posts yet.</td></tr>
-        {/if}
-      </tbody>
-    </table>
-  </div>
-
-  {#if editing}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4">
-      <div class="bg-background border border-border w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-fade-up">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-display font-bold">{isNew ? 'New Post' : 'Edit Post'}</h3>
-          <button aria-label="Close" onclick={() => { editing = null; isNew = false; }} class="text-muted-foreground hover:text-foreground">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
+    <Card class="overflow-hidden">
+      {#if community.length === 0}
+        <div class="flex flex-col items-center gap-2 py-16 text-center">
+          <FileText size={28} class="text-muted-foreground" />
+          <p class="font-medium">No posts yet</p>
+          <p class="text-sm text-muted-foreground">Write your first story to start the community feed.</p>
         </div>
+      {:else}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-border">
+              <tr>
+                <th class={thCls}>Title</th>
+                <th class="{thCls} hidden md:table-cell">Category</th>
+                <th class="{thCls} hidden md:table-cell">Date</th>
+                <th class={thCls}>Status</th>
+                <th class="{thCls} w-24 text-right"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each community as post (post.id)}
+                <tr class="border-b border-border/60 last:border-0 hover:bg-muted/50">
+                  <td class="{tdCls} font-medium"><button type="button" class="text-left hover:underline" onclick={() => startEditing(post)}>{post.title}</button></td>
+                  <td class="{tdCls} hidden text-muted-foreground md:table-cell">{post.category}</td>
+                  <td class="{tdCls} hidden text-muted-foreground md:table-cell">{post.date}</td>
+                  <td class={tdCls}><Badge variant={post.published ? 'success' : 'secondary'}>{post.published ? 'Published' : 'Draft'}</Badge></td>
+                  <td class="{tdCls} text-right">
+                    <div class="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" aria-label="Edit {post.title}" onclick={() => startEditing(post)}><Pencil size={15} /></Button>
+                      <Button variant="ghost" size="icon" aria-label="Delete {post.title}" class="hover:text-destructive" disabled={deletingId === post.id} onclick={() => handleDelete(post)}>
+                        {#if deletingId === post.id}<LoaderCircle size={15} class="animate-spin" />{:else}<Trash2 size={15} />{/if}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
+    </Card>
+  </div>
+{:else}
+  <div class="space-y-6 pb-24">
+    <div>
+      <button type="button" onclick={requestClose} class="mb-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft size={14} /> Community</button>
+      <h1 class="text-2xl font-semibold tracking-tight">{isNew ? 'New post' : editing.title || 'Edit post'}</h1>
+    </div>
 
-        <div class="space-y-4">
-          <!-- Metadata row -->
-          <div>
-            <label for="post-title" class="text-label block mb-1.5">TITLE</label>
-            <input id="post-title" bind:value={editing.title}
-              oninput={() => { if (isNew) editing.slug = slugify(editing.title); }}
-              class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <div class="space-y-6 lg:col-span-2">
+        <Card title="Content">
+          <div class="space-y-5 p-6 pt-4">
             <div>
-              <label for="post-slug" class="text-label block mb-1.5">SLUG</label>
-              <input id="post-slug" bind:value={editing.slug} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors font-mono" />
+              <label for="post-title" class={labelCls}>Title</label>
+              <input id="post-title" bind:value={editing.title} oninput={() => { if (isNew) editing.slug = slugify(editing.title); }} class={inputCls} />
             </div>
             <div>
-              <label for="post-cat" class="text-label block mb-1.5">CATEGORY</label>
-              <select id="post-cat" bind:value={editing.category} class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors">
+              <label for="post-excerpt" class={labelCls}>Excerpt</label>
+              <textarea id="post-excerpt" bind:value={editing.excerpt} rows={2} class={textareaCls}></textarea>
+              <p class={hintCls}>Shown on the community page and in link previews.</p>
+            </div>
+            <div>
+              <p class={labelCls}>Body</p>
+              <RichEditor value={editing.content} onChange={(html) => (editing = { ...editing, content: html })} />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div class="space-y-6">
+        <Card title="Publishing">
+          <div class="space-y-5 p-6 pt-4">
+            <div class="flex items-center justify-between gap-4">
+              <div class="text-sm"><p class="font-medium">Published</p><p class="text-muted-foreground">Visible on the site</p></div>
+              <Switch bind:checked={editing.published} aria-label="Published" />
+            </div>
+            <div>
+              <label for="post-cat" class={labelCls}>Category</label>
+              <select id="post-cat" bind:value={editing.category} class={selectCls}>
                 {#each CATEGORIES as c}<option value={c}>{c}</option>{/each}
               </select>
             </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="post-author" class="text-label block mb-1.5">AUTHOR</label>
-              <input id="post-author" bind:value={editing.author} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+            <div class="grid grid-cols-2 gap-3">
+              <div><label for="post-author" class={labelCls}>Author</label><input id="post-author" bind:value={editing.author} class={inputCls} /></div>
+              <div><label for="post-date" class={labelCls}>Date</label><input id="post-date" type="date" bind:value={editing.date} class={inputCls} /></div>
             </div>
             <div>
-              <label for="post-date" class="text-label block mb-1.5">DATE</label>
-              <input id="post-date" type="date" bind:value={editing.date} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
+              <label for="post-slug" class={labelCls}>Slug</label>
+              <input id="post-slug" bind:value={editing.slug} class="{inputCls} font-mono text-[13px]" />
+              <p class={hintCls}>The post’s address: /community/{editing.slug || '…'}</p>
             </div>
           </div>
+        </Card>
 
-          <div>
-            <label for="post-excerpt" class="text-label block mb-1.5">EXCERPT</label>
-            <textarea id="post-excerpt" bind:value={editing.excerpt} rows={2} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
-          </div>
+        <Card title="Cover image">
+          <div class="p-6 pt-4"><ImageUpload label="" value={editing.image} onChange={(url) => (editing = { ...editing, image: url })} /></div>
+        </Card>
+      </div>
+    </div>
 
-          <!-- Rich content editor -->
-          <div>
-            <p class="text-label block mb-1.5">CONTENT</p>
-            <RichEditor value={editing.content} onChange={(html) => (editing = { ...editing, content: html })} />
-          </div>
-
-          <ImageUpload label="COVER IMAGE" value={editing.image} onChange={(url) => (editing = { ...editing, image: url })} />
-
-          <label class="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" bind:checked={editing.published} class="accent-foreground" />
-            Published (visible on site)
-          </label>
-        </div>
-
-        <div class="flex gap-3 pt-2">
-          <button onclick={handleSave} disabled={saving} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 disabled:cursor-wait">
-            {#if saving}
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-              SAVING…
-            {:else}
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
-              SAVE
-            {/if}
-          </button>
-          <button onclick={() => { editing = null; isNew = false; }} disabled={saving} class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] disabled:opacity-40">CANCEL</button>
+    <div class="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur md:left-60">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
+        <p class="text-sm {dirty ? 'text-foreground' : 'text-muted-foreground'}">{dirty ? 'You have unsaved changes' : 'No changes yet'}</p>
+        <div class="flex gap-2">
+          <Button variant="outline" disabled={saving} onclick={requestClose}>Cancel</Button>
+          <Button disabled={saving} onclick={handleSave}>{#if saving}<LoaderCircle size={15} class="animate-spin" /> Saving…{:else}Save post{/if}</Button>
         </div>
       </div>
     </div>
-  {/if}
-</div>
+  </div>
+{/if}

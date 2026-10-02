@@ -1,48 +1,85 @@
 <script>
-  export let orders = [];
-  export let currency = 'R';
-  export let onUpdate = () => {};
+  import Button from '../ui/Button.svelte';
+  import Badge from '../ui/Badge.svelte';
+  import Card from '../ui/Card.svelte';
+  import Tabs from '../ui/Tabs.svelte';
+  import Sheet from '../ui/Sheet.svelte';
+  import { inputCls, textareaCls, labelCls, hintCls, thCls, tdCls } from '../../lib/ui.js';
+  import { toast } from '../../lib/toast.js';
+  import { confirmDialog } from '../../lib/confirm.js';
+  import Search from 'lucide-svelte/icons/search';
+  import Download from 'lucide-svelte/icons/download';
+  import Truck from 'lucide-svelte/icons/truck';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+  import ShoppingBag from 'lucide-svelte/icons/shopping-bag';
 
-  let filter = 'all';
-  // 'processing' was missing here, which meant there was no way to filter down to
-  // just orders being prepared for shipment even though that's a real order status.
-  const statusOptions = ['all', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
+  let { orders = [], currency = 'R', onUpdate = () => {} } = $props();
 
-  let rejectingId = null;
-  let rejectReason = '';
-  let searchQuery = '';
-  let pendingId = null; // order id currently mid-request (status patch or delete)
-
-  let shippingModalId = null;
-  let shippingForm = { carrier: '', trackingNumber: '', estimatedDelivery: '' };
-
-  let emailToast = null; // { sent: true, type, to } | { sent: false, reason } | null
-  const EMAIL_TYPE_LABELS = {
-    paid: 'Order confirmation',
-    processing: 'Processing update',
-    shipped: 'Shipped',
-    delivered: 'Delivered',
-    cancelled: 'Cancellation',
+  const STATUS = {
+    pending_payment: { label: 'Pending payment', variant: 'warning' },
+    pending:         { label: 'Pending',         variant: 'warning' },
+    paid:            { label: 'Paid',            variant: 'success' },
+    processing:      { label: 'Processing',      variant: 'violet' },
+    shipped:         { label: 'Shipped',         variant: 'info' },
+    delivered:       { label: 'Delivered',       variant: 'secondary' },
+    cancelled:       { label: 'Cancelled',       variant: 'destructive' },
   };
-  function showEmailToast(result) {
-    emailToast = result;
-    setTimeout(() => { if (emailToast === result) emailToast = null; }, 5000);
-  }
+  const statusOf = (s) => STATUS[s] || { label: s, variant: 'secondary' };
 
-  // Sort orders newest first
-  $: sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
-  $: statusCounts = Object.fromEntries(statusOptions.map(s => [s, s === 'all' ? orders.length : orders.filter(o => o.status === s).length]));
-  $: filteredOrders = sortedOrders.filter(o => {
-    const matchesStatus = filter === 'all' || o.status === filter;
+  const EMAIL_TYPE_LABELS = {
+    paid: 'Order confirmation', processing: 'Processing update', shipped: 'Shipped',
+    delivered: 'Delivered', cancelled: 'Cancellation',
+  };
+
+  let filter = $state('all');
+  let searchQuery = $state('');
+  let selectedId = $state(null);
+  let sheetOpen = $state(false);
+  let pendingId = $state(null); // order id mid-request (status patch or delete)
+  let cancelling = $state(false);
+  let cancelReason = $state('');
+  let shippingForm = $state({ carrier: '', trackingNumber: '', estimatedDelivery: '' });
+
+  const money = (n) => `${currency}${Number(n || 0).toFixed(2)}`;
+  const dateOf = (o) => new Date(o.createdAt || o.date || Date.now());
+  const fmtDate = (o, opts = { dateStyle: 'medium', timeStyle: 'short' }) => dateOf(o).toLocaleString([], opts);
+
+  let sortedOrders = $derived([...orders].sort((a, b) => dateOf(b) - dateOf(a)));
+  let counts = $derived(Object.fromEntries(
+    ['all', ...Object.keys(STATUS).filter(s => s !== 'pending')].map(s => [s, s === 'all' ? orders.length : orders.filter(o => o.status === s).length])
+  ));
+  let tabItems = $derived([
+    { value: 'all', label: 'All', count: counts.all },
+    { value: 'paid', label: 'To ship', count: counts.paid },
+    { value: 'processing', label: 'Processing', count: counts.processing },
+    { value: 'shipped', label: 'Shipped', count: counts.shipped },
+    { value: 'delivered', label: 'Delivered', count: counts.delivered },
+    { value: 'pending_payment', label: 'Unpaid', count: counts.pending_payment },
+    { value: 'cancelled', label: 'Cancelled', count: counts.cancelled },
+  ]);
+  let filteredOrders = $derived(sortedOrders.filter(o => {
+    if (filter !== 'all' && o.status !== filter) return false;
     const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q ||
+    return !q ||
       o.id.toLowerCase().includes(q) ||
       (o.customer || '').toLowerCase().includes(q) ||
       (o.email || '').toLowerCase().includes(q) ||
       (o.phone || '').toLowerCase().includes(q) ||
       (o.trackingNumber || '').toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
-  });
+  }));
+  let selected = $derived(orders.find(o => o.id === selectedId) || null);
+
+  function openOrder(order) {
+    selectedId = order.id;
+    cancelling = false;
+    cancelReason = '';
+    shippingForm = {
+      carrier: order.carrier || '',
+      trackingNumber: order.trackingNumber || '',
+      estimatedDelivery: order.estimatedDelivery || '',
+    };
+    sheetOpen = true;
+  }
 
   async function patchStatus(orderId, status, reason = '', extra = {}) {
     pendingId = orderId;
@@ -54,57 +91,56 @@
         body: JSON.stringify({ status, reason, ...extra }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error);
+      if (!res.ok) throw new Error(body.error || 'Request failed');
       onUpdate(orders.map(o => o.id === orderId ? { ...o, status, adminNote: reason || o.adminNote, ...extra } : o));
-      if (body.emailResult) showEmailToast(body.emailResult);
+      const r = body.emailResult;
+      if (r?.sent) toast.success(`${EMAIL_TYPE_LABELS[r.type] || r.type} email sent to ${r.to}`);
+      else if (r) toast.error(`Order updated, but the email wasn't sent (${r.reason})`);
+      else toast.success('Order updated');
+      return true;
     } catch (e) {
-      alert(`Failed to update order: ${e.message}`);
+      toast.error(`Failed to update order: ${e.message}`);
+      return false;
     } finally {
       pendingId = null;
     }
   }
 
-  function openShippingModal(orderId) {
-    shippingModalId = orderId;
-    shippingForm = { carrier: '', trackingNumber: '', estimatedDelivery: '' };
+  async function confirmCancel(orderId) {
+    if (await patchStatus(orderId, 'cancelled', cancelReason)) {
+      cancelling = false;
+      cancelReason = '';
+    }
   }
 
-  async function confirmShipped(orderId) {
+  async function markShipped(orderId) {
     await patchStatus(orderId, 'shipped', '', { ...shippingForm });
-    shippingModalId = null;
   }
 
-  function handleAccept(orderId) {
-    patchStatus(orderId, 'shipped');
-  }
-
-  function handleReject(orderId) {
-    rejectingId = orderId;
-    rejectReason = '';
-  }
-
-  function confirmReject(orderId) {
-    patchStatus(orderId, 'cancelled', rejectReason);
-    rejectingId = null;
-    rejectReason = '';
-  }
-
-  async function handleDelete(orderId) {
-    if (!confirm('Are you sure you want to permanently delete this pending order?')) return;
-    pendingId = orderId;
+  async function handleDelete(order) {
+    const ok = await confirmDialog.ask({
+      title: `Delete order ${order.id}?`,
+      description: 'This permanently removes the order. Reserved stock is returned to inventory.',
+      confirmLabel: 'Delete order',
+      destructive: true,
+    });
+    if (!ok) return;
+    pendingId = order.id;
     try {
-      const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error((await res.json()).error);
-      onUpdate(orders.filter(o => o.id !== orderId));
+      const res = await fetch(`/api/orders/${order.id}`, { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Request failed');
+      sheetOpen = false;
+      onUpdate(orders.filter(o => o.id !== order.id));
+      toast.success('Order deleted');
     } catch (e) {
-      alert(`Failed to delete order: ${e.message}`);
+      toast.error(`Failed to delete order: ${e.message}`);
     } finally {
       pendingId = null;
     }
   }
 
   function exportPDF(order) {
-    if (!window.jspdf) return alert('PDF library loading, try again in a moment...');
+    if (!window.jspdf) return toast.info('PDF library is still loading — try again in a moment.');
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.setFontSize(20);
@@ -114,7 +150,7 @@
     doc.text(`Customer: ${order.customer}`, 14, 32);
     doc.text(`Email: ${order.email}`, 14, 38);
     doc.text(`Address: ${order.address}`, 14, 44);
-    doc.text(`Date: ${new Date(order.createdAt || order.date || Date.now()).toLocaleString()}`, 14, 50);
+    doc.text(`Date: ${dateOf(order).toLocaleString()}`, 14, 50);
     doc.text(`Status: ${order.status.toUpperCase().replace('_', ' ')}`, 14, 56);
 
     const tableData = (order.items || []).map(item => [
@@ -140,6 +176,10 @@
 
     doc.save(`${order.id}.pdf`);
   }
+
+  // Progress through the happy path, for the stepper in the detail panel.
+  const STEPS = ['paid', 'processing', 'shipped', 'delivered'];
+  const stepIndex = (status) => STEPS.indexOf(status);
 </script>
 
 <svelte:head>
@@ -147,206 +187,176 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </svelte:head>
 
-<!-- Email-sent confirmation, shown after any status change that triggers a customer email -->
-{#if emailToast}
-  <div class="fixed bottom-4 right-4 z-50 px-4 py-2.5 text-sm shadow-lg animate-fade-up flex items-center gap-2 {emailToast.sent ? 'bg-foreground text-primary-foreground' : 'bg-destructive text-destructive-foreground'} max-w-xs">
-    {#if emailToast.sent}
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
-      <span>{EMAIL_TYPE_LABELS[emailToast.type] || emailToast.type} email sent to {emailToast.to}</span>
-    {:else}
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-      <span>Order updated, but the email wasn't sent ({emailToast.reason})</span>
-    {/if}
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight">Orders</h1>
+    <p class="text-sm text-muted-foreground">Pack and post paid orders yourself, then add the carrier and tracking number when you ship.</p>
   </div>
-{/if}
 
-<div class="space-y-6 max-w-4xl">
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-2xl font-display font-bold mb-1">Orders</h2>
-      <p class="text-sm text-muted-foreground">{filteredOrders.length} orders total</p>
-    </div>
-    <div class="flex items-center gap-3">
-      <div class="relative flex-1 max-w-xs">
-        <input
-          type="text"
-          bind:value={searchQuery}
-          placeholder="Search name, email, phone, ID or tracking #..."
-          class="w-full bg-transparent border border-border pl-8 pr-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"
-        />
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      </div>
-      <select bind:value={filter} class="bg-transparent border border-border px-4 py-2 text-sm focus:outline-none focus:border-foreground transition-colors cursor-pointer">
-        {#each statusOptions as s}
-          <option value={s}>{s === 'all' ? 'All Orders' : s.replace('_', ' ').toUpperCase()} ({statusCounts[s]})</option>
-        {/each}
-      </select>
+  <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div class="overflow-x-auto"><Tabs items={tabItems} bind:value={filter} label="Filter orders by status" /></div>
+    <div class="relative w-full lg:w-80">
+      <Search size={15} class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <input type="search" bind:value={searchQuery} placeholder="Search name, email, order or tracking #" aria-label="Search orders" class="{inputCls} pl-9" />
     </div>
   </div>
 
-  <div class="space-y-4">
-    {#each filteredOrders as order (order.id)}
-      <div class="bg-card border border-border p-5 space-y-4 animate-fade-in relative">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <p class="font-medium tabular-nums text-foreground">{order.id} • {currency}{order.total.toFixed(2)}</p>
-            <p class="text-sm text-muted-foreground">{order.customer} · {new Date(order.createdAt || order.date || Date.now()).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
-          </div>
-        <div class="flex flex-wrap items-center gap-2">
-            <!-- Status badge -->
-            <span class="text-[10px] uppercase font-medium tracking-[0.1em] px-2 py-1 rounded
-              {order.status === 'paid'           ? 'bg-green-100 text-green-700' :
-               order.status === 'processing'     ? 'bg-blue-100 text-blue-700' :
-               order.status === 'shipped'        ? 'bg-purple-100 text-purple-700' :
-               order.status === 'delivered'      ? 'bg-cyan-100 text-cyan-700' :
-               order.status === 'cancelled'      ? 'bg-red-100 text-red-700' :
-               order.status === 'pending_payment'? 'bg-yellow-100 text-yellow-700' :
-                                                   'bg-muted text-muted-foreground'}"
-            >{order.status.replace('_', ' ')}</span>
-            {#if pendingId === order.id}
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin text-muted-foreground"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-            {/if}
-
-            <!-- Delete pending order button -->
-            {#if order.status.includes('pending')}
-              <button onclick={() => handleDelete(order.id)} disabled={pendingId === order.id}
-                class="text-[10px] uppercase font-medium tracking-wider px-2 py-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors active:scale-95 ml-2 disabled:opacity-40 disabled:cursor-wait"
-                title="Delete Pending Order"
-              >
-                ✕ DELETE
-              </button>
-            {/if}
-
-            <!-- Accept/Reject (shown for paid orders awaiting fulfillment decision) -->
-            {#if order.status === 'paid'}
-              <button onclick={() => patchStatus(order.id, 'processing')} disabled={pendingId === order.id}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-green-600 text-white hover:bg-green-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
-                ✓ MARK PROCESSING
-              </button>
-              <button onclick={() => handleReject(order.id)} disabled={pendingId === order.id}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
-                ✕ CANCEL
-              </button>
-            {/if}
-
-            <!-- Move from processing to shipped -->
-            {#if order.status === 'processing'}
-              <button onclick={() => openShippingModal(order.id)} disabled={pendingId === order.id}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
-                ✓ MARK SHIPPED
-              </button>
-              <button onclick={() => handleReject(order.id)} disabled={pendingId === order.id}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-red-600 text-white hover:bg-red-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
-                ✕ CANCEL
-              </button>
-            {/if}
-
-            <!-- Move from shipped to delivered -->
-            {#if order.status === 'shipped'}
-              <button onclick={() => patchStatus(order.id, 'delivered')} disabled={pendingId === order.id}
-                class="text-[10px] uppercase font-medium tracking-wider px-3 py-1 bg-cyan-600 text-white hover:bg-cyan-700 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-wait">
-                ✓ MARK DELIVERED
-              </button>
-            {/if}
-
-            <button onclick={() => exportPDF(order)} class="text-[10px] uppercase text-muted-foreground hover:text-foreground border border-border px-2 py-1 transition-colors ml-auto">
-              PDF
-            </button>
-          </div>
-
-          <!-- Reject reason input -->
-          {#if rejectingId === order.id}
-            <div class="flex gap-2 mt-1">
-              <input
-                bind:value={rejectReason}
-                placeholder="Rejection reason (optional)…"
-                class="flex-1 bg-transparent border border-red-300 px-3 py-1.5 text-xs focus:outline-none"
-              />
-              <button onclick={() => confirmReject(order.id)}
-                class="bg-red-600 text-white text-[10px] uppercase tracking-wider px-3 py-1.5 hover:bg-red-700 transition-colors">
-                Confirm Reject
-              </button>
-              <button onclick={() => rejectingId = null}
-                class="text-xs text-muted-foreground hover:text-foreground px-2 transition-colors">
-                Cancel
-              </button>
-            </div>
-          {/if}
-
-          <!-- Shipping details, sent to the customer in the "shipped" email -->
-          {#if shippingModalId === order.id}
-            <div class="mt-1 p-3 border border-blue-200 bg-blue-50 space-y-2">
-              <p class="text-[10px] uppercase tracking-wider font-medium text-blue-900">Shipping details (optional — included in the customer email)</p>
-              <div class="grid grid-cols-2 gap-2">
-                <input
-                  bind:value={shippingForm.carrier}
-                  placeholder="Carrier (e.g. UPS, DHL)"
-                  class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground"
-                />
-                <input
-                  bind:value={shippingForm.trackingNumber}
-                  placeholder="Tracking number"
-                  class="bg-white border border-border px-2 py-1.5 text-xs focus:outline-none focus:border-foreground"
-                />
-              </div>
-              <div class="flex items-center gap-2">
-                <label for="est-delivery-{order.id}" class="text-xs text-muted-foreground whitespace-nowrap">Est. delivery</label>
-                <input
-                  id="est-delivery-{order.id}"
-                  type="date"
-                  bind:value={shippingForm.estimatedDelivery}
-                  class="bg-white border border-border px-2 py-1 text-xs focus:outline-none focus:border-foreground"
-                />
-              </div>
-              <div class="flex gap-2 pt-1">
-                <button onclick={() => confirmShipped(order.id)} disabled={pendingId === order.id}
-                  class="bg-blue-600 text-white text-[10px] uppercase tracking-wider px-3 py-1.5 hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-wait">
-                  Confirm Shipped
-                </button>
-                <button onclick={() => shippingModalId = null}
-                  class="text-xs text-muted-foreground hover:text-foreground px-2 transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          {/if}
-        </div>
-
-        <div class="border-t border-border/50 pt-3 space-y-2">
-          {#each order.items || [] as item}
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-muted-foreground flex items-center gap-2">
-                {#if item.image}<img src={item.image} alt="" class="w-6 h-6 object-cover bg-secondary" />{/if}
-                <span>{item.quantity}× {item.name} <span class="text-xs">({[item.size, item.color].filter(Boolean).join(' / ') || '-'})</span></span>
-              </span>
-              <span class="tabular-nums">{currency}{(item.price * item.quantity).toFixed(2)}</span>
-            </div>
-          {/each}
-        </div>
-
-        <div class="text-xs text-muted-foreground flex flex-col sm:flex-row gap-4 sm:items-center border-t border-border/50 pt-3">
-          <div><span class="text-label">ADDRESS:</span> {order.address || '-'}</div>
-          <div><span class="text-label">EMAIL:</span> {order.email || '-'}</div>
-          <div><span class="text-label">PHONE:</span> {order.phone || '-'}</div>
-          <div class="sm:hidden mt-2">
-             <button onclick={() => exportPDF(order)} class="text-[10px] uppercase text-muted-foreground hover:text-foreground underline transition-colors">Download PDF</button>
-          </div>
-        </div>
-
-        {#if order.trackingNumber || order.carrier}
-          <div class="text-xs text-muted-foreground flex flex-col sm:flex-row gap-4 sm:items-center border-t border-border/50 pt-3">
-            {#if order.carrier}<div><span class="text-label">CARRIER:</span> {order.carrier}</div>{/if}
-            {#if order.trackingNumber}<div><span class="text-label">TRACKING #:</span> {order.trackingNumber}</div>{/if}
-            {#if order.estimatedDelivery}<div><span class="text-label">EST. DELIVERY:</span> {order.estimatedDelivery}</div>{/if}
-          </div>
-        {/if}
-      </div>
-    {/each}
-
+  <Card class="overflow-hidden">
     {#if filteredOrders.length === 0}
-      <div class="py-12 border border-dashed border-border text-center">
-        <p class="text-muted-foreground text-sm">No orders found for this filter.</p>
+      <div class="flex flex-col items-center gap-2 py-16 text-center">
+        <ShoppingBag size={28} class="text-muted-foreground" />
+        <p class="font-medium">No orders found</p>
+        <p class="text-sm text-muted-foreground">{searchQuery ? 'Try a different search.' : 'Nothing in this status yet.'}</p>
       </div>
+    {:else}
+      <div class="overflow-x-auto">
+        <table class="w-full caption-bottom text-sm">
+          <thead class="border-b border-border">
+            <tr>
+              <th class={thCls}>Order</th>
+              <th class="{thCls} hidden md:table-cell">Customer</th>
+              <th class="{thCls} hidden lg:table-cell">Items</th>
+              <th class={thCls}>Status</th>
+              <th class="{thCls} text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each filteredOrders as order (order.id)}
+              {@const st = statusOf(order.status)}
+              <tr class="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-muted/50 {selectedId === order.id && sheetOpen ? 'bg-muted/60' : ''}" onclick={() => openOrder(order)}>
+                <td class={tdCls}>
+                  <button type="button" class="text-left font-medium tabular-nums focus-visible:underline focus-visible:outline-none">{order.id}</button>
+                  <div class="text-xs text-muted-foreground">{fmtDate(order, { dateStyle: 'medium', timeStyle: 'short' })}</div>
+                </td>
+                <td class="{tdCls} hidden md:table-cell">
+                  <div class="font-medium">{order.customer || '—'}</div>
+                  <div class="text-xs text-muted-foreground">{order.email || ''}</div>
+                </td>
+                <td class="{tdCls} hidden lg:table-cell text-muted-foreground">{(order.items || []).reduce((n, i) => n + (i.quantity || 0), 0)} item(s)</td>
+                <td class={tdCls}>
+                  <span class="inline-flex items-center gap-2">
+                    <Badge variant={st.variant}>{st.label}</Badge>
+                    {#if pendingId === order.id}<LoaderCircle size={14} class="animate-spin text-muted-foreground" />{/if}
+                  </span>
+                </td>
+                <td class="{tdCls} text-right font-medium tabular-nums">{money(order.total)}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      <div class="border-t border-border px-4 py-3 text-xs text-muted-foreground">Showing {filteredOrders.length} of {orders.length} orders</div>
     {/if}
-  </div>
+  </Card>
 </div>
+
+<Sheet bind:open={sheetOpen} title={selected ? selected.id : 'Order'} description={selected ? fmtDate(selected) : ''}>
+  {#if selected}
+    {@const st = statusOf(selected.status)}
+    <div class="space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-lg font-semibold">{selected.customer || 'Customer'}</p>
+          <p class="text-sm text-muted-foreground">{money(selected.total)} total</p>
+        </div>
+        <Badge variant={st.variant}>{st.label}</Badge>
+      </div>
+
+      {#if stepIndex(selected.status) >= 0}
+        <ol class="flex gap-2" aria-label="Order progress">
+          {#each STEPS as step, i}
+            <li class="flex-1">
+              <div class="h-1 rounded-full {i <= stepIndex(selected.status) ? 'bg-primary' : 'bg-border'}"></div>
+              <p class="mt-1.5 text-xs {i <= stepIndex(selected.status) ? 'font-medium' : 'text-muted-foreground'}">{statusOf(step).label}</p>
+            </li>
+          {/each}
+        </ol>
+      {/if}
+
+      <dl class="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+        <div><dt class="text-xs text-muted-foreground mb-0.5">Email</dt><dd class="break-all">{selected.email || '—'}</dd></div>
+        <div><dt class="text-xs text-muted-foreground mb-0.5">Phone</dt><dd>{selected.phone || '—'}</dd></div>
+        <div class="col-span-2"><dt class="text-xs text-muted-foreground mb-0.5">Deliver to</dt><dd class="whitespace-pre-line">{selected.address || '—'}</dd></div>
+      </dl>
+
+      <div class="rounded-lg border border-border">
+        {#each selected.items || [] as item}
+          <div class="flex items-center gap-3 border-b border-border/60 p-3">
+            {#if item.image}<img src={item.image} alt="" class="h-11 w-11 rounded-md bg-muted object-cover" />{:else}<div class="h-11 w-11 rounded-md bg-muted"></div>{/if}
+            <div class="min-w-0 flex-1 text-sm">
+              <p class="truncate font-medium">{item.name}</p>
+              <p class="text-xs text-muted-foreground">{[item.size, item.color].filter(Boolean).join(' / ') || '—'} · Qty {item.quantity}</p>
+            </div>
+            <p class="text-sm font-medium tabular-nums">{money(item.price * item.quantity)}</p>
+          </div>
+        {/each}
+        <div class="flex justify-between px-3 pt-3 text-sm text-muted-foreground"><span>Shipping</span><span class="tabular-nums">{selected.shippingCost ? money(selected.shippingCost) : 'Free'}</span></div>
+        <div class="flex justify-between px-3 py-3 font-semibold"><span>Total</span><span class="tabular-nums">{money(selected.total)}</span></div>
+      </div>
+
+      {#if selected.adminNote}
+        <p class="rounded-lg bg-muted p-3 text-sm"><span class="font-medium">Note:</span> {selected.adminNote}</p>
+      {/if}
+
+      {#if selected.status === 'processing'}
+        <div class="space-y-4 rounded-lg border border-border p-4">
+          <p class="flex items-center gap-2 text-sm font-semibold"><Truck size={16} /> Shipping details</p>
+          <div>
+            <label for="ship-carrier" class={labelCls}>Carrier</label>
+            <input id="ship-carrier" class={inputCls} bind:value={shippingForm.carrier} placeholder="e.g. The Courier Guy, PostNet, Aramex" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="ship-track" class={labelCls}>Tracking number</label>
+              <input id="ship-track" class={inputCls} bind:value={shippingForm.trackingNumber} placeholder="Optional" />
+            </div>
+            <div>
+              <label for="ship-eta" class={labelCls}>Est. delivery</label>
+              <input id="ship-eta" type="date" class={inputCls} bind:value={shippingForm.estimatedDelivery} />
+            </div>
+          </div>
+          <p class={hintCls}>These details are included in the “shipped” email to the customer.</p>
+          <Button class="w-full" disabled={pendingId === selected.id} onclick={() => markShipped(selected.id)}>
+            {#if pendingId === selected.id}<LoaderCircle size={15} class="animate-spin" />{/if} Mark as shipped
+          </Button>
+        </div>
+      {:else if (selected.carrier || selected.trackingNumber || selected.estimatedDelivery)}
+        <dl class="grid grid-cols-3 gap-4 rounded-lg border border-border p-4 text-sm">
+          <div><dt class="text-xs text-muted-foreground mb-0.5">Carrier</dt><dd>{selected.carrier || '—'}</dd></div>
+          <div><dt class="text-xs text-muted-foreground mb-0.5">Tracking #</dt><dd class="break-all">{selected.trackingNumber || '—'}</dd></div>
+          <div><dt class="text-xs text-muted-foreground mb-0.5">Est. delivery</dt><dd>{selected.estimatedDelivery || '—'}</dd></div>
+        </dl>
+      {/if}
+
+      {#if cancelling}
+        <div class="space-y-3 rounded-lg border border-destructive/40 p-4">
+          <label for="cancel-reason" class={labelCls}>Reason for cancelling (shown to the customer)</label>
+          <textarea id="cancel-reason" class={textareaCls} bind:value={cancelReason} placeholder="Optional"></textarea>
+          <div class="flex gap-2">
+            <Button variant="destructive" size="sm" disabled={pendingId === selected.id} onclick={() => confirmCancel(selected.id)}>Cancel order &amp; restock</Button>
+            <Button variant="ghost" size="sm" onclick={() => (cancelling = false)}>Keep order</Button>
+          </div>
+        </div>
+      {/if}
+    </div>
+  {/if}
+
+  {#snippet footer()}
+    {#if selected}
+      <Button variant="outline" onclick={() => exportPDF(selected)}><Download size={15} /> Invoice PDF</Button>
+      <div class="flex-1"></div>
+      {#if selected.status.includes('pending')}
+        <Button variant="destructive" disabled={pendingId === selected.id} onclick={() => handleDelete(selected)}>Delete order</Button>
+      {/if}
+      {#if (selected.status === 'paid' || selected.status === 'processing') && !cancelling}
+        <Button variant="outline" onclick={() => (cancelling = true)}>Cancel order</Button>
+      {/if}
+      {#if selected.status === 'paid'}
+        <Button disabled={pendingId === selected.id} onclick={() => patchStatus(selected.id, 'processing')}>Mark processing</Button>
+      {/if}
+      {#if selected.status === 'shipped'}
+        <Button disabled={pendingId === selected.id} onclick={() => patchStatus(selected.id, 'delivered')}>Mark delivered</Button>
+      {/if}
+    {/if}
+  {/snippet}
+</Sheet>

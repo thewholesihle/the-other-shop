@@ -1,11 +1,24 @@
 <script>
   import { onMount } from 'svelte';
-  import { Shield, Activity, Database, Mail, Cloud, AlertCircle, Trash2, RefreshCw, CheckCircle2, Clock } from 'lucide-svelte';
+  import Button from '../ui/Button.svelte';
+  import Badge from '../ui/Badge.svelte';
+  import Card from '../ui/Card.svelte';
+  import { toast } from '../../lib/toast.js';
+  import { confirmDialog } from '../../lib/confirm.js';
+  import Database from 'lucide-svelte/icons/database';
+  import Mail from 'lucide-svelte/icons/mail';
+  import Cloud from 'lucide-svelte/icons/cloud';
+  import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import CircleAlert from 'lucide-svelte/icons/circle-alert';
+  import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
+  import Info from 'lucide-svelte/icons/info';
+  import CircleCheck from 'lucide-svelte/icons/circle-check';
 
-  let status = null;
-  let logs = [];
-  let loading = true;
-  let refreshing = false;
+  let status = $state(null);
+  let logs = $state([]);
+  let loading = $state(true);
+  let refreshing = $state(false);
 
   async function loadDiagnostics() {
     refreshing = true;
@@ -18,6 +31,7 @@
       if (logsRes.ok) logs = await logsRes.json();
     } catch (e) {
       console.error('Failed to load diagnostics', e);
+      toast.error('Could not load diagnostics.');
     } finally {
       loading = false;
       refreshing = false;
@@ -25,167 +39,113 @@
   }
 
   async function clearLogs() {
-    if (!confirm('Are you sure you want to clear all system logs?')) return;
+    const ok = await confirmDialog.ask({
+      title: 'Clear all system logs?', description: 'This removes the log history permanently.',
+      confirmLabel: 'Clear logs', destructive: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch('/api/admin/logs', { method: 'DELETE', credentials: 'include' });
-      if (res.ok) logs = [];
-    } catch (e) {
-      alert('Failed to clear logs');
+      if (!res.ok) throw new Error();
+      logs = [];
+      toast.success('Logs cleared');
+    } catch {
+      toast.error('Failed to clear logs');
     }
   }
 
   onMount(loadDiagnostics);
 
-  function getStatusColor(val) {
-    if (val === 'connected' || val === 'configured' || val === 'ready') return 'text-green-500';
-    if (val === 'connecting' || val === 'pending') return 'text-yellow-500';
-    return 'text-red-500';
-  }
+  const isGood = (v) => ['connected', 'configured', 'ready'].includes(v);
+  const label = (v) => String(v || 'unknown').replace(/_/g, ' ');
+
+  let services = $derived(status ? [
+    { name: 'Database', icon: Database, value: status.db, note: status.db === 'connected' ? 'MongoDB connection is active.' : 'The store is showing its maintenance page until the database reconnects.' },
+    { name: 'Email', icon: Mail, value: status.email, note: status.email === 'configured' ? 'Order emails and alerts are sent via Resend.' : 'Set RESEND_API_KEY to send order emails and alerts.' },
+    { name: 'Image hosting', icon: Cloud, value: status.cloudinary, note: status.cloudinary === 'configured' ? 'Cloudinary uploads are available.' : 'Cloudinary credentials are missing — uploads will fail.' },
+  ] : []);
+
+  let stats = $derived(status ? [
+    { label: 'Orders', value: status.stats.orders },
+    { label: 'Products', value: status.stats.products },
+    { label: 'Subscribers', value: status.stats.subscribers },
+    { label: 'Errors logged', value: status.stats.logs, bad: status.stats.logs > 0 },
+  ] : []);
 </script>
 
-<div class="space-y-8 max-w-5xl">
-  <div class="flex items-center justify-between">
+<div class="max-w-5xl space-y-6">
+  <div class="flex items-end justify-between gap-4">
     <div>
-      <h2 class="text-2xl font-display font-bold mb-1 flex items-center gap-2">
-        <Shield class="w-6 h-6" /> SYSTEM HEALTH
-      </h2>
-      <p class="text-sm text-muted-foreground">Real-time status and diagnostic logs.</p>
+      <h1 class="text-2xl font-semibold tracking-tight">Site status</h1>
+      <p class="text-sm text-muted-foreground">Live health of your services and recent system logs.</p>
     </div>
-    <button 
-      onclick={loadDiagnostics} 
-      disabled={refreshing}
-      class="flex items-center gap-2 px-4 py-2 border border-border hover:bg-muted transition-colors text-xs font-bold tracking-widest uppercase disabled:opacity-50"
-    >
-      <RefreshCw class="w-3.5 h-3.5 {refreshing ? 'animate-spin' : ''}" />
-      Refresh
-    </button>
+    <Button variant="outline" disabled={refreshing} onclick={loadDiagnostics}><RefreshCw size={15} class={refreshing ? 'animate-spin' : ''} /> Refresh</Button>
   </div>
 
   {#if loading}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
-      {#each Array(3) as _}
-        <div class="h-32 bg-muted rounded-none border border-border"></div>
-      {/each}
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      {#each Array(3) as _}<div class="h-32 animate-pulse rounded-xl border border-border bg-muted"></div>{/each}
     </div>
   {:else if status}
-    <!-- Status Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="bg-card border border-border p-6 relative overflow-hidden group">
-        <Database class="w-12 h-12 absolute -right-2 -bottom-2 text-foreground/5 group-hover:text-foreground/10 transition-colors" />
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-            <Database class="w-5 h-5" />
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      {#each services as svc}
+        <Card class="p-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-sm font-medium text-muted-foreground"><svc.icon size={16} /> {svc.name}</div>
+            <Badge variant={isGood(svc.value) ? 'success' : 'destructive'} class="capitalize">{label(svc.value)}</Badge>
           </div>
-          <div>
-            <p class="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Database</p>
-            <p class="text-lg font-display font-bold {getStatusColor(status.db)}">{status.db.toUpperCase()}</p>
-          </div>
-        </div>
-        <p class="text-xs text-muted-foreground">Connection to MongoDB Atlas is active and stable.</p>
-      </div>
-
-      <div class="bg-card border border-border p-6 relative overflow-hidden group">
-        <Mail class="w-12 h-12 absolute -right-2 -bottom-2 text-foreground/5 group-hover:text-foreground/10 transition-colors" />
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-            <Mail class="w-5 h-5" />
-          </div>
-          <div>
-            <p class="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Email (SMTP)</p>
-            <p class="text-lg font-display font-bold {getStatusColor(status.email)}">{status.email.toUpperCase().replace('_', ' ')}</p>
-          </div>
-        </div>
-        <p class="text-xs text-muted-foreground">Automated order notifications and alerts system.</p>
-      </div>
-
-      <div class="bg-card border border-border p-6 relative overflow-hidden group">
-        <Cloud class="w-12 h-12 absolute -right-2 -bottom-2 text-foreground/5 group-hover:text-foreground/10 transition-colors" />
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-            <Cloud class="w-5 h-5" />
-          </div>
-          <div>
-            <p class="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">CDN (Cloudinary)</p>
-            <p class="text-lg font-display font-bold {getStatusColor(status.cloudinary)}">{status.cloudinary.toUpperCase()}</p>
-          </div>
-        </div>
-        <p class="text-xs text-muted-foreground">Image hosting and optimization services status.</p>
-      </div>
+          <p class="mt-3 text-sm text-muted-foreground">{svc.note}</p>
+        </Card>
+      {/each}
     </div>
 
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-muted/30 border border-border p-4 text-center">
-        <p class="text-[10px] uppercase font-bold tracking-tighter text-muted-foreground mb-1">Total Orders</p>
-        <p class="text-2xl font-display font-bold">{status.stats.orders}</p>
-      </div>
-      <div class="bg-muted/30 border border-border p-4 text-center">
-        <p class="text-[10px] uppercase font-bold tracking-tighter text-muted-foreground mb-1">Stock Items</p>
-        <p class="text-2xl font-display font-bold">{status.stats.products}</p>
-      </div>
-      <div class="bg-muted/30 border border-border p-4 text-center">
-        <p class="text-[10px] uppercase font-bold tracking-tighter text-muted-foreground mb-1">Newsletter</p>
-        <p class="text-2xl font-display font-bold">{status.stats.subscribers}</p>
-      </div>
-      <div class="bg-muted/30 border border-border p-4 text-center">
-        <p class="text-[10px] uppercase font-bold tracking-tighter text-muted-foreground mb-1 group">System Errors</p>
-        <p class="text-2xl font-display font-bold {status.stats.logs > 0 ? 'text-red-500' : 'text-foreground'}">{status.stats.logs}</p>
-      </div>
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {#each stats as s}
+        <Card class="p-5">
+          <p class="text-sm font-medium text-muted-foreground">{s.label}</p>
+          <p class="mt-1 text-2xl font-semibold tabular-nums {s.bad ? 'text-destructive' : ''}">{s.value}</p>
+        </Card>
+      {/each}
     </div>
   {/if}
 
-  <!-- Error Logs -->
-  <div class="space-y-4 pt-4">
-    <div class="flex items-center justify-between border-b border-border pb-4">
-      <h3 class="text-lg font-display font-bold flex items-center gap-2">
-        <Activity class="w-5 h-5 text-muted-foreground" /> SYSTEM LOGS
-      </h3>
-      {#if logs.length > 0}
-        <button onclick={clearLogs} class="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-destructive hover:underline">
-          <Trash2 class="w-3 h-3" /> Clear History
-        </button>
-      {/if}
-    </div>
-
-    <div class="bg-muted/10 border border-border rounded-none overflow-hidden">
+  <Card title="System logs" description="Most recent 100 events, newest first." class="overflow-hidden">
+    {#snippet actions()}
+      {#if logs.length > 0}<Button variant="outline" size="sm" class="text-destructive hover:text-destructive" onclick={clearLogs}><Trash2 size={14} /> Clear</Button>{/if}
+    {/snippet}
+    <div class="mt-4 border-t border-border">
       {#if logs.length === 0}
-        <div class="py-12 text-center text-muted-foreground">
-          <CheckCircle2 class="w-8 h-8 mx-auto mb-3 opacity-20" />
-          <p class="text-sm italic">No system errors detected recently.</p>
+        <div class="flex flex-col items-center gap-2 py-14 text-center">
+          <CircleCheck size={28} class="text-emerald-600" />
+          <p class="text-sm text-muted-foreground">No system events logged.</p>
         </div>
       {:else}
-        <div class="divide-y divide-border max-h-[400px] overflow-y-auto">
+        <ul class="max-h-[480px] divide-y divide-border overflow-y-auto">
           {#each logs as log}
-            <div class="p-4 flex gap-4 hover:bg-muted/20 transition-colors">
-              <div class="flex-shrink-0 pt-1">
-                {#if log.type === 'error'}
-                  <AlertCircle class="w-4 h-4 text-red-500" />
-                {:else if log.type === 'warn'}
-                  <AlertCircle class="w-4 h-4 text-yellow-500" />
-                {:else}
-                  <Clock class="w-4 h-4 text-blue-500" />
-                {/if}
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-4 mb-1">
-                  <span class="text-[10px] font-bold font-mono text-muted-foreground uppercase">{log.context || 'SYSTEM'}</span>
-                  <span class="text-[10px] font-mono text-muted-foreground">{new Date(log.timestamp).toLocaleString()}</span>
+            <li class="flex gap-3 px-6 py-4">
+              <span class="mt-0.5 shrink-0 {log.type === 'error' ? 'text-destructive' : log.type === 'warn' ? 'text-amber-600' : 'text-blue-600'}">
+                {#if log.type === 'error'}<CircleAlert size={16} />{:else if log.type === 'warn'}<TriangleAlert size={16} />{:else}<Info size={16} />{/if}
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="mb-1 flex items-center justify-between gap-4 text-xs text-muted-foreground">
+                  <span class="font-medium uppercase tracking-wide">{log.context || 'SYSTEM'}</span>
+                  <time class="tabular-nums">{new Date(log.timestamp).toLocaleString()}</time>
                 </div>
-                <p class="text-sm font-medium mb-1 break-words">{log.message}</p>
+                <p class="break-words text-sm font-medium">{log.message}</p>
                 {#if log.data?.path}
-                  <p class="text-[10px] font-mono bg-muted px-1.5 py-0.5 inline-block rounded mb-2">{log.data.method} {log.data.path}</p>
+                  <p class="mt-1.5 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{log.data.method} {log.data.path}</p>
                 {/if}
                 {#if log.data?.stack}
-                  <details class="text-[10px] font-mono text-muted-foreground cursor-pointer">
-                    <summary class="hover:text-foreground">View Stack Trace</summary>
-                    <pre class="mt-2 p-2 bg-black text-green-500 overflow-x-auto whitespace-pre-wrap leading-tight">{log.data.stack}</pre>
+                  <details class="mt-2 text-xs text-muted-foreground">
+                    <summary class="cursor-pointer hover:text-foreground">Stack trace</summary>
+                    <pre class="mt-2 overflow-x-auto whitespace-pre-wrap rounded-md bg-zinc-950 p-3 font-mono leading-tight text-zinc-100">{log.data.stack}</pre>
                   </details>
                 {/if}
               </div>
-            </div>
+            </li>
           {/each}
-        </div>
+        </ul>
       {/if}
     </div>
-  </div>
+  </Card>
 </div>

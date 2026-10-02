@@ -1,137 +1,111 @@
 <script>
   import RichEditor from './RichEditor.svelte';
+  import Button from '../ui/Button.svelte';
+  import Card from '../ui/Card.svelte';
+  import { inputCls, labelCls, hintCls } from '../../lib/ui.js';
+  import { toast } from '../../lib/toast.js';
+  import { confirmDialog } from '../../lib/confirm.js';
+  import Send from 'lucide-svelte/icons/send';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 
-  export let subscribers = [];
-  export let siteName = 'Others.';
+  let { subscribers = [], siteName = 'Others.' } = $props();
 
-  let subject = '';
-  let htmlContent = '<p>Write your newsletter here...</p>';
-  let isSending = false;
-  let errorMsg = '';
-  let successMsg = '';
+  const DEFAULT_BODY = '<p>Write your newsletter here...</p>';
+  const idOf = (s) => s._id || s.id;
 
-  let selectedIds = new Set(subscribers.map(s => s._id || s.id));
-  
-  $: allSelected = selectedIds.size === subscribers.length && subscribers.length > 0;
+  let subject = $state('');
+  let htmlContent = $state(DEFAULT_BODY);
+  let isSending = $state(false);
+  // svelte-ignore state_referenced_locally
+  let selectedIds = $state(new Set(subscribers.map(idOf)));
+
+  let allSelected = $derived(selectedIds.size === subscribers.length && subscribers.length > 0);
 
   function toggleSelectAll() {
-    if (allSelected) {
-      selectedIds = new Set();
-    } else {
-      selectedIds = new Set(subscribers.map(s => s._id || s.id));
-    }
+    selectedIds = allSelected ? new Set() : new Set(subscribers.map(idOf));
   }
 
   function toggleSubscriber(id) {
-    if (selectedIds.has(id)) {
-      selectedIds.delete(id);
-    } else {
-      selectedIds.add(id);
-    }
-    selectedIds = selectedIds; // trigger reactivity
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    selectedIds = next;
   }
 
   async function handleSend() {
-    if (!subject.trim() || !htmlContent.trim()) {
-      errorMsg = 'Subject and message are required.';
-      return;
-    }
-    if (subscribers.length === 0) {
-      errorMsg = 'No subscribers to mail.';
-      return;
-    }
-    
-    if (!confirm(`Are you sure you want to broadcast this to ${subscribers.length} subscriber(s)?`)) return;
+    if (!subject.trim() || !htmlContent.trim()) return toast.error('Subject and message are required.');
+    if (selectedIds.size === 0) return toast.error('Select at least one recipient.');
+
+    const ok = await confirmDialog.ask({
+      title: `Send to ${selectedIds.size} subscriber${selectedIds.size === 1 ? '' : 's'}?`,
+      description: `“${subject.trim()}” will be emailed individually to each selected recipient. This cannot be undone.`,
+      confirmLabel: 'Send newsletter',
+    });
+    if (!ok) return;
 
     isSending = true;
-    errorMsg = '';
-    successMsg = '';
-
     try {
       const res = await fetch('/api/newsletter/broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          subject, 
-          html: htmlContent,
-          subscriberIds: Array.from(selectedIds)
-        }),
+        body: JSON.stringify({ subject, html: htmlContent, subscriberIds: Array.from(selectedIds) }),
         credentials: 'include'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Broadcast failed.');
-      successMsg = `Successfully delivered to ${data.sentCount} subscriber(s).`;
+      toast.success(`Delivered to ${data.sentCount} subscriber(s).`);
       subject = '';
-      htmlContent = '<p>Write your newsletter here...</p>';
+      htmlContent = DEFAULT_BODY;
     } catch (e) {
-      errorMsg = e.message;
+      toast.error(e.message);
     } finally {
       isSending = false;
     }
   }
 </script>
 
-<div class="space-y-6 max-w-4xl">
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-2xl font-display font-bold mb-1">Newsletter Broadcast</h2>
-      <p class="text-sm text-muted-foreground">Send custom HTML emails from {siteName} directly to your {subscribers.length} active subscriber(s).</p>
-    </div>
+<div class="max-w-4xl space-y-6">
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight">Newsletter</h1>
+    <p class="text-sm text-muted-foreground">Email your {subscribers.length} subscriber{subscribers.length === 1 ? '' : 's'} from {siteName}.</p>
   </div>
 
-  {#if errorMsg}
-    <div class="bg-red-50 text-red-600 px-4 py-3 border border-red-200 text-sm">{errorMsg}</div>
-  {/if}
-  {#if successMsg}
-    <div class="bg-green-50 text-green-700 px-4 py-3 border border-green-200 text-sm">{successMsg}</div>
-  {/if}
-
-  <div class="space-y-4 bg-card border border-border p-5">
-    <div>
-      <label for="n-sub" class="text-label block mb-1.5">EMAIL SUBJECT LINE</label>
-      <input id="n-sub" bind:value={subject} placeholder="e.g. The Spring Collection is Live" class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-    </div>
-
-    <div>
-      <p class="text-label block mb-1.5">EMAIL MESSAGE BODY</p>
-      <p class="text-[10px] text-muted-foreground uppercase tracking-widest mb-3">Your store logo, header, and footer will be automatically injected around this message.</p>
-      <div class="border border-border">
-        <RichEditor value={htmlContent} onChange={val => htmlContent = val} />
+  <Card title="Compose" description="Your logo, header and footer are added around the message automatically.">
+    <div class="space-y-5 p-6 pt-4">
+      <div>
+        <label for="n-sub" class={labelCls}>Subject line</label>
+        <input id="n-sub" bind:value={subject} placeholder="e.g. The Spring Collection is live" class={inputCls} />
+      </div>
+      <div>
+        <p class={labelCls}>Message</p>
+        <RichEditor value={htmlContent} onChange={(val) => (htmlContent = val)} />
+        <p class={hintCls}>Each recipient gets their own copy with a personal unsubscribe link.</p>
       </div>
     </div>
-    
-    <div>
-      <p class="text-label block mb-1.5">RECIPIENTS ({selectedIds.size})</p>
-      <div class="border border-border p-3 max-h-48 overflow-y-auto space-y-2 bg-muted/30">
-        <label class="flex items-center gap-2 text-xs font-medium cursor-pointer pb-2 border-b border-border/50 mb-2">
-          <input type="checkbox" checked={allSelected} onchange={toggleSelectAll} class="rounded border-border" />
-          SELECT ALL
-        </label>
-        {#each subscribers as sub}
-          <label class="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted p-1 transition-colors">
-            <input 
-              type="checkbox" 
-              checked={selectedIds.has(sub._id || sub.id)} 
-              onchange={() => toggleSubscriber(sub._id || sub.id)} 
-              class="rounded border-border text-foreground focus:ring-foreground" 
-            />
-            <span class="truncate">{sub.email}</span>
+  </Card>
+
+  <Card title="Recipients" description="{selectedIds.size} of {subscribers.length} selected">
+    <div class="p-6 pt-4">
+      {#if subscribers.length === 0}
+        <p class="py-6 text-center text-sm text-muted-foreground">No subscribers yet.</p>
+      {:else}
+        <div class="max-h-56 overflow-y-auto rounded-lg border border-border">
+          <label class="sticky top-0 flex cursor-pointer items-center gap-3 border-b border-border bg-muted/60 px-4 py-2.5 text-sm font-medium backdrop-blur">
+            <input type="checkbox" checked={allSelected} onchange={toggleSelectAll} class="h-4 w-4 accent-primary" /> Select all
           </label>
-        {/each}
-        {#if subscribers.length === 0}
-          <p class="text-xs text-muted-foreground italic">No subscribers found.</p>
-        {/if}
-      </div>
+          {#each subscribers as sub (idOf(sub))}
+            <label class="flex cursor-pointer items-center gap-3 border-b border-border/60 px-4 py-2 text-sm last:border-0 hover:bg-muted/40">
+              <input type="checkbox" checked={selectedIds.has(idOf(sub))} onchange={() => toggleSubscriber(idOf(sub))} class="h-4 w-4 accent-primary" />
+              <span class="truncate">{sub.email}</span>
+            </label>
+          {/each}
+        </div>
+      {/if}
     </div>
+  </Card>
 
-    <div class="pt-4 border-t border-border">
-      <button 
-        onclick={handleSend}
-        disabled={isSending || selectedIds.size === 0}
-        class="flex items-center gap-2 bg-foreground text-primary-foreground px-6 py-3 text-label tracking-[0.15em] hover:bg-foreground/90 transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class={isSending ? 'animate-bounce' : ''}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-        {isSending ? 'BROADCASTING...' : 'SEND TO SELECTED'}
-      </button>
-    </div>
+  <div class="flex justify-end">
+    <Button disabled={isSending || selectedIds.size === 0} onclick={handleSend}>
+      {#if isSending}<LoaderCircle size={15} class="animate-spin" /> Sending…{:else}<Send size={15} /> Send newsletter{/if}
+    </Button>
   </div>
 </div>

@@ -13,6 +13,9 @@
   import AdminStatus from '../components/admin/AdminStatus.svelte';
   import AdminCategories from '../components/admin/AdminCategories.svelte';
   import Loader from '../components/Loader.svelte';
+  import Toaster from '../components/ui/Toaster.svelte';
+  import ConfirmDialog from '../components/ui/ConfirmDialog.svelte';
+  import { toast } from '../lib/toast.js';
 
   const SECTIONS = ['dashboard', 'products', 'categories', 'orders', 'status', 'lookbook', 'community', 'pages', 'subscribers', 'newsletter', 'settings'];
 
@@ -25,7 +28,6 @@
   let loading = true;
   let saving = false;
   let saveError = null;
-  let saveSuccess = false;
   let activeSection = sectionFromPath(window.location.pathname);
 
   // ── Read from MongoDB (via /api/data) ─────────────────────────────────────
@@ -53,8 +55,7 @@
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Save failed: ${res.status}`);
       }
-      saveSuccess = true;
-      setTimeout(() => (saveSuccess = false), 2000);
+      toast.success('Saved to database');
       // The blob we just sent IS what's now persisted — trust it instead of a
       // second round-trip GET, so the UI doesn't flash/reset after every save.
       data = updated;
@@ -62,6 +63,9 @@
       saving = false;
     }
   }
+
+  // Orders waiting on the shop (paid, not yet shipped) — shown as a nav badge.
+  $: badges = { orders: data ? data.orders.filter(o => ['paid', 'processing'].includes(o.status)).length : 0 };
 
   let pollTimer = null;
 
@@ -118,7 +122,7 @@
       data = updated; // optimistic update
       await saveData(updated);
     } catch (e) {
-      saveError = e.message;
+      toast.error(e.message);
       throw e;
     }
   }
@@ -147,11 +151,6 @@
   function updateLookbooksLocal(lookbooks) { updateLocal('lookbooks', lookbooks); }
   function updateCommunityLocal(community) { updateLocal('community', community); }
 
-  async function resetData() {
-    if (!confirm('Reset ALL store data? This cannot be undone.')) return;
-    data = await loadData();
-  }
-
   function navigate(section) {
     activeSection = section;
     const path = section === 'dashboard' ? '/admin' : `/admin/${section}`;
@@ -161,36 +160,26 @@
   }
 </script>
 
+<svelte:head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+  <title>Admin — Others.</title>
+</svelte:head>
+
+<div class="admin-root min-h-screen">
 {#if loading}
   <Loader />
 {:else if !data}
   <div class="flex min-h-screen items-center justify-center flex-col gap-4">
     <p class="text-muted-foreground">Could not connect to the database.</p>
     {#if saveError}<p class="text-xs text-destructive">{saveError}</p>{/if}
-    <button onclick={() => location.reload()} class="border border-border px-4 py-2 text-sm hover:bg-muted transition-colors">Retry</button>
+    <button onclick={() => location.reload()} class="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm hover:bg-accent transition-colors">Retry</button>
   </div>
 {:else}
-  <!-- Global save/error toast -->
-  {#if saving}
-    <div class="fixed bottom-4 right-4 z-50 bg-foreground text-primary-foreground px-4 py-2 text-sm shadow-lg animate-fade-up flex items-center gap-2">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-      Saving…
-    </div>
-  {:else if saveError}
-    <div class="fixed bottom-4 right-4 z-50 bg-destructive text-destructive-foreground px-4 py-2 text-sm shadow-lg animate-fade-up max-w-xs">
-      {saveError}
-    </div>
-  {/if}
-  {#if !saving && saveSuccess}
-    <div class="fixed bottom-4 right-4 z-50 bg-foreground text-primary-foreground px-4 py-2 text-sm shadow-lg animate-fade-up flex items-center gap-2">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
-      Saved to database
-    </div>
-  {/if}
-
-  <AdminLayout {activeSection} {navigate}>
+  <AdminLayout {activeSection} {navigate} {badges}>
     {#if activeSection === 'dashboard'}
-      <AdminDashboard {data} />
+      <AdminDashboard {data} {navigate} />
     {:else if activeSection === 'products'}
       <AdminProducts products={data.products} categories={data.categories} currency={data.site.currency} onUpdate={updateProducts} onLocalUpdate={updateProductsLocal} />
     {:else if activeSection === 'categories'}
@@ -210,7 +199,11 @@
     {:else if activeSection === 'status'}
       <AdminStatus />
     {:else if activeSection === 'settings'}
-      <AdminSettings site={data.site} lookbooks={data.lookbooks} articles={data.community} onUpdate={updateSite} onReset={resetData} />
+      <AdminSettings site={data.site} lookbooks={data.lookbooks} articles={data.community} onUpdate={updateSite} />
     {/if}
   </AdminLayout>
 {/if}
+
+<Toaster />
+<ConfirmDialog />
+</div>

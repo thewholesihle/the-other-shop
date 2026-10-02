@@ -1,66 +1,92 @@
 <script>
-  export let subscribers = [];
-  export let onUpdate = () => {};
+  import Button from '../ui/Button.svelte';
+  import Card from '../ui/Card.svelte';
+  import { inputCls, thCls, tdCls } from '../../lib/ui.js';
+  import { toast } from '../../lib/toast.js';
+  import { confirmDialog } from '../../lib/confirm.js';
+  import Download from 'lucide-svelte/icons/download';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import Search from 'lucide-svelte/icons/search';
+  import Users from 'lucide-svelte/icons/users';
+
+  let { subscribers = [], onUpdate = () => {} } = $props();
+
+  let query = $state('');
+  let filtered = $derived(subscribers.filter(s => !query.trim() || s.email.toLowerCase().includes(query.toLowerCase().trim())));
 
   function exportCSV() {
     const rows = [['Email', 'Date'], ...subscribers.map(s => [s.email, s.date])];
-    const csv = rows.map(r => r.join(',')).join('\n');
+    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `newsletter-subscribers-${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `newsletter-subscribers-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  function removeSubscriber(id) {
-    onUpdate(subscribers.filter(s => s.id !== id));
+  async function removeSubscriber(sub) {
+    const ok = await confirmDialog.ask({
+      title: 'Remove subscriber?',
+      description: `${sub.email} will no longer receive newsletters.`,
+      confirmLabel: 'Remove', destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await onUpdate(subscribers.filter(s => s.id !== sub.id));
+    } catch { /* Admin.svelte toasts the failure */ }
   }
 </script>
 
 <div class="space-y-6">
-  <div class="flex items-center justify-between">
+  <div class="flex items-end justify-between gap-4">
     <div>
-      <h2 class="text-2xl font-display font-bold mb-1">Newsletter Subscribers</h2>
-      <p class="text-sm text-muted-foreground">{subscribers.length} subscriber{subscribers.length !== 1 ? 's' : ''}</p>
+      <h1 class="text-2xl font-semibold tracking-tight">Subscribers</h1>
+      <p class="text-sm text-muted-foreground">{subscribers.length} newsletter subscriber{subscribers.length !== 1 ? 's' : ''}.</p>
     </div>
     {#if subscribers.length > 0}
-      <button onclick={exportCSV} class="flex items-center gap-2 border border-border px-4 py-2.5 text-label tracking-[0.15em] hover:bg-muted transition-colors active:scale-[0.97]">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-        EXPORT CSV
-      </button>
+      <Button variant="outline" onclick={exportCSV}><Download size={15} /> Export CSV</Button>
     {/if}
   </div>
 
-  <div class="bg-card border border-border overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="border-b border-border">
-          <th class="text-left text-label p-3">EMAIL</th>
-          <th class="text-left text-label p-3 hidden md:table-cell">DATE SUBSCRIBED</th>
-          <th class="text-right text-label p-3">REMOVE</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each subscribers as sub}
-          <tr class="border-b border-border/50 hover:bg-muted/50 transition-colors">
-            <td class="p-3 font-medium">{sub.email}</td>
-            <td class="p-3 text-muted-foreground hidden md:table-cell">{sub.date}</td>
-            <td class="p-3 text-right">
-              <button
-                aria-label="Remove subscriber"
-                onclick={() => removeSubscriber(sub.id)}
-                class="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-              </button>
-            </td>
+  {#if subscribers.length > 0}
+    <div class="relative max-w-sm">
+      <Search size={15} class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <input type="search" bind:value={query} placeholder="Search by email" aria-label="Search subscribers" class="{inputCls} pl-9" />
+    </div>
+  {/if}
+
+  <Card class="overflow-hidden">
+    {#if subscribers.length === 0}
+      <div class="flex flex-col items-center gap-2 py-16 text-center">
+        <Users size={28} class="text-muted-foreground" />
+        <p class="font-medium">No subscribers yet</p>
+        <p class="text-sm text-muted-foreground">The newsletter form in the footer collects emails.</p>
+      </div>
+    {:else}
+      <table class="w-full text-sm">
+        <thead class="border-b border-border">
+          <tr>
+            <th class={thCls}>Email</th>
+            <th class="{thCls} hidden md:table-cell">Subscribed</th>
+            <th class="{thCls} w-16 text-right"><span class="sr-only">Remove</span></th>
           </tr>
-        {/each}
-        {#if !subscribers.length}
-          <tr><td colspan="3" class="p-8 text-center text-muted-foreground text-sm">No subscribers yet. The newsletter form in the footer collects emails.</td></tr>
-        {/if}
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          {#each filtered as sub (sub.id)}
+            <tr class="border-b border-border/60 last:border-0 hover:bg-muted/50">
+              <td class="{tdCls} font-medium">{sub.email}</td>
+              <td class="{tdCls} hidden text-muted-foreground md:table-cell">{sub.date}</td>
+              <td class="{tdCls} text-right">
+                <Button variant="ghost" size="icon" aria-label="Remove {sub.email}" class="hover:text-destructive" onclick={() => removeSubscriber(sub)}><Trash2 size={15} /></Button>
+              </td>
+            </tr>
+          {:else}
+            <tr><td colspan="3" class="py-10 text-center text-sm text-muted-foreground">No subscribers match “{query}”.</td></tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
+  </Card>
 </div>

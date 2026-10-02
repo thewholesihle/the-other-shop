@@ -1,21 +1,44 @@
 <script>
-  export let pages = {};
-  export let onUpdate = () => {};
+  import Button from '../ui/Button.svelte';
+  import Card from '../ui/Card.svelte';
+  import Tabs from '../ui/Tabs.svelte';
+  import { inputCls, textareaCls, labelCls, hintCls } from '../../lib/ui.js';
+  import Plus from 'lucide-svelte/icons/plus';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 
-  let section = 'shipping';
-  let shipping = pages.shipping?.content ?? '';
-  let faq = Array.isArray(pages.faq) ? JSON.parse(JSON.stringify(pages.faq)) : (pages.faq?.items ? JSON.parse(JSON.stringify(pages.faq.items)) : []);
-  let contact = pages.contact ? JSON.parse(JSON.stringify(pages.contact)) : { address: '', details: [] };
-  let saved = false;
-  let saving = false;
+  let { pages = {}, onUpdate = () => {} } = $props();
+
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+
+  let section = $state('shipping');
+  // The form owns an editable copy of the saved pages, captured once on mount.
+  /* svelte-ignore state_referenced_locally */
+  let shipping = $state(pages.shipping?.content ?? '');
+  /* svelte-ignore state_referenced_locally */
+  let faq = $state(Array.isArray(pages.faq) ? clone(pages.faq) : (pages.faq?.items ? clone(pages.faq.items) : []));
+  /* svelte-ignore state_referenced_locally */
+  let contact = $state(pages.contact ? clone(pages.contact) : { address: '', details: [] });
+  contact.details ??= [];
+  let saving = $state(false);
+  /* svelte-ignore state_referenced_locally */
+  let snapshot = $state(JSON.stringify({ shipping, faq, contact }));
+  let dirty = $derived(JSON.stringify({ shipping, faq, contact }) !== snapshot);
+
+  const tabs = [
+    { value: 'shipping', label: 'Shipping & returns' },
+    { value: 'faq', label: 'FAQ' },
+    { value: 'contact', label: 'Contact' },
+  ];
 
   async function save() {
     if (saving) return;
     saving = true;
     try {
-      await onUpdate({ shipping: { content: shipping }, faq: { items: faq }, contact });
-      saved = true;
-      setTimeout(() => (saved = false), 2000);
+      await onUpdate({ shipping: { content: shipping }, faq: { items: $state.snapshot(faq) }, contact: $state.snapshot(contact) });
+      snapshot = JSON.stringify({ shipping, faq, contact });
+    } catch {
+      // Admin.svelte toasts the failure; keep edits on screen.
     } finally {
       saving = false;
     }
@@ -23,81 +46,73 @@
 
   function addFaq() { faq = [...faq, { id: `faq-${Date.now()}`, question: '', answer: '' }]; }
   function removeFaq(id) { faq = faq.filter(f => f.id !== id); }
-
-  function addContact() { contact = { ...contact, details: [...contact.details, { id: `c-${Date.now()}`, label: '', value: '' }] }; }
-  function removeContact(id) { contact = { ...contact, details: contact.details.filter(d => d.id !== id) }; }
+  function addContact() { contact.details = [...contact.details, { id: `c-${Date.now()}`, label: '', value: '' }]; }
+  function removeContact(id) { contact.details = contact.details.filter(d => d.id !== id); }
 </script>
 
-<div class="space-y-6 max-w-3xl">
+<div class="max-w-3xl space-y-6 pb-24">
   <div>
-    <h2 class="text-2xl font-display font-bold mb-1">Pages</h2>
-    <p class="text-sm text-muted-foreground">Edit public-facing informational pages.</p>
+    <h1 class="text-2xl font-semibold tracking-tight">Pages</h1>
+    <p class="text-sm text-muted-foreground">Edit the public information pages.</p>
   </div>
 
-  <!-- Section tabs -->
-  <div class="flex gap-2 border-b border-border pb-4">
-    {#each [['shipping','Shipping & Returns'],['faq','FAQ'],['contact','Contact']] as [key, label]}
-      <button onclick={() => (section = key)} class="px-4 py-2 text-label tracking-[0.15em] transition-colors {section === key ? 'bg-foreground text-primary-foreground' : 'hover:bg-muted text-muted-foreground hover:text-foreground'}">{label}</button>
-    {/each}
-  </div>
+  <Tabs items={tabs} bind:value={section} label="Page" />
 
   {#if section === 'shipping'}
-    <div class="space-y-4">
-      <p class="text-xs text-muted-foreground">Supports HTML. Use &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, etc.</p>
-      <textarea bind:value={shipping} rows={16} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-y font-mono"></textarea>
-    </div>
+    <Card title="Shipping & returns" description="Supports HTML — use &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt; and so on.">
+      <div class="p-6 pt-4">
+        <label for="pg-shipping" class="sr-only">Shipping and returns content</label>
+        <textarea id="pg-shipping" bind:value={shipping} rows={16} class="{textareaCls} resize-y font-mono text-[13px]"></textarea>
+      </div>
+    </Card>
 
   {:else if section === 'faq'}
     <div class="space-y-4">
-      {#each faq as item, i}
-        <div class="border border-border p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-label">Q{i + 1}</span>
-            <button aria-label="Remove FAQ" onclick={() => removeFaq(item.id)} class="text-muted-foreground hover:text-destructive">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
+      {#each faq as item, i (item.id)}
+        <Card>
+          <div class="space-y-3 p-6">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-semibold">Question {i + 1}</p>
+              <Button variant="ghost" size="icon" aria-label="Remove question {i + 1}" class="hover:text-destructive" onclick={() => removeFaq(item.id)}><Trash2 size={15} /></Button>
+            </div>
+            <input bind:value={item.question} placeholder="Question" aria-label="Question {i + 1}" class={inputCls} />
+            <textarea bind:value={item.answer} placeholder="Answer" aria-label="Answer {i + 1}" rows={3} class={textareaCls}></textarea>
           </div>
-          <input bind:value={item.question} placeholder="Question" class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors" />
-          <textarea bind:value={item.answer} placeholder="Answer" rows={2} class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
-        </div>
+        </Card>
+      {:else}
+        <Card><p class="p-10 text-center text-sm text-muted-foreground">No questions yet.</p></Card>
       {/each}
-      <button onclick={addFaq} class="flex items-center gap-2 border border-dashed border-border px-4 py-3 w-full text-label text-muted-foreground hover:text-foreground hover:border-foreground transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-        ADD QUESTION
-      </button>
+      <Button variant="outline" class="w-full border-dashed" onclick={addFaq}><Plus size={15} /> Add question</Button>
     </div>
 
   {:else if section === 'contact'}
-    <div class="space-y-4">
-      <div>
-        <label for="contact-address" class="text-label block mb-1.5">ADDRESS</label>
-        <textarea id="contact-address" bind:value={contact.address} rows={2} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
+    <Card title="Contact page" description="The address also appears in the footer of marketing emails (required by anti-spam law).">
+      <div class="space-y-5 p-6 pt-4">
+        <div>
+          <label for="contact-address" class={labelCls}>Address</label>
+          <textarea id="contact-address" bind:value={contact.address} rows={2} class={textareaCls}></textarea>
+        </div>
+        <div class="space-y-3">
+          <p class={labelCls}>Contact details</p>
+          {#each contact.details as detail (detail.id)}
+            <div class="flex items-start gap-2">
+              <input bind:value={detail.label} placeholder="Label (e.g. General enquiries)" aria-label="Contact label" class={inputCls} />
+              <input bind:value={detail.value} placeholder="Email or phone" aria-label="Contact value" class={inputCls} />
+              <Button variant="ghost" size="icon" aria-label="Remove contact" class="shrink-0 hover:text-destructive" onclick={() => removeContact(detail.id)}><Trash2 size={15} /></Button>
+            </div>
+          {/each}
+          <Button variant="outline" class="w-full border-dashed" onclick={addContact}><Plus size={15} /> Add contact detail</Button>
+        </div>
       </div>
-      <div class="space-y-3">
-        <p class="text-label">CONTACT DETAILS</p>
-        {#each contact.details as detail}
-          <div class="flex gap-2 items-start">
-            <input bind:value={detail.label} placeholder="Label (e.g. General Enquiries)" class="flex-1 bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors" />
-            <input bind:value={detail.value} placeholder="Value (e.g. email or phone)" class="flex-1 bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors" />
-            <button aria-label="Remove contact" onclick={() => removeContact(detail.id)} class="p-2 text-muted-foreground hover:text-destructive transition-colors mt-0.5">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-          </div>
-        {/each}
-        <button onclick={addContact} class="flex items-center gap-2 border border-dashed border-border px-4 py-3 w-full text-label text-muted-foreground hover:text-foreground hover:border-foreground transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-          ADD CONTACT
-        </button>
-      </div>
-    </div>
+    </Card>
   {/if}
 
-  <button onclick={save} disabled={saving} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 disabled:cursor-wait">
-    {#if saving}
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-    {:else}
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
-    {/if}
-    {saving ? 'SAVING…' : saved ? 'SAVED!' : 'SAVE CHANGES'}
-  </button>
+  <div class="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur md:left-60">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
+      <p class="text-sm {dirty ? 'text-foreground' : 'text-muted-foreground'}">{dirty ? 'You have unsaved changes' : 'All changes saved'}</p>
+      <Button disabled={!dirty || saving} onclick={save}>
+        {#if saving}<LoaderCircle size={15} class="animate-spin" /> Saving…{:else}Save changes{/if}
+      </Button>
+    </div>
+  </div>
 </div>

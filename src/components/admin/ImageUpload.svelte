@@ -1,13 +1,18 @@
 <script>
+  import Upload from 'lucide-svelte/icons/upload';
+  import X from 'lucide-svelte/icons/x';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+
   // Props
   export let value = '';        // single URL (single mode)
   export let values = [];       // array of URLs (multi mode)
   export let multi = false;     // enable multi-image mode
-  export let label = 'Upload Image';
+  export let label = 'Upload image';
   export let onChange = () => {};  // called with (url) or ([...urls])
 
   let uploading = false;
   let error = '';
+  let dragging = false;
 
   async function handleFiles(files) {
     if (!files.length) return;
@@ -45,34 +50,37 @@
 
   function handleDrop(e) {
     e.preventDefault();
+    dragging = false;
     handleFiles(e.dataTransfer.files);
   }
 </script>
 
 <div class="space-y-3">
   {#if label}
-    <p class="text-label">{label}</p>
+    <p class="text-sm font-medium leading-none">{label}</p>
   {/if}
 
   <!-- Drop zone -->
   <label
-    class="flex flex-col items-center justify-center w-full border border-dashed border-border px-4 py-6 cursor-pointer hover:bg-muted/50 transition-colors"
-    ondragover={(e) => e.preventDefault()}
+    class="flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed px-4 py-6 transition-colors hover:bg-muted/50 focus-within:ring-2 focus-within:ring-ring/40 {dragging ? 'border-ring bg-muted/60' : 'border-input'}"
+    ondragover={(e) => { e.preventDefault(); dragging = true; }}
+    ondragleave={() => (dragging = false)}
     ondrop={handleDrop}
   >
     <input
       type="file"
       accept="image/jpeg,image/png,image/webp,image/gif"
       multiple={multi}
-      class="hidden"
+      class="sr-only"
       onchange={(e) => handleFiles(e.target.files)}
     />
     {#if uploading}
-      <div class="w-5 h-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin mb-2"></div>
+      <LoaderCircle size={20} class="mb-2 animate-spin text-muted-foreground" />
       <span class="text-xs text-muted-foreground">Uploading…</span>
     {:else}
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-2 text-muted-foreground"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-      <span class="text-xs text-muted-foreground">Drop image{multi ? 's' : ''} or click to browse</span>
+      <Upload size={20} class="mb-2 text-muted-foreground" />
+      <span class="text-sm text-muted-foreground"><span class="font-medium text-foreground">Click to upload</span> or drag {multi ? 'images' : 'an image'} here</span>
+      <span class="mt-0.5 text-xs text-muted-foreground">JPG, PNG, WebP or GIF</span>
     {/if}
   </label>
 
@@ -82,31 +90,30 @@
 
   <!-- Single preview -->
   {#if !multi && value}
-    <div class="relative w-24 h-24 border border-border">
-      <img src={value} alt="Preview" class="w-full h-full object-cover" />
+    <div class="group relative h-24 w-24 overflow-hidden rounded-lg border border-border">
+      <img src={value} alt="Preview" class="h-full w-full object-cover" />
       <button
+        type="button"
         aria-label="Remove image"
         onclick={() => { value = ''; onChange(''); }}
-        class="absolute top-0.5 right-0.5 bg-background text-foreground p-0.5 hover:bg-destructive hover:text-white transition-colors"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
+        class="absolute right-1 top-1 rounded-md bg-background/90 p-1 text-foreground shadow transition-colors hover:bg-destructive hover:text-white"
+      ><X size={12} /></button>
     </div>
   {/if}
 
   <!-- Multi previews -->
   {#if multi && values.length}
     <div class="flex flex-wrap gap-2">
-      {#each values as url}
-        <div class="relative w-20 h-20 border border-border flex-shrink-0">
-          <img src={url} alt="Preview" class="w-full h-full object-cover" />
+      {#each values as url, i}
+        <div class="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border">
+          <img src={url} alt="Preview {i + 1}" class="h-full w-full object-cover" />
+          {#if i === 0}<span class="absolute bottom-0 left-0 right-0 bg-black/60 py-0.5 text-center text-[10px] font-medium text-white">Cover</span>{/if}
           <button
+            type="button"
             aria-label="Remove image"
             onclick={() => removeImage(url)}
-            class="absolute top-0.5 right-0.5 bg-background text-foreground p-0.5 hover:bg-destructive hover:text-white transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
+            class="absolute right-1 top-1 rounded-md bg-background/90 p-1 text-foreground shadow transition-colors hover:bg-destructive hover:text-white"
+          ><X size={12} /></button>
         </div>
       {/each}
     </div>

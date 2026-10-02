@@ -1,61 +1,96 @@
 <script>
   import ImageUpload from './ImageUpload.svelte';
+  import Button from '../ui/Button.svelte';
+  import Card from '../ui/Card.svelte';
+  import Badge from '../ui/Badge.svelte';
+  import { inputCls, textareaCls, labelCls } from '../../lib/ui.js';
+  import { toast } from '../../lib/toast.js';
+  import { confirmDialog } from '../../lib/confirm.js';
+  import Plus from 'lucide-svelte/icons/plus';
+  import Pencil from 'lucide-svelte/icons/pencil';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+  import ArrowUp from 'lucide-svelte/icons/arrow-up';
+  import ArrowDown from 'lucide-svelte/icons/arrow-down';
+  import X from 'lucide-svelte/icons/x';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+  import ImageIcon from 'lucide-svelte/icons/image';
+  import Video from 'lucide-svelte/icons/video';
+  import Link from 'lucide-svelte/icons/link';
 
-  export let lookbooks = [];
-  export let onUpdate = () => {};
-  export let onLocalUpdate = onUpdate;
+  let { lookbooks = [], onUpdate = () => {}, onLocalUpdate = null } = $props();
+  const syncLocal = (list) => (onLocalUpdate || onUpdate)(list);
 
-  let editing = null;
-  let isNew = false;
-  let saving = false;
-  let deletingId = null;
+  let editing = $state(null);
+  let isNew = $state(false);
+  let saving = $state(false);
+  let deletingId = $state(null);
+  let snapshot = $state('');
+  let dirty = $derived(editing ? JSON.stringify(editing) !== snapshot : false);
 
   const empty = () => ({
-    id: '', title: '', description: '', date: new Date().toISOString().slice(0,10),
+    id: '', title: '', description: '', date: new Date().toISOString().slice(0, 10),
     coverImage: '', items: []
   });
 
+  function startEditing(lb) {
+    editing = lb
+      ? { ...lb, items: lb.items ?? lb.images?.map(url => ({ type: 'image', url, caption: '' })) ?? [] }
+      : empty();
+    isNew = !lb;
+    snapshot = JSON.stringify(editing);
+  }
+
+  function closeEditor() { editing = null; isNew = false; }
+
+  async function requestClose() {
+    if (dirty && !(await confirmDialog.ask({
+      title: 'Discard changes?', description: 'You have unsaved changes to this lookbook.',
+      confirmLabel: 'Discard', destructive: true,
+    }))) return;
+    closeEditor();
+  }
+
   async function handleSave() {
     if (saving) return;
+    if (!editing.title.trim()) return toast.error('Give the lookbook a title.');
     saving = true;
     try {
-      if (isNew) {
-        await onUpdate([...lookbooks, { ...editing, id: `lb-${Date.now()}` }]);
-      } else {
-        await onUpdate(lookbooks.map(l => l.id === editing.id ? editing : l));
-      }
-      editing = null; isNew = false;
+      if (isNew) await onUpdate([...lookbooks, { ...editing, id: `lb-${Date.now()}` }]);
+      else await onUpdate(lookbooks.map(l => l.id === editing.id ? editing : l));
+      closeEditor();
+    } catch {
+      // Admin.svelte toasts the failure; keep the editor open.
     } finally {
       saving = false;
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Are you sure you want to delete this lookbook?')) return;
-    deletingId = id;
+  async function handleDelete(lb) {
+    const ok = await confirmDialog.ask({
+      title: `Delete “${lb.title}”?`,
+      description: 'The lookbook and its uploaded images are permanently removed.',
+      confirmLabel: 'Delete lookbook', destructive: true,
+    });
+    if (!ok) return;
+    deletingId = lb.id;
     try {
-      const res = await fetch('/api/lookbooks/' + id, { method: 'DELETE' });
+      const res = await fetch('/api/lookbooks/' + lb.id, { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error('Failed to delete lookbook.');
-      onLocalUpdate(lookbooks.filter(l => l.id !== id));
+      syncLocal(lookbooks.filter(l => l.id !== lb.id));
+      toast.success('Lookbook deleted');
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       deletingId = null;
     }
   }
 
   // ── Item helpers ────────────────────────────────────────────────────────────
-  function addItem(type) {
-    editing = { ...editing, items: [...editing.items, { type, url: '', caption: '' }] };
-  }
-  function removeItem(i) {
-    editing = { ...editing, items: editing.items.filter((_, idx) => idx !== i) };
-  }
+  function addItem(type) { editing = { ...editing, items: [...editing.items, { type, url: '', caption: '' }] }; }
+  function removeItem(i) { editing = { ...editing, items: editing.items.filter((_, idx) => idx !== i) }; }
   function updateItem(i, field, val) {
-    editing = {
-      ...editing,
-      items: editing.items.map((item, idx) => idx === i ? { ...item, [field]: val } : item)
-    };
+    editing = { ...editing, items: editing.items.map((item, idx) => idx === i ? { ...item, [field]: val } : item) };
   }
   function moveItem(i, dir) {
     const items = [...editing.items];
@@ -64,154 +99,117 @@
     [items[i], items[j]] = [items[j], items[i]];
     editing = { ...editing, items };
   }
+
+  const TYPE_LABEL = { image: 'Image', video: 'Video', embed: 'Embed' };
 </script>
 
-<div class="space-y-6">
-  <div class="flex items-center justify-between">
-    <div>
-      <h2 class="text-2xl font-display font-bold mb-1">Lookbook</h2>
-      <p class="text-sm text-muted-foreground">{lookbooks.length} lookbook{lookbooks.length !== 1 ? 's' : ''}</p>
-    </div>
-    <button onclick={() => { editing = empty(); isNew = true; }}
-      class="flex items-center gap-2 bg-foreground text-primary-foreground px-4 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97]">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-      ADD LOOKBOOK
-    </button>
-  </div>
-
-  <div class="grid gap-4">
-    {#each lookbooks as lb}
-      {@const cover = lb.coverImage ?? lb.items?.find(i => i.type !== 'video')?.url ?? lb.images?.[0]}
-      <div class="bg-card border border-border p-4 flex gap-4 items-start">
-        {#if cover}
-          <img src={cover} alt={lb.title} class="w-20 h-24 object-cover flex-shrink-0 bg-secondary" />
-        {:else}
-          <div class="w-20 h-24 bg-secondary flex-shrink-0 flex items-center justify-center text-muted-foreground text-xs">No cover</div>
-        {/if}
-        <div class="flex-1 min-w-0">
-          <p class="font-medium">{lb.title}</p>
-          <p class="text-xs text-muted-foreground mt-0.5">{lb.date} · {(lb.items ?? lb.images ?? []).length} item{(lb.items ?? lb.images ?? []).length !== 1 ? 's' : ''}</p>
-          <p class="text-sm text-muted-foreground mt-1 truncate">{lb.description}</p>
-        </div>
-        <div class="flex gap-1 flex-shrink-0">
-          <button aria-label="Edit lookbook" onclick={() => { editing = { ...lb, items: lb.items ?? lb.images?.map(url => ({ type: 'image', url, caption: '' })) ?? [] }; isNew = false; }} class="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-          </button>
-          <button aria-label="Delete lookbook" onclick={() => handleDelete(lb.id)} disabled={deletingId === lb.id} class="p-1.5 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40 disabled:cursor-wait">
-            {#if deletingId === lb.id}
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-            {:else}
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
-            {/if}
-          </button>
-        </div>
+{#if !editing}
+  <div class="space-y-6">
+    <div class="flex items-end justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight">Lookbook</h1>
+        <p class="text-sm text-muted-foreground">{lookbooks.length} lookbook{lookbooks.length !== 1 ? 's' : ''} — editorial imagery and campaigns.</p>
       </div>
-    {/each}
-    {#if !lookbooks.length}
-      <div class="text-center py-16 border border-dashed border-border text-muted-foreground text-sm">No lookbooks yet. Click ADD LOOKBOOK to create one.</div>
+      <Button onclick={() => startEditing(null)}><Plus size={16} /> New lookbook</Button>
+    </div>
+
+    {#if lookbooks.length === 0}
+      <Card><div class="flex flex-col items-center gap-2 py-16 text-center">
+        <ImageIcon size={28} class="text-muted-foreground" />
+        <p class="font-medium">No lookbooks yet</p>
+        <p class="text-sm text-muted-foreground">Create one to showcase your campaigns.</p>
+      </div></Card>
+    {:else}
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {#each lookbooks as lb (lb.id)}
+          {@const cover = lb.coverImage || lb.items?.find(i => i.type === 'image')?.url || lb.images?.[0]}
+          {@const count = (lb.items ?? lb.images ?? []).length}
+          <Card class="group overflow-hidden">
+            <button type="button" class="block w-full text-left" onclick={() => startEditing(lb)} aria-label="Edit {lb.title}">
+              {#if cover}
+                <img src={cover} alt="" class="aspect-[4/3] w-full bg-muted object-cover" />
+              {:else}
+                <div class="flex aspect-[4/3] w-full items-center justify-center bg-muted text-sm text-muted-foreground">No cover</div>
+              {/if}
+            </button>
+            <div class="flex items-start justify-between gap-2 p-4">
+              <div class="min-w-0">
+                <p class="truncate font-medium">{lb.title}</p>
+                <p class="mt-0.5 text-xs text-muted-foreground">{lb.date} · {count} item{count !== 1 ? 's' : ''}</p>
+              </div>
+              <div class="flex shrink-0 gap-1">
+                <Button variant="ghost" size="icon" aria-label="Edit {lb.title}" onclick={() => startEditing(lb)}><Pencil size={15} /></Button>
+                <Button variant="ghost" size="icon" aria-label="Delete {lb.title}" class="hover:text-destructive" disabled={deletingId === lb.id} onclick={() => handleDelete(lb)}>
+                  {#if deletingId === lb.id}<LoaderCircle size={15} class="animate-spin" />{:else}<Trash2 size={15} />{/if}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        {/each}
+      </div>
     {/if}
   </div>
+{:else}
+  <div class="max-w-3xl space-y-6 pb-24">
+    <div>
+      <button type="button" onclick={requestClose} class="mb-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft size={14} /> Lookbook</button>
+      <h1 class="text-2xl font-semibold tracking-tight">{isNew ? 'New lookbook' : editing.title || 'Edit lookbook'}</h1>
+    </div>
 
-  {#if editing}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4">
-      <div class="bg-background border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 animate-fade-up">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-display font-bold">{isNew ? 'Add Lookbook' : 'Edit Lookbook'}</h3>
-          <button aria-label="Close" onclick={() => { editing = null; isNew = false; }} class="text-muted-foreground hover:text-foreground">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
+    <Card title="Details">
+      <div class="space-y-5 p-6 pt-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_180px]">
+          <div><label for="lb-title" class={labelCls}>Title</label><input id="lb-title" bind:value={editing.title} class={inputCls} /></div>
+          <div><label for="lb-date" class={labelCls}>Date</label><input id="lb-date" type="date" bind:value={editing.date} class={inputCls} /></div>
         </div>
+        <div><label for="lb-desc" class={labelCls}>Description</label><textarea id="lb-desc" bind:value={editing.description} rows={2} class={textareaCls}></textarea></div>
+        <ImageUpload label="Cover image" value={editing.coverImage ?? ''} onChange={(url) => (editing = { ...editing, coverImage: url })} />
+      </div>
+    </Card>
 
-        <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="lb-title" class="text-label block mb-1.5">TITLE</label>
-              <input id="lb-title" bind:value={editing.title} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-            </div>
-            <div>
-              <label for="lb-date" class="text-label block mb-1.5">DATE</label>
-              <input id="lb-date" type="date" bind:value={editing.date} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-            </div>
-          </div>
-          <div>
-            <label for="lb-desc" class="text-label block mb-1.5">DESCRIPTION</label>
-            <textarea id="lb-desc" bind:value={editing.description} rows={2} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors resize-none"></textarea>
-          </div>
-
-          <!-- Cover image -->
-          <ImageUpload label="COVER IMAGE" value={editing.coverImage ?? ''} onChange={(url) => (editing = { ...editing, coverImage: url })} />
-
-          <!-- Media items -->
-          <div>
-            <p class="text-label mb-3">MEDIA ITEMS <span class="text-muted-foreground font-normal normal-case text-xs">({editing.items.length} items)</span></p>
-
-            {#each editing.items as item, i}
-              <div class="border border-border p-3 mb-2 space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] tracking-[0.15em] uppercase text-muted-foreground">{item.type}</span>
-                  <div class="flex items-center gap-1">
-                    <button aria-label="Move up" onclick={() => moveItem(i, -1)} class="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={i === 0}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>
-                    </button>
-                    <button aria-label="Move down" onclick={() => moveItem(i, 1)} class="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={i === editing.items.length - 1}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
-                    <button aria-label="Remove item" onclick={() => removeItem(i)} class="p-1 text-muted-foreground hover:text-destructive">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>
-                  </div>
-                </div>
-
-                {#if item.type === 'image'}
-                  <ImageUpload label="" value={item.url} onChange={(url) => updateItem(i, 'url', url)} />
-                {:else}
-                  <input
-                    value={item.url}
-                    oninput={(e) => updateItem(i, 'url', e.target.value)}
-                    placeholder={item.type === 'embed' ? 'YouTube or Vimeo URL' : 'Video file URL'}
-                    class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors font-mono"
-                  />
-                {/if}
-                <input
-                  value={item.caption}
-                  oninput={(e) => updateItem(i, 'caption', e.target.value)}
-                  placeholder="Caption (optional)"
-                  class="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors"
-                />
+    <Card title="Media" description="Images, videos and embeds, in the order they appear.">
+      <div class="space-y-3 p-6 pt-4">
+        {#each editing.items as item, i}
+          <div class="space-y-3 rounded-lg border border-border p-4">
+            <div class="flex items-center justify-between">
+              <Badge variant="outline">{i + 1}. {TYPE_LABEL[item.type] || item.type}</Badge>
+              <div class="flex items-center gap-0.5">
+                <Button variant="ghost" size="icon" class="h-8 w-8" aria-label="Move up" disabled={i === 0} onclick={() => moveItem(i, -1)}><ArrowUp size={14} /></Button>
+                <Button variant="ghost" size="icon" class="h-8 w-8" aria-label="Move down" disabled={i === editing.items.length - 1} onclick={() => moveItem(i, 1)}><ArrowDown size={14} /></Button>
+                <Button variant="ghost" size="icon" class="h-8 w-8 hover:text-destructive" aria-label="Remove item {i + 1}" onclick={() => removeItem(i)}><X size={14} /></Button>
               </div>
-            {/each}
-
-            <!-- Add item buttons -->
-            <div class="flex gap-2 flex-wrap pt-1">
-              <button onclick={() => addItem('image')} class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                ADD IMAGE
-              </button>
-              <button onclick={() => addItem('video')} class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
-                ADD VIDEO
-              </button>
-              <button onclick={() => addItem('embed')} class="flex items-center gap-1.5 border border-dashed border-border px-3 py-2 text-label text-xs text-muted-foreground hover:text-foreground hover:border-foreground transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 17a24.12 24.12 0 0 1 0-10"/><path d="m10 15 5-3-5-3z"/></svg>
-                EMBED YT/VIMEO
-              </button>
             </div>
-          </div>
-        </div>
-
-        <div class="flex gap-3 pt-2">
-          <button onclick={handleSave} disabled={saving} class="flex items-center gap-2 bg-foreground text-primary-foreground px-5 py-2.5 text-label tracking-[0.15em] hover:bg-foreground/90 transition-colors active:scale-[0.97] disabled:opacity-60 disabled:cursor-wait">
-            {#if saving}
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-              SAVING…
+            {#if item.type === 'image'}
+              <ImageUpload label="" value={item.url} onChange={(url) => updateItem(i, 'url', url)} />
             {:else}
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
-              SAVE
+              <input
+                value={item.url}
+                oninput={(e) => updateItem(i, 'url', e.target.value)}
+                placeholder={item.type === 'embed' ? 'YouTube or Vimeo URL' : 'Video file URL'}
+                aria-label="{TYPE_LABEL[item.type]} URL"
+                class="{inputCls} font-mono text-[13px]"
+              />
             {/if}
-          </button>
-          <button onclick={() => { editing = null; isNew = false; }} disabled={saving} class="px-5 py-2.5 text-label tracking-[0.15em] border border-border hover:bg-muted transition-colors active:scale-[0.97] disabled:opacity-40">CANCEL</button>
+            <input value={item.caption} oninput={(e) => updateItem(i, 'caption', e.target.value)} placeholder="Caption (optional)" aria-label="Caption" class={inputCls} />
+          </div>
+        {/each}
+
+        <div class="flex flex-wrap gap-2 pt-1">
+          <Button variant="outline" size="sm" onclick={() => addItem('image')}><ImageIcon size={14} /> Add image</Button>
+          <Button variant="outline" size="sm" onclick={() => addItem('video')}><Video size={14} /> Add video</Button>
+          <Button variant="outline" size="sm" onclick={() => addItem('embed')}><Link size={14} /> Embed YouTube / Vimeo</Button>
+        </div>
+      </div>
+    </Card>
+
+    <div class="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur md:left-60">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
+        <p class="text-sm {dirty ? 'text-foreground' : 'text-muted-foreground'}">{dirty ? 'You have unsaved changes' : 'No changes yet'}</p>
+        <div class="flex gap-2">
+          <Button variant="outline" disabled={saving} onclick={requestClose}>Cancel</Button>
+          <Button disabled={saving} onclick={handleSave}>{#if saving}<LoaderCircle size={15} class="animate-spin" /> Saving…{:else}Save lookbook{/if}</Button>
         </div>
       </div>
     </div>
-  {/if}
-</div>
+  </div>
+{/if}

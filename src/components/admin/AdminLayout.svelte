@@ -1,78 +1,130 @@
 <script>
-  export let activeSection = 'dashboard';
-  export let navigate = () => {};
+  import { cn } from '../../lib/cn.js';
+  import LayoutDashboard from 'lucide-svelte/icons/layout-dashboard';
+  import ShoppingBag from 'lucide-svelte/icons/shopping-bag';
+  import Package from 'lucide-svelte/icons/package';
+  import Tags from 'lucide-svelte/icons/tags';
+  import ImageIcon from 'lucide-svelte/icons/image';
+  import FileText from 'lucide-svelte/icons/file-text';
+  import Files from 'lucide-svelte/icons/files';
+  import Megaphone from 'lucide-svelte/icons/megaphone';
+  import Users from 'lucide-svelte/icons/users';
+  import Settings2 from 'lucide-svelte/icons/settings-2';
+  import Activity from 'lucide-svelte/icons/activity';
+  import ArrowUpRight from 'lucide-svelte/icons/arrow-up-right';
+  import Menu from 'lucide-svelte/icons/menu';
+  import X from 'lucide-svelte/icons/x';
 
-  let sidebarOpen = false;
+  // `badges` maps a section key to a count shown beside its nav label (e.g. orders to ship).
+  let { activeSection = 'dashboard', navigate = () => {}, badges = {}, children } = $props();
 
-  const sidebarItems = [
-    { key: 'dashboard',   label: 'Dashboard'   },
-    { key: 'products',    label: 'Products'    },
-    { key: 'categories',  label: 'Categories'  },
-    { key: 'orders',      label: 'Orders'      },
-    { key: 'status',      label: 'Site Status' },
-    { key: 'lookbook',    label: 'Lookbook'    },
-    { key: 'community',   label: 'Community'   },
-    { key: 'pages',       label: 'Pages'       },
-    { key: 'subscribers', label: 'Subscribers' },
-    { key: 'newsletter',  label: 'Newsletter'  },
-    { key: 'settings',    label: 'Settings'    },
+  let sidebarOpen = $state(false);
+
+  const groups = [
+    { title: 'Store', items: [
+      { key: 'dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
+      { key: 'orders',     label: 'Orders',     icon: ShoppingBag },
+      { key: 'products',   label: 'Products',   icon: Package },
+      { key: 'categories', label: 'Categories', icon: Tags },
+    ]},
+    { title: 'Content', items: [
+      { key: 'lookbook',    label: 'Lookbook',    icon: ImageIcon },
+      { key: 'community',   label: 'Community',   icon: FileText },
+      { key: 'pages',       label: 'Pages',       icon: Files },
+      { key: 'newsletter',  label: 'Newsletter',  icon: Megaphone },
+      { key: 'subscribers', label: 'Subscribers', icon: Users },
+    ]},
+    { title: 'System', items: [
+      { key: 'settings', label: 'Settings',    icon: Settings2 },
+      { key: 'status',   label: 'Site status', icon: Activity },
+    ]},
   ];
 
-  const icons = {
-    dashboard: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>`,
-    products:  `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
-    categories: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4"/><path d="M20.38 4.61a2 2 0 0 0-2.83 0l-8.8 8.8a2 2 0 0 0-.59 1.42V19h4.17a2 2 0 0 0 1.42-.59l8.8-8.8a2 2 0 0 0 0-2.83Z"/><path d="M9 14 4 19"/><path d="m7 12-5 5"/></svg>`,
-    orders:    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
-    status:    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"/><path d="M18.4 4.6a10 10 0 1 1-12.8 0"/></svg>`,
-    lookbook:  `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
-    community: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-    pages:     `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
-    settings:     `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
-    subscribers:  `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
-    newsletter:   `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`,
-  };
+  const allItems = groups.flatMap(g => g.items);
+  let activeLabel = $derived(allItems.find(i => i.key === activeSection)?.label ?? 'Admin');
 
-  function goTo(key) { navigate(key); sidebarOpen = false; }
+  function hrefFor(key) { return key === 'dashboard' ? '/admin' : `/admin/${key}`; }
+
+  function go(e, key) {
+    // Let modified clicks (new tab etc.) behave like normal links.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+    e.preventDefault();
+    navigate(key);
+    sidebarOpen = false;
+  }
 </script>
 
-<div class="min-h-screen bg-background flex">
-  <aside class="fixed inset-y-0 left-0 z-50 w-56 bg-foreground text-primary-foreground transform transition-transform duration-300 md:translate-x-0 {sidebarOpen ? 'translate-x-0' : '-translate-x-full'}">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-primary-foreground/10">
-      <span class="font-display text-base font-bold">Others. Admin</span>
-      <button class="md:hidden text-primary-foreground/60 hover:text-primary-foreground" aria-label="Close sidebar" onclick={() => (sidebarOpen = false)}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
+{#snippet nav()}
+  <div class="flex h-full flex-col">
+    <div class="flex h-14 items-center justify-between px-5">
+      <a href="/admin" onclick={(e) => go(e, 'dashboard')} class="flex items-baseline gap-2">
+        <span class="text-lg font-bold tracking-tight">Others.</span>
+        <span class="text-xs text-muted-foreground">Admin</span>
+      </a>
+      <button type="button" class="md:hidden rounded-md p-1.5 text-muted-foreground hover:bg-accent" aria-label="Close menu" onclick={() => (sidebarOpen = false)}><X size={18} /></button>
     </div>
-    <nav class="px-2 py-3 space-y-0.5">
-      {#each sidebarItems as item}
-        {@const isActive = activeSection === item.key}
-        <button class="w-full flex items-center gap-2.5 px-3 py-2 text-[11px] tracking-[0.1em] uppercase font-medium transition-colors text-left {isActive ? 'bg-primary-foreground/10 text-primary-foreground' : 'text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/5'}" onclick={() => goTo(item.key)}>
-          {@html icons[item.key]}
-          {item.label}
-        </button>
+
+    <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-2" aria-label="Admin sections">
+      {#each groups as group}
+        <div>
+          <p class="px-3 pb-1.5 text-xs font-medium text-muted-foreground">{group.title}</p>
+          <ul class="space-y-0.5">
+            {#each group.items as item}
+              {@const active = activeSection === item.key}
+              <li>
+                <a
+                  href={hrefFor(item.key)}
+                  onclick={(e) => go(e, item.key)}
+                  aria-current={active ? 'page' : undefined}
+                  class={cn(
+                    'flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors',
+                    active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+                  )}
+                >
+                  <item.icon size={16} />
+                  <span class="flex-1">{item.label}</span>
+                  {#if badges[item.key]}
+                    <span class="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold leading-none text-primary-foreground tabular-nums">{badges[item.key]}</span>
+                  {/if}
+                </a>
+              </li>
+            {/each}
+          </ul>
+        </div>
       {/each}
     </nav>
-    <div class="absolute bottom-0 left-0 right-0 px-2 py-3 border-t border-primary-foreground/10">
-      <a href="/" class="flex items-center gap-2.5 px-3 py-2 text-[11px] tracking-[0.1em] uppercase font-medium text-primary-foreground/50 hover:text-primary-foreground transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-        Back to Store
+
+    <div class="border-t border-border p-3">
+      <a href="/" class="flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground">
+        <ArrowUpRight size={16} /> View storefront
       </a>
     </div>
+  </div>
+{/snippet}
+
+<div class="min-h-screen">
+  <aside class="fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-border bg-card md:block">
+    {@render nav()}
   </aside>
 
   {#if sidebarOpen}
-    <button class="fixed inset-0 bg-foreground/50 z-40 md:hidden w-full h-full cursor-default" aria-label="Close sidebar overlay" onclick={() => (sidebarOpen = false)}></button>
+    <button type="button" class="fixed inset-0 z-40 bg-black/40 md:hidden cursor-default" aria-label="Close menu overlay" onclick={() => (sidebarOpen = false)}></button>
+    <aside class="fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card shadow-xl md:hidden">
+      {@render nav()}
+    </aside>
   {/if}
 
-  <main class="flex-1 md:ml-56">
-    <header class="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border px-6 py-3 flex items-center gap-4">
-      <button class="md:hidden text-foreground" aria-label="Open sidebar" onclick={() => (sidebarOpen = true)}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-      </button>
-      <h1 class="text-sm font-medium text-foreground capitalize">{sidebarItems.find(i => i.key === activeSection)?.label ?? 'Admin'}</h1>
+  <div class="md:pl-60">
+    <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur md:px-8">
+      <button type="button" class="md:hidden rounded-md p-1.5 hover:bg-accent" aria-label="Open menu" onclick={() => (sidebarOpen = true)}><Menu size={20} /></button>
+      <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm">
+        <span class="text-muted-foreground">Admin</span>
+        <span class="text-muted-foreground">/</span>
+        <span class="font-medium" aria-current="page">{activeLabel}</span>
+      </nav>
     </header>
-    <div class="p-6 md:p-8">
-      <slot />
-    </div>
-  </main>
+    <main class="mx-auto max-w-6xl p-4 md:p-8">
+      {@render children?.()}
+    </main>
+  </div>
 </div>
