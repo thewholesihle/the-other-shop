@@ -545,6 +545,9 @@
         <div class="flex justify-between px-3 py-3 font-semibold"><span>Total</span><span class="tabular-nums">{money(selected.total)}</span></div>
       </div>
 
+      {#if selected.internalNote}
+        <p role="status" class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"><span class="font-medium">Needs a look:</span> {selected.internalNote}</p>
+      {/if}
       {#if selected.adminNote}
         <p class="rounded-lg bg-muted p-3 text-sm"><span class="font-medium">Note:</span> {selected.adminNote}</p>
       {/if}

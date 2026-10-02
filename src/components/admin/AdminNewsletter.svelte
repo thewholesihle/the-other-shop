@@ -53,6 +53,8 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Broadcast failed.');
       toast.success(`Delivered to ${data.sentCount} subscriber(s).`);
+      // Deliverability advice for next time (spam-filter triggers spotted in the subject or body).
+      for (const w of data.warnings || []) toast.info(`Deliverability tip: ${w}`, 9000);
       subject = '';
       htmlContent = DEFAULT_BODY;
     } catch (e) {

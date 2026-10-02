@@ -152,7 +152,10 @@ const OrderSchema = new mongoose.Schema({
   cancelReason: { type: String, default: '', enum: ['', 'customer', 'abandoned', 'payment_failed'] },
   yocoCheckoutId: { type: String, default: '', index: true }, // links Yoco's webhook back to the order
   yocoPaymentId:  { type: String, default: '' },
-  adminNote:    { type: String, default: '' },
+  adminNote:    { type: String, default: '' }, // shown to the customer in their status email
+  // For the admin only, never emailed: set automatically when something needs a human look (e.g. a late payment
+  // arrived after its stock was released and could not be fully re-reserved).
+  internalNote: { type: String, default: '' },
   // Shipment details — entered manually by the admin when marking an order 'shipped',
   // and surfaced as reference info in the customer status email.
   carrier:           { type: String, default: '' },

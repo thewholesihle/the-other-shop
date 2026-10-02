@@ -31,3 +31,7 @@ public/data/store.json
 
 # ── Fly.io ────────────────────────────────────────────────────────────────────
 .fly/
+
+# Email templates: compiled by `npm run build`, previews by `npm run emails:preview`
+emails/dist
+emails/preview

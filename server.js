@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const auth = require('./src/auth');
 const { yocoConfig, YocoError, createYocoCheckout, verifyYocoWebhook } = require('./src/services/yoco');
+const { renderEmail, sanitizeEmailHtml } = require('./src/emails');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -326,50 +327,6 @@ async function sendEmail({ from, to, subject, html, text, replyTo, headers, atta
   return res.json();
 }
 
-/** Best-effort plain-text derivation of an email's HTML, preserving link URLs.
- * Every send gets this as the `text` part alongside `html` — some clients render
- * text-only, and having one at all measurably helps spam-filter scoring. */
-function htmlToText(html) {
-  return String(html || '')
-    // Outlook conditional comments (<!--[if mso]>...<![endif]-->) are valid HTML
-    // comments end to end, and emailLayout() uses them for its width-table fallback
-    // and MSO-only <head> block — left unstripped, their raw contents (stray "96"
-    // from <o:PixelsPerInch>, duplicate wrapper markup) leaked straight into the
-    // plain-text part. Drop <head> and all comments before anything else runs.
-    .replace(/<head[\s\S]*?<\/head>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    // Keep link destinations instead of dropping them with the rest of the tags —
-    // a plain-text "Unsubscribe" with no URL next to it is useless. Icon links
-    // wrap an <img> with no text, so fall back to its alt text as the label.
-    .replace(/<a\s+[^>]*href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => {
-      let text = label.replace(/<[^>]+>/g, '').trim();
-      if (!text) {
-        const alt = label.match(/alt=["']([^"']*)["']/i);
-        if (alt) text = alt[1];
-      }
-      return href && !href.startsWith('#') ? `${text} (${href})` : text;
-    })
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|tr|table|h[1-6]|li)>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '- ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&zwnj;/gi, '') // zero-width joiner — invisible padding, not real text
-    .replace(/&middot;/gi, '·')
-    .replace(/&times;/gi, '×')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&#39;|&apos;/gi, "'")
-    .replace(/&quot;/gi, '"')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n[ \t]+/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
 /** First usable "reply to a human" address for a site — customer/marketing mail is
  * sent "from" a no-reply sandbox address (see EMAIL_FROM), so without this, hitting
  * reply on any customer-facing email goes nowhere. */
@@ -412,168 +369,56 @@ async function getEmailBranding() {
   }
 }
 
-// Small monochrome glyphs, inlined as base64 data-URI <img> sources rather than live
-// <svg> (email clients — Outlook especially — render inline SVG unreliably, but a
-// data-URI image degrades gracefully everywhere image loading is supported).
-const EMAIL_SOCIAL_ICONS = {
-  instagram: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>',
-  twitter: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"><path d="M4 4l16 16M20 4L4 20"/></svg>',
-  tiktok: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6c0-1 1-2 3-2 1.5 3 3 4 6 4"/><circle cx="9" cy="18" r="3"/></svg>',
-  youtube: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" stroke="none"><path d="M21.6 7.2a2.7 2.7 0 0 0-1.9-1.9C18 5 12 5 12 5s-6 0-7.7.3a2.7 2.7 0 0 0-1.9 1.9A28 28 0 0 0 2 12a28 28 0 0 0 .4 4.8 2.7 2.7 0 0 0 1.9 1.9C6 19 12 19 12 19s6 0 7.7-.3a2.7 2.7 0 0 0 1.9-1.9A28 28 0 0 0 22 12a28 28 0 0 0-.4-4.8zM10 15.5v-7l6 3.5-6 3.5z"/></svg>',
-};
-
-const EMAIL_SOCIAL_PLATFORMS = [
-  { key: 'instagram', label: 'Instagram' },
-  { key: 'twitter',   label: 'Twitter' },
-  { key: 'tiktok',    label: 'TikTok' },
-  { key: 'youtube',   label: 'YouTube' },
-];
-
-function emailSocialLinks(socials) {
-  const active = EMAIL_SOCIAL_PLATFORMS.filter(p => socials?.[p.key]?.trim());
-  if (!active.length) return '';
-  // Table cells, not inline-block <a> tags side by side — Outlook's Word rendering
-  // engine supports inline-block inconsistently and can stack these instead of
-  // rowing them; a <table> row is the one layout primitive every client agrees on.
-  const cells = active.map(p => {
-    const iconSrc = `data:image/svg+xml;base64,${Buffer.from(EMAIL_SOCIAL_ICONS[p.key]).toString('base64')}`;
-    return `<td style="padding:0 5px;">
-      <a href="${socials[p.key]}" style="display:inline-block; width:34px; height:34px; line-height:34px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); text-align:center;">
-        <img src="${iconSrc}" width="16" height="16" alt="${p.label}" style="display:inline; vertical-align:middle;" />
-      </a>
-    </td>`;
-  }).join('');
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr>${cells}</tr></table>`;
-}
-
 function formatDateLabel(dateStr) {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/** Wraps email body content in the shared branded header/footer chrome used by every
- * template. Produces a full standalone HTML document (doctype/head/body), not a
- * fragment — Resend forwards `html` verbatim to the mailbox, and clients like
- * Outlook (Word rendering engine) and Windows Mail need the real document
- * structure, an explicit charset, and an Outlook conditional-comment width table
- * to render a fixed-width layout reliably; a bare `<div>` soup degrades badly.
- *
- * `preheader` sets the hidden preview snippet shown next to the subject line in
- * the inbox list. `unsubscribeUrl` is only passed for marketing sends (the
- * newsletter broadcast) — transactional order emails have nothing to unsubscribe
- * from, so the footer link is conditional rather than always present. */
 /** Cloudinary delivery URL for emails: capped size and a format every mail client renders
  * (no AVIF/WebP — Outlook and some webmail can't show them), so `f_auto` is not used here. */
 function cldEmail(url, { w, h, png = false } = {}) {
   if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url;
   const t = h ? `c_fill,g_auto,h_${h},w_${w}` : `c_limit,w_${w}`;
-  return url.replace('/upload/', `/upload/${t},f_${png ? 'png' : 'jpg'},q_auto/`);
+  // Sources that can be transparent stay PNG — flattening them to JPG would put a black box behind them.
+  const asPng = png || /\.(png|gif|svg)(\?|$)/i.test(url);
+  return url.replace('/upload/', `/upload/${t},f_${asPng ? 'png' : 'jpg'},q_auto/`);
 }
 
-function emailLayout({ siteName, logoUrl, bodyHtml, socials, contactAddress, contactUrl, preheader = '', unsubscribeUrl = '' }) {
-  const socialLinksHtml = emailSocialLinks(socials);
-  const safeSiteName = escapeHtmlAttr(siteName);
-  // Invisible preview text + zero-width joiners to pad it past the boilerplate the
-  // client would otherwise pull into the inbox preview snippet (e.g. "View this
-  // email in your browser..."). mso-hide keeps Outlook's preview pane from showing it.
-  const preheaderHtml = preheader
-    ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#ffffff; opacity:0;">${escapeHtmlAttr(preheader)}${'&nbsp;&zwnj;'.repeat(10)}</div>`
-    : '';
+/** Everything the shared email chrome needs (logo, links, address). Logos go out as PNG/JPG at a capped size —
+ *  Outlook and some webmail can't show AVIF/WebP — and always over an absolute https URL. */
+function emailBrand(site, contactAddress, baseUrl = '') {
+  const base = String(baseUrl || '').replace(/\/+$/, '');
+  const abs = (u) => (u && u.startsWith('/') && base ? base + u : u);
+  const logo = abs(site?.emailLogo || site?.logo);
+  const socials = [['instagram', 'Instagram'], ['twitter', 'X'], ['tiktok', 'TikTok'], ['youtube', 'YouTube']]
+    .filter(([k]) => site?.socials?.[k]?.trim()).map(([k, label]) => ({ label, href: site.socials[k].trim() }));
+  return {
+    name: site?.name || 'Others.',
+    logoUrl: logo ? cldEmail(logo, { w: 360, png: true }) : '',
+    url: base,
+    contactUrl: base ? `${base}/contact` : '',
+    address: contactAddress || '',
+    socials,
+  };
+}
 
-  return `<!doctype html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<meta name="format-detection" content="telephone=no" />
-<!-- Locks light mode: this template's dark header/footer against a light body is
-     an intentional contrast, not a light-mode default — letting Gmail/Apple Mail/
-     Outlook.com auto-dark-mode invert it flattens that and can make text unreadable. -->
-<meta name="color-scheme" content="light" />
-<meta name="supported-color-schemes" content="light" />
-<title>${safeSiteName}</title>
-<!--[if mso]>
-<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
-<![endif]-->
-<style>
-  body, table, td { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
-  table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
-  img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
-  a { text-decoration:none; }
-  @media only screen and (max-width:600px) {
-    .email-container { width:100% !important; }
-    .email-padded { padding-left:20px !important; padding-right:20px !important; }
+// Automatic mail (alerts, summaries) is marked as such so auto-responders and out-of-office replies leave it alone.
+const AUTO_HEADERS = { 'Auto-Submitted': 'auto-generated', 'X-Auto-Response-Suppress': 'All' };
+
+/** Renders a React Email template and sends it. If the templates can't render (e.g. they were never built),
+ *  a plain-text fallback still goes out — a missed order alert is worse than an unstyled one. */
+async function sendTemplate(name, props, mail, fallbackText = '') {
+  let rendered;
+  try {
+    rendered = await renderEmail(name, props);
+  } catch (err) {
+    console.error(`[Mail] Template "${name}" failed to render: ${err.message}`);
+    dbLog({ id: `log-${Date.now()}-tpl`, type: 'error', message: `Email template "${name}" failed to render: ${err.message}`, context: 'EMAIL', data: {} });
+    const text = fallbackText || mail.subject;
+    rendered = { text, html: `<pre style="font:14px/1.6 sans-serif;white-space:pre-wrap">${escapeHtmlAttr(text)}</pre>` };
   }
-</style>
-</head>
-<body style="margin:0; padding:0; width:100%; background:#f4f4f4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-${preheaderHtml}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f4;">
-  <tr>
-    <td align="center" style="padding:32px 16px;">
-      <!--[if mso]>
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" align="center"><tr><td>
-      <![endif]-->
-      <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; margin:0 auto; background:#ffffff;">
-        <tr>
-          <td align="center" style="background:#111111; padding:28px 24px;">
-            ${logoUrl
-              ? `<img src="${cldEmail(logoUrl, { w: 360, png: true })}" width="180" height="36" alt="${safeSiteName}" style="max-height:36px; max-width:180px; width:auto; height:auto; display:block; margin:0 auto;" />`
-              : `<span style="color:#ffffff; font-size:18px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;">${safeSiteName}</span>`}
-          </td>
-        </tr>
-        <tr>
-          <td class="email-padded" style="padding:40px 32px; color:#111111;">
-            ${bodyHtml}
-          </td>
-        </tr>
-        <tr>
-          <td align="center" class="email-padded" style="background:#111111; padding:32px 24px;">
-            ${socialLinksHtml ? `
-              <p style="color:rgba(255,255,255,0.5); font-size:11px; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 16px;">Want updates through more platforms?</p>
-              <div style="margin-bottom:24px;">${socialLinksHtml}</div>
-            ` : ''}
-            ${contactAddress ? `<p style="color:rgba(255,255,255,0.4); font-size:11px; margin:0 0 12px; line-height:1.5;">${contactAddress}</p>` : ''}
-            <p style="margin:0;">
-              ${contactUrl ? `<a href="${contactUrl}" style="color:rgba(255,255,255,0.6); font-size:11px;">Contact us</a>` : ''}
-              ${contactUrl && unsubscribeUrl ? `<span style="color:rgba(255,255,255,0.3); font-size:11px;">&nbsp;&middot;&nbsp;</span>` : ''}
-              ${unsubscribeUrl ? `<a href="${unsubscribeUrl}" style="color:rgba(255,255,255,0.6); font-size:11px;">Unsubscribe</a>` : ''}
-            </p>
-          </td>
-        </tr>
-      </table>
-      <!--[if mso]>
-      </td></tr></table>
-      <![endif]-->
-    </td>
-  </tr>
-</table>
-</body>
-</html>`;
-}
-
-/** One order-line-item row, shared by the admin notification and customer status
- * emails. A <table> row, not the flexbox div this used to be — Outlook's Word
- * rendering engine ignores `display:flex` entirely, which collapsed the image,
- * name and quantity into an unreadable stack in that one client. */
-function emailItemRow(item, { showPrice = false, currency = 'R' } = {}) {
-  const meta = [item.size, item.color].filter(Boolean).join(' / ');
-  return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eee; margin-bottom:8px;">
-      <tr>
-        ${item.image ? `<td width="48" valign="top" style="padding:12px 0 12px 12px;"><img src="${cldEmail(item.image, { w: 96, h: 96 })}" width="48" height="48" alt="" style="width:48px; height:48px; object-fit:cover; background:#f5f5f5;" /></td>` : ''}
-        <td valign="middle" style="padding:12px;">
-          <p style="margin:0; font-size:13px; font-weight:600;">${item.name}</p>
-          ${meta ? `<p style="margin:2px 0 0; font-size:11px; color:#888;">${meta}</p>` : ''}
-        </td>
-        <td valign="middle" align="right" style="padding:12px; white-space:nowrap;">
-          <p style="margin:0; font-size:12px; color:#666;">${showPrice ? `&times;${item.quantity}` : `Qty: ${item.quantity}`}</p>
-          ${showPrice ? `<p style="margin:2px 0 0; font-size:13px; font-weight:600;">${currency}${(item.price * item.quantity).toFixed(2)}</p>` : ''}
-        </td>
-      </tr>
-    </table>`;
+  return sendEmail({ ...mail, ...rendered });
 }
 
 /** Who gets admin emails: Settings → Emails & alerts when the DB is up, else ADMIN_EMAIL. */
@@ -615,57 +460,26 @@ async function sendOrderNotification(order, baseUrl = '') {
     const siteName = site?.name || 'Others.';
     const currency = site?.currency || 'R';
 
-    const itemsHtml = (order.items || []).map(i => emailItemRow(i, { showPrice: true, currency })).join('');
-
-    const totalHtml = `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #111; margin-top:16px; margin-bottom:32px;">
-        <tr>
-          <td style="padding-top:16px; font-weight:700; font-size:16px;">Total paid</td>
-          <td align="right" style="padding-top:16px; font-weight:700; font-size:16px;">${currency}${order.total.toFixed(2)}</td>
-        </tr>
-      </table>
-    `;
-
-    const bodyHtml = `
-      <h1 style="font-size:22px; font-weight:800; margin:0 0 8px;">New order paid</h1>
-      <p style="font-size:14px; color:#666; margin:0 0 32px;">#${order.id} &middot; ${order.customer || 'Customer'} (${order.email || '—'})</p>
-
-      <div style="margin-bottom:24px;">
-        <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888; margin:0 0 4px;">Delivery address</p>
-        <p style="font-size:14px; margin:0;">${order.address || '—'}</p>
-      </div>
-
-      <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:#888; margin:0 0 12px;">Items</p>
-      ${itemsHtml}
-
-      ${totalHtml}
-
-      ${baseUrl ? `
-        <div style="text-align:center;">
-          <a href="${baseUrl}/admin" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:14px 32px; font-size:12px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase;">Open Admin Dashboard</a>
-        </div>
-      ` : ''}
-    `;
-
-    const html = emailLayout({
-      siteName,
-      logoUrl: site?.emailLogo || site?.logo,
-      bodyHtml,
-      socials: site?.socials,
-      contactAddress,
-      contactUrl: baseUrl ? `${baseUrl}/contact` : '',
-      preheader: `New order #${order.id} — ${currency}${order.total.toFixed(2)} from ${order.customer || 'a customer'}.`,
-    });
-
-    await sendEmail({
-      from: `${siteName} Store <${EMAIL_FROM}>`,
+    const props = {
+      brand: emailBrand(site, contactAddress, baseUrl),
+      currency,
+      adminUrl: baseUrl ? `${baseUrl}/admin/orders` : '',
+      order: {
+        id: order.id, customer: order.customer, email: order.email, phone: order.phone, address: order.address,
+        total: order.total, shippingCost: order.shippingCost || 0,
+        paymentMethod: order.paymentMethod || (order.payfastId ? 'payfast' : ''),
+        paymentRef: order.yocoPaymentId || order.payfastId || '',
+        items: (order.items || []).map(i => ({ name: i.name, size: i.size, color: i.color, quantity: i.quantity, price: i.price, image: cldEmail(i.image, { w: 104, h: 104 }) })),
+      },
+    };
+    await sendTemplate('OrderNotification', props, {
+      from: `${siteName} Alerts <${EMAIL_FROM}>`,
       to: recipients,
-      subject: `New Order Paid: #${order.id}`,
-      html,
-      text: htmlToText(html),
+      subject: `New order ${order.id} \u2014 ${currency}${order.total.toFixed(2)}`,
       // Admin hits reply and it goes straight to the customer, not into the void.
       replyTo: order.email || undefined,
-    });
+      headers: AUTO_HEADERS,
+    }, `New order ${order.id} from ${order.customer || 'a customer'}: ${currency}${order.total.toFixed(2)}.\n\n${order.address || ''}\n\n${(order.items || []).map(i => `${i.quantity} x ${i.name} ${[i.size, i.color].filter(Boolean).join(' / ')}`).join('\n')}`);
     console.log(`[Email] Notification sent for order ${order.id}`);
   } catch (err) {
     console.error(`[Email] Failed to send invoice email: ${err.message} (code: ${err.code || 'n/a'})`);
@@ -992,104 +806,37 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
     const siteName = site?.name || 'Others.';
     const currency = site?.currency || 'R';
     const templates = site?.emailTemplates || {};
-    const firstName = (order.customer || '').split(' ')[0] || 'there';
-
-    const statusMap = { shipped: 'shipped', delivered: 'delivered', cancelled: 'cancelled', paid: 'confirmed' };
-
-    // A shipping update and a payment receipt need different information — a
-    // shipped/delivered email is a logistics update (tracking, ETA, address) and
-    // has no reason to repeat pricing; a paid/cancelled email is financial and
-    // has no tracking info to show yet. Pick what's actually relevant per status.
-    const headlineMap = {
-      paid: `${firstName}, thank you for your order.`,
-      processing: `${firstName}, your order is being prepared.`,
-      shipped: `${firstName}, your order is on its way.`,
-      delivered: `${firstName}, your order has arrived.`,
-      cancelled: `${firstName}, your order has been cancelled.`,
+    const base = String(baseUrl || '').replace(/\/+$/, '');
+    // Sentence-case subjects with no brackets, capitals or exclamation marks — the patterns spam filters weigh.
+    const subjects = {
+      paid: `Your order ${order.id} is confirmed`,
+      processing: `We're preparing your order ${order.id}`,
+      shipped: `Your order ${order.id} is on its way`,
+      delivered: `Your order ${order.id} has been delivered`,
+      cancelled: `Your order ${order.id} has been cancelled`,
     };
-    const headline = headlineMap[order.status] || `${firstName}, your order has been updated.`;
+    const subject = subjects[order.status] || `An update on your order ${order.id}`;
+    const message = templates[order.status] || `Your order status has been updated to ${order.status}.`;
 
-    let messageBody = templates[order.status] || `Your order status has been updated to: ${order.status}.`;
-    messageBody = messageBody.replace(/{orderId}/g, `<strong>#${order.id}</strong>`);
-
-    const addressLines = (order.address || '').split(',').map(s => s.trim()).filter(Boolean);
-    const showTracking = ['shipped', 'delivered'].includes(order.status) && (order.trackingNumber || order.carrier);
-    const showFinancials = ['paid', 'cancelled'].includes(order.status);
-
-    const detailRow = (label, value) => value ? `
-      <div style="margin-bottom:20px;">
-        <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888; margin:0 0 4px;">${label}</p>
-        <p style="font-size:15px; font-weight:700; margin:0; line-height:1.4;">${value}</p>
-      </div>` : '';
-
-    const orderDetailsHtml = `
-      <div style="border:1px solid #eee; padding:24px; margin-bottom:24px;">
-        ${detailRow('Order number', `#${order.id}`)}
-        ${showTracking ? detailRow('Carrier', order.carrier) : ''}
-        ${showTracking ? detailRow('Tracking number', order.trackingNumber) : ''}
-        ${order.estimatedDelivery ? detailRow('Estimated delivery', formatDateLabel(order.estimatedDelivery)) : ''}
-        ${addressLines.length ? detailRow('Delivery address', addressLines.join('<br>')) : ''}
-      </div>
-    `;
-
-    const itemsHtml = (order.items || []).map(i => emailItemRow(i, { showPrice: false })).join('');
-
-    const financialsHtml = showFinancials ? `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #eee; margin-bottom:32px;">
-        <tr>
-          <td style="padding-top:16px; font-size:14px; color:#666;">Subtotal</td>
-          <td align="right" style="padding-top:16px; font-size:14px; color:#666;">${currency}${(order.total - (order.shippingCost || 0)).toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0 16px; font-size:14px; color:#666;">Shipping</td>
-          <td align="right" style="padding:8px 0 16px; font-size:14px; color:#666;">${order.shippingCost ? `${currency}${order.shippingCost.toFixed(2)}` : 'Free'}</td>
-        </tr>
-        <tr>
-          <td style="padding-top:14px; border-top:1px solid #111; font-size:17px; font-weight:800;">Total</td>
-          <td align="right" style="padding-top:14px; border-top:1px solid #111; font-size:17px; font-weight:800;">${currency}${order.total.toFixed(2)}</td>
-        </tr>
-      </table>
-    ` : '';
-
-    const bodyHtml = `
-      <h1 style="font-size:24px; font-weight:800; margin:0 0 16px; line-height:1.3;">${headline}</h1>
-      <p style="font-size:15px; color:#333; line-height:1.6; margin:0 0 32px;">${messageBody}</p>
-
-      ${order.adminNote ? `
-        <div style="background:#f7f7f7; padding:20px; border-left:2px solid #111; margin-bottom:32px;">
-          <p style="margin:0; font-size:14px; font-style:italic; color:#444; line-height:1.5;">"${order.adminNote}"</p>
-        </div>
-      ` : ''}
-
-      ${orderDetailsHtml}
-
-      <p style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:#888; margin:0 0 12px;">Items</p>
-      ${itemsHtml}
-
-      ${financialsHtml}
-
-      <p style="text-align:center; font-size:14px; color:#666; margin-top:8px;">Thank you for shopping with ${siteName}.</p>
-    `;
-
-    const html = emailLayout({
-      siteName,
-      logoUrl: site?.emailLogo || site?.logo,
-      bodyHtml,
-      socials: site?.socials,
-      contactAddress,
-      contactUrl: baseUrl ? `${baseUrl}/contact` : '',
-      preheader: headline,
-    });
-
-    await sendEmail({
+    await sendTemplate('OrderUpdate', {
+      brand: emailBrand(site, contactAddress, base),
+      currency,
+      message,
+      supportEmail: primaryContactEmail(site) || '',
+      order: {
+        id: order.id, customer: order.customer, status: order.status, address: order.address,
+        total: order.total, shippingCost: order.shippingCost || 0, adminNote: order.adminNote || '',
+        carrier: order.carrier || '', trackingNumber: order.trackingNumber || '',
+        estimatedDelivery: order.estimatedDelivery ? formatDateLabel(order.estimatedDelivery) : '',
+        items: (order.items || []).map(i => ({ name: i.name, size: i.size, color: i.color, quantity: i.quantity, price: i.price, image: cldEmail(i.image, { w: 104, h: 104 }) })),
+      },
+    }, {
       from: `${siteName} <${EMAIL_FROM}>`,
       to: order.email,
-      subject: `Order Update: #${order.id} [${statusMap[order.status]?.toUpperCase() || order.status.toUpperCase()}]`,
-      html,
-      text: htmlToText(html),
+      subject,
       // Customer hits reply and it lands in the store's real inbox, not the no-reply sandbox address.
       replyTo: primaryContactEmail(site),
-    });
+    }, `${subject}.\n\n${message.replace(/{orderId}/g, order.id)}`);
     console.log(`[Email] Customer status update sent for order ${order.id}`);
     return { sent: true, type: order.status, to: order.email };
   } catch (err) {
@@ -1255,19 +1002,16 @@ async function sendNewDeviceAlert(req, info) {
   const recipients = await getAdminRecipients();
   if (!recipients.length) return;
   const when = new Date().toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' });
-  const html = emailLayout({
-    siteName: 'Others.',
-    bodyHtml: `<h1 style="font-size:22px;margin:0 0 12px;">New admin sign-in</h1>
-      <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 20px;">Your admin panel was just signed in to from a device we haven't seen before.</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.7;margin:0 0 20px;">
-        <tr><td style="color:#888;padding-right:16px;">Device</td><td>${escapeHtmlAttr(info.device)}</td></tr>
-        <tr><td style="color:#888;padding-right:16px;">IP address</td><td>${escapeHtmlAttr(info.ip)}</td></tr>
-        <tr><td style="color:#888;padding-right:16px;">Time</td><td>${escapeHtmlAttr(when)}</td></tr>
-      </table>
-      <p style="font-size:14px;color:#444;line-height:1.6;margin:0;">If this was you, no action is needed. If not, change your admin password immediately.</p>`,
-    preheader: `New sign-in from ${info.device}`,
-  });
-  await sendEmail({ from: `Others. Security <${EMAIL_FROM}>`, to: recipients, subject: 'New admin sign-in from an unrecognised device', html, text: htmlToText(html) });
+  const { site, contactAddress } = await getEmailBranding();
+  const baseUrl = process.env.PUBLIC_URL || (req ? `${req.protocol}://${req.get('host')}` : '');
+  await sendTemplate('NewDeviceAlert', {
+    brand: emailBrand(site, contactAddress, baseUrl),
+    device: info.device, ip: info.ip, when,
+    reviewUrl: baseUrl ? `${baseUrl.replace(/\/+$/, '')}/admin/status` : '',
+  }, {
+    from: `${site?.name || 'Others.'} Alerts <${EMAIL_FROM}>`, to: recipients,
+    subject: 'New sign-in to your admin panel', headers: AUTO_HEADERS,
+  }, `New admin sign-in from ${info.device} (${info.ip}) at ${when}. If this wasn't you, change your admin password now.`);
 }
 
 // ─── System log backups ──────────────────────────────────────────────────────
@@ -1434,77 +1178,12 @@ async function buildWeeklyReport(now = new Date()) {
   };
 }
 
-function renderWeeklyReportHtml(r, baseUrl = '') {
-  const e = escapeHtmlAttr;
-  const money = (n) => `${r.currency}${Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}`;
-  const day = (d) => new Date(d).toLocaleDateString('en-ZA', { timeZone: SAST, day: 'numeric', month: 'short' });
-  const delta = (v) => (v === null ? '<span style="color:#888;">no data last week</span>' : `<span style="color:${v >= 0 ? '#166534' : '#b91c1c'};">${v >= 0 ? '\u2191' : '\u2193'} ${Math.abs(v)}% vs last week</span>`);
-  const SEV = {
-    high: { bg: '#fef2f2', bd: '#fecaca', fg: '#991b1b', label: 'REVIEW' },
-    medium: { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e', label: 'CHECK' },
-    info: { bg: '#f4f4f5', bd: '#e4e4e7', fg: '#3f3f46', label: 'NOTE' },
-  };
-  const h2 = (t) => `<p style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:#888; margin:32px 0 12px;">${t}</p>`;
-
-  const worst = r.flags[0]?.severity;
-  const banner = !r.flags.length
-    ? { ...{ bg: '#f0fdf4', bd: '#bbf7d0', fg: '#166534' }, title: 'Nothing suspicious this week', sub: 'No unusual sign-ins, payment anomalies or error spikes were found.' }
-    : worst === 'high'
-      ? { bg: '#fef2f2', bd: '#fecaca', fg: '#991b1b', title: `${r.flags.filter(f => f.severity !== 'info').length} item${r.flags.filter(f => f.severity !== 'info').length === 1 ? '' : 's'} need your attention`, sub: 'See the list below, starting with the most serious.' }
-      : worst === 'medium'
-        ? { bg: '#fffbeb', bd: '#fde68a', fg: '#92400e', title: `${r.flags.filter(f => f.severity !== 'info').length} thing${r.flags.filter(f => f.severity !== 'info').length === 1 ? '' : 's'} worth a look`, sub: 'Probably fine, but worth confirming it was you.' }
-        : { bg: '#f4f4f5', bd: '#e4e4e7', fg: '#3f3f46', title: 'Nothing suspicious — a few notes', sub: 'Just housekeeping items below.' };
-
-  const stat = (label, value, note) => `<td width="50%" valign="top" style="padding:0 6px 12px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;"><tr><td style="padding:14px 16px;"><p style="margin:0; font-size:11px; color:#888;">${label}</p><p style="margin:4px 0 2px; font-size:22px; font-weight:800; color:#111;">${value}</p><p style="margin:0; font-size:12px;">${note}</p></td></tr></table></td>`;
-
-  const flagsHtml = r.flags.map(f => {
-    const c = SEV[f.severity];
-    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px; background:${c.bg}; border:1px solid ${c.bd};"><tr><td width="64" valign="top" style="padding:12px 0 12px 14px;"><span style="font-size:10px; font-weight:700; letter-spacing:0.08em; color:${c.fg};">${c.label}</span></td><td style="padding:12px 14px 12px 6px;"><p style="margin:0; font-size:14px; font-weight:700; color:#111;">${e(f.title)}</p><p style="margin:4px 0 0; font-size:13px; color:#555; line-height:1.5;">${e(f.detail)}</p></td></tr></table>`;
-  }).join('');
-
-  const row = (cells, head = false) => `<tr>${cells.map((c, i) => `<td align="${i === 0 ? 'left' : 'right'}" style="padding:8px 0; font-size:${head ? 11 : 13}px; ${head ? 'color:#888;' : 'color:#111;'} border-bottom:1px solid #f0f0f0;">${c}</td>`).join('')}</tr>`;
-
-  const sc = r.sales.statusCounts;
-  const statusLine = ['paid', 'processing', 'shipped', 'delivered', 'pending_payment', 'cancelled'].filter(k => sc[k]).map(k => `${k.replace('_', ' ')}: <strong>${sc[k]}</strong>`).join(' &nbsp;·&nbsp; ') || 'No orders this week.';
-
-  const bodyHtml = `
-    <h1 style="font-size:24px; font-weight:800; margin:0 0 4px;">Your weekly summary</h1>
-    <p style="font-size:14px; color:#666; margin:0 0 24px;">${day(r.from)} \u2013 ${day(r.to)} &middot; ${e(r.siteName)}</p>
-
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${banner.bg}; border:1px solid ${banner.bd}; margin-bottom:8px;"><tr><td style="padding:16px 18px;"><p style="margin:0; font-size:16px; font-weight:800; color:${banner.fg};">${banner.title}</p><p style="margin:4px 0 0; font-size:13px; color:${banner.fg};">${banner.sub}</p></td></tr></table>
-
-    ${r.flags.length ? h2('Flagged this week') + flagsHtml : ''}
-
-    ${h2('Sales')}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${stat('Revenue', money(r.sales.revenue), delta(r.sales.revenueDelta))}
-      ${stat('Paid orders', String(r.sales.paidOrders), delta(r.sales.ordersDelta))}
-    </tr><tr>
-      ${stat('Average order', money(r.sales.avgOrder), '<span style="color:#888;">paid orders only</span>')}
-      ${stat('New subscribers', String(r.sales.newSubscribers), '<span style="color:#888;">newsletter</span>')}
-    </tr></table>
-    <p style="font-size:13px; color:#555; margin:4px 0 0; line-height:1.7;">Orders placed: <strong>${r.sales.orders}</strong> &nbsp;&middot;&nbsp; ${statusLine}</p>
-
-    ${r.sales.topProducts.length ? h2('Top products') + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${row(['Product', 'Units', 'Revenue'], true)}${r.sales.topProducts.map(p => row([e(p.name), p.units, money(p.revenue)])).join('')}</table>` : ''}
-
-    ${h2('Sign-ins & security')}
-    <p style="font-size:13px; color:#555; margin:0 0 10px; line-height:1.7;">Successful sign-ins: <strong>${r.security.signins}</strong> &nbsp;&middot;&nbsp; Failed: <strong style="color:${r.security.failed ? '#b91c1c' : '#111'};">${r.security.failed}</strong> &nbsp;&middot;&nbsp; Lockouts: <strong style="color:${r.security.lockouts ? '#b91c1c' : '#111'};">${r.security.lockouts}</strong> &nbsp;&middot;&nbsp; Logs cleared: <strong>${r.security.logsCleared}</strong></p>
-    ${r.security.devices.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${row(['Device', 'Sign-ins', 'IP'], true)}${r.security.devices.map(d => row([e(d.device) + (d.isNew ? ' <span style="font-size:10px; font-weight:700; color:#92400e;">NEW</span>' : ''), d.count, e(d.ips.join(', '))])).join('')}</table>` : '<p style="font-size:13px; color:#888; margin:0;">No admin sign-ins this week.</p>'}
-
-    ${h2('Payments & system health')}
-    <p style="font-size:13px; color:#555; margin:0; line-height:1.8;">Suspicious payment notifications: <strong style="color:${r.payments.badSignature + r.payments.badAmount + r.payments.untrustedIp ? '#b91c1c' : '#111'};">${r.payments.badSignature + r.payments.badAmount + r.payments.untrustedIp}</strong><br>Server errors: <strong>${r.health.errors}</strong> &nbsp;&middot;&nbsp; Failed emails: <strong>${r.health.emailFailures}</strong> &nbsp;&middot;&nbsp; Database drops: <strong>${r.health.dbDrops}</strong></p>
-    ${r.health.topErrors.length ? `<p style="font-size:12px; color:#888; margin:8px 0 0; line-height:1.6;">Most frequent: ${r.health.topErrors.map(x => `${e(x.message)} (${x.count}\u00d7)`).join('; ')}</p>` : ''}
-
-    <p style="font-size:12px; color:#888; margin:32px 0 0; line-height:1.6;">The full system log for the period (${r.totalLogs} entries) is attached as a compressed backup (.json.gz). It includes sign-in IP addresses and device details, so keep it somewhere safe.${baseUrl ? ` <a href="${baseUrl}/admin/status" style="color:#111;">Open Site status</a>.` : ''}</p>`;
-
-  return emailLayout({
-    siteName: r.siteName,
-    logoUrl: r.site?.emailLogo || r.site?.logo,
-    bodyHtml,
-    socials: r.site?.socials,
-    contactAddress: r.contactAddress,
-    contactUrl: baseUrl ? `${baseUrl}/contact` : '',
-    preheader: r.flags.filter(f => f.severity !== 'info').length ? `${r.flags.filter(f => f.severity !== 'info').length} item(s) flagged \u00b7 ${money(r.sales.revenue)} revenue` : `All quiet \u00b7 ${money(r.sales.revenue)} revenue, ${r.sales.paidOrders} paid orders`,
+async function renderWeeklyReportEmail(r, baseUrl = '') {
+  const { site, contactAddress, ...report } = r;
+  return renderEmail('WeeklySummary', {
+    brand: emailBrand(site, contactAddress, baseUrl),
+    report,
+    adminUrl: baseUrl ? `${baseUrl.replace(/\/+$/, '')}/admin/status` : '',
   });
 }
 
@@ -1518,13 +1197,13 @@ async function emailLogBackup(force = false, baseUrl = '') {
 
   const report = await buildWeeklyReport();
   const logs = await Log.find(lastMail?.to ? { timestamp: { $gt: lastMail.to } } : {}).sort({ timestamp: 1 }).lean();
-  const html = renderWeeklyReportHtml(report, baseUrl || process.env.PUBLIC_URL || '');
+  const { html, text } = await renderWeeklyReportEmail(report, baseUrl || process.env.PUBLIC_URL || '');
   const day = new Date().toISOString().slice(0, 10);
   const attention = report.flags.filter(f => f.severity !== 'info').length;
   const email = {
-    from: `${report.siteName} System <${EMAIL_FROM}>`, to: recipients,
-    subject: `${attention ? `\u26a0 ${attention} to review \u2014 ` : ''}Weekly summary, ${day}`,
-    html, text: htmlToText(html),
+    from: `${report.siteName} Alerts <${EMAIL_FROM}>`, to: recipients,
+    subject: `Weekly summary, ${day}${attention ? ` \u2014 ${attention} to review` : ''}`,
+    html, text, headers: AUTO_HEADERS,
   };
   if (logs.length) {
     const gz = gzipLogs(logs);
@@ -1601,7 +1280,7 @@ app.get('/api/admin/weekly-report', requireAdmin, async (req, res) => {
     if (!getIsConnected()) return res.status(503).json({ error: 'The database is offline.' });
     const report = await buildWeeklyReport();
     if (req.query.format === 'html') {
-      res.type('html').send(renderWeeklyReportHtml(report, `${req.protocol}://${req.get('host')}`));
+      res.type('html').send((await renderWeeklyReportEmail(report, `${req.protocol}://${req.get('host')}`)).html);
     } else {
       const { site, contactAddress, ...rest } = report;
       res.json(rest);
@@ -1661,11 +1340,14 @@ app.post('/api/admin/test-email', requireAdmin, async (_req, res) => {
   const recipients = await getAdminRecipients();
   if (recipients.length === 0) return res.status(400).json({ error: 'No notification email address is configured (Settings → Emails & alerts).' });
   try {
-    const html = emailLayout({
-      siteName: 'Others.', bodyHtml: '<h1 style="font-size:22px;margin:0 0 12px;">Notifications are working</h1><p style="font-size:14px;color:#444;line-height:1.6;margin:0;">This is a test message from your Others. admin panel. You’ll receive emails like this for new paid orders and site alerts.</p>',
-      preheader: 'Test email from your admin panel.',
-    });
-    await sendEmail({ from: `Others. Admin <${EMAIL_FROM}>`, to: recipients, subject: 'Test email — notifications are working', html, text: htmlToText(html) });
+    const { site, contactAddress } = await getEmailBranding();
+    await sendTemplate('TestEmail', {
+      brand: emailBrand(site, contactAddress, _req ? `${_req.protocol}://${_req.get('host')}` : ''),
+      from: EMAIL_FROM, sandbox: /resend\.dev$/i.test(EMAIL_FROM),
+    }, {
+      from: `${site?.name || 'Others.'} Alerts <${EMAIL_FROM}>`, to: recipients,
+      subject: 'Test email: notifications are working', headers: AUTO_HEADERS,
+    }, 'This is a test message from your admin panel. Notifications are working.');
     res.json({ ok: true, to: recipients, from: EMAIL_FROM });
   } catch (err) {
     const sandbox = /resend\.dev$/i.test(EMAIL_FROM);
@@ -1909,20 +1591,32 @@ app.post('/api/newsletter/broadcast', requireAdmin, async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const replyTo = primaryContactEmail(site);
 
+    // The body is the admin's rich text: strip anything mail clients block or filters punish (scripts, embeds,
+    // forms, event handlers), make relative links absolute, and serve images at a size and format email can show.
+    const cleanBody = sanitizeEmailHtml(html, baseUrl)
+      .replace(/(<img\b[^>]*\ssrc=")([^"]+)(")/gi, (_m, a, src, c) => a + cldEmail(src, { w: 1200 }) + c);
+    const previewText = String(req.body.preview || '').trim().slice(0, 140) || subject;
+
+    // Subject-line hygiene: patterns that raise spam scores. Advisory only — the admin decides.
+    const warnings = [];
+    const letters = subject.replace(/[^A-Za-z]/g, '');
+    if (letters.length >= 6 && subject.replace(/[^A-Z]/g, '').length / letters.length > 0.6) warnings.push('The subject is mostly capital letters, which spam filters penalise.');
+    if (/[!?]{2,}|!.*!/.test(subject)) warnings.push('Several exclamation or question marks in the subject can trigger spam filters.');
+    if (subject.length > 70) warnings.push('The subject is long and will be cut off on phones (aim for under 60 characters).');
+    if (/\b(free|winner|act now|limited time|100%|guarantee|urgent|cash|click here)\b/i.test(subject)) warnings.push('The subject contains words commonly used in spam (free, act now, limited time...).');
+    if (!/<a\b/i.test(cleanBody) && cleanBody.replace(/<[^>]+>/g, '').trim().length < 80) warnings.push('The message is very short and has no links; image-only or near-empty emails score poorly.');
+
     // Process individually for privacy and deliverability
     let sentCount = 0;
     for (const sub of subscribers) {
       try {
         const token = unsubscribeToken(sub.email);
         const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(sub.email)}&token=${token}`;
-        const emailHtml = emailLayout({
-          siteName,
-          logoUrl: site?.logo,
-          bodyHtml: `<div style="font-size:16px; line-height:1.6;">${html}</div>`,
-          socials: site?.socials,
-          contactAddress,
-          contactUrl: `${baseUrl}/contact`,
-          preheader: subject,
+        const { html: emailHtml, text: emailText } = await renderEmail('Newsletter', {
+          brand: emailBrand(site, contactAddress, baseUrl),
+          subject,
+          html: cleanBody,
+          preview: previewText,
           unsubscribeUrl,
         });
         await sendEmail({
@@ -1930,7 +1624,7 @@ app.post('/api/newsletter/broadcast', requireAdmin, async (req, res) => {
           to: sub.email,
           subject: subject,
           html: emailHtml,
-          text: htmlToText(emailHtml),
+          text: emailText,
           replyTo,
           headers: {
             // RFC 8058 one-click unsubscribe — Gmail/Yahoo/Outlook.com show a native
@@ -1947,7 +1641,7 @@ app.post('/api/newsletter/broadcast', requireAdmin, async (req, res) => {
     }
 
     console.log(`[Broadcast] Delivered ${sentCount}/${subscribers.length} individual emails`);
-    res.json({ ok: true, sentCount });
+    res.json({ ok: true, sentCount, warnings });
   } catch (err) {
     console.error('POST /api/newsletter/broadcast', err);
     res.status(500).json({ error: 'Mail delivery failed. Check your Resend configuration.' });
@@ -2479,8 +2173,8 @@ app.post('/api/yoco/webhook', async (req, res) => {
       const short = await reclaimStock(before.items);
       if (short.length) {
         const note = `Paid after the checkout was cancelled; stock could not be re-reserved for: ${short.join(', ')}. Check availability before shipping.`;
-        await Order.updateOne({ id: order.id }, { $set: { adminNote: note } });
-        updated.adminNote = note;
+        await Order.updateOne({ id: order.id }, { $set: { internalNote: note } });
+        updated.internalNote = note;
       }
       await dbLog({ id: `log-${Date.now()}-yoco-late`, type: 'warn', message: `Yoco payment arrived for cancelled order ${order.id}${short.length ? ' (some stock short)' : ''}`, context: 'PAYMENT', data: { orderId: order.id, short } });
     }
@@ -2606,8 +2300,8 @@ app.post('/api/payfast/itn', async (req, res) => {
               const short = await reclaimStock(prev.items);
               if (short.length) {
                 const note = `Paid after the checkout was cancelled; stock could not be re-reserved for: ${short.join(', ')}. Check availability before shipping.`;
-                await Order.updateOne({ id: orderId }, { $set: { adminNote: note } });
-                updated.adminNote = note;
+                await Order.updateOne({ id: orderId }, { $set: { internalNote: note } });
+                updated.internalNote = note;
               }
               await dbLog({ id: `log-${Date.now()}-pf-late`, type: 'warn', message: `PayFast payment arrived for cancelled order ${orderId}${short.length ? ' (some stock short)' : ''}`, context: 'PAYMENT', data: { orderId, short } });
             }
@@ -3018,34 +2712,20 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
     const recipients = await getAdminRecipients();
     if (recipients.length === 0) return;
 
-    const alertHtml = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>System Alert</title></head>
-<body style="margin:0; padding:0; background:#f4f4f4;">
-        <div style="font-family: sans-serif; padding: 20px; color: #111; max-width: 600px; margin: 20px auto; background:#fff; border: 1px solid #eee;">
-          <h2 style="color: #d32f2f; text-transform: uppercase; letter-spacing: 0.1em;">${customMsg ? 'System Alert' : 'Critical Site Error'}</h2>
-          <p>${customMsg || 'The system detected an internal error that might require your attention.'}</p>
-          <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;">
-            ${req ? `<p style="margin: 0 0 10px;"><strong>Path:</strong> ${req.method} ${req.url}</p>` : ''}
-            <p style="margin: 0;"><strong>Message:</strong> ${err.message}</p>
-          </div>
-          <p style="margin-top: 30px;">
-            <a href="${req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:' + port}/admin"
-               style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; font-weight: bold; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;">
-               Open Admin Dashboard
-            </a>
-          </p>
-          <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;" />
-          <p style="font-size: 12px; color: #888;">This alert is throttled to once every 15 minutes.</p>
-        </div>
-</body></html>`;
-
-    await sendEmail({
-      from: `Others. System <${EMAIL_FROM}>`,
-      to: recipients,
-      subject: `[ALERT] Site Error: ${err.message.slice(0, 50)}`,
-      html: alertHtml,
-      text: htmlToText(alertHtml),
-    });
+    const { site, contactAddress } = await getEmailBranding();
+    const baseUrl = req ? `${req.protocol}://${req.get('host')}` : (process.env.PUBLIC_URL || `http://localhost:${port}`);
+    const shortMessage = String(err.message || 'Unknown error').slice(0, 300);
+    await sendTemplate('SystemAlert', {
+      brand: emailBrand(site, contactAddress, baseUrl),
+      heading: customMsg ? 'Site alert' : 'Critical site error',
+      message: customMsg || 'The system detected an internal error that might need your attention.',
+      errorMessage: shortMessage,
+      path: req ? `${req.method} ${req.url}` : '',
+      adminUrl: `${baseUrl.replace(/\/+$/, '')}/admin/status`,
+    }, {
+      from: `${site?.name || 'Others.'} Alerts <${EMAIL_FROM}>`, to: recipients,
+      subject: `Site alert: ${shortMessage.slice(0, 60)}`, headers: AUTO_HEADERS,
+    }, `${customMsg || 'Site error'}: ${shortMessage}`);
   } catch (e) {
     console.error('Failed to send error notification email:', e);
   }
