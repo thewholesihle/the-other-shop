@@ -135,6 +135,10 @@ Shipping is handled manually. Once an order is paid, the admin Orders tab shows 
 - **Strict CSP** on admin pages (scripts only from this site; the PDF libraries are self-hosted in `public/vendor/`), no framing, `noindex`.
 - `/api/data` only returns orders, subscribers and admin-only settings to a signed-in admin.
 
+## Events & pop-ups
+
+The Community page has an **Events & Pop-ups** section at the top. It is managed only from the admin (**Content → Events**, behind the sign-in): title, event/pop-up type, start/end date and time (South African time, multi-day supported), venue and address, price, description, image, an RSVP/tickets link, and a published switch (drafts stay private). Past events disappear from the site automatically; visitors can **Add to calendar** (.ics) and search engines get Event structured data. Writes and deletes require an admin session, and drafts are never returned to the public API.
+
 ## Branding & accessibility
 
 - **Logo everywhere:** the store's logo is used on the loading screen (a static on-brand screen baked into the first HTML by the server, then the in-app `<Loader>`), the admin sidebar/mobile header and sign-in page, and the invoice letterhead. Without a logo the store name is used.

@@ -234,6 +234,28 @@ const LogSchema = new mongoose.Schema({
   data:      { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { strict: true, versionKey: false });
 
+// ── Event / pop-up (community page; managed only from the admin) ──────────────
+// Dates and times are wall-clock values in the store's timezone (South Africa, UTC+2, no DST), kept
+// as plain strings ("2026-10-18", "18:00") exactly as entered — no timezone conversion surprises.
+const EventSchema = new mongoose.Schema({
+  id:          { type: String, required: true, unique: true },
+  kind:        { type: String, enum: ['event', 'popup'], default: 'event' },
+  title:       { type: String, required: true, trim: true },
+  date:        { type: String, required: true },            // YYYY-MM-DD (first day)
+  startTime:   { type: String, default: '' },               // HH:mm, optional (blank = all day)
+  endDate:     { type: String, default: '' },               // YYYY-MM-DD, optional (multi-day pop-ups)
+  endTime:     { type: String, default: '' },               // HH:mm, optional
+  venue:       { type: String, default: '' },
+  address:     { type: String, default: '' },
+  city:        { type: String, default: '' },
+  price:       { type: String, default: '' },               // free text: "Free", "R150"…
+  description: { type: String, default: '' },
+  image:       { type: String, default: '' },
+  link:        { type: String, default: '' },               // RSVP / tickets / more info
+  linkLabel:   { type: String, default: '' },
+  published:   { type: Boolean, default: true },
+}, { strict: true, versionKey: false });
+
 // ── Log backup ───────────────────────────────────────────────────────────────
 // A gzip-compressed JSON snapshot of log entries, kept independently of the live `logs`
 // collection so clearing or losing the logs doesn't lose the history. `kind: 'email'`
@@ -261,5 +283,6 @@ module.exports = {
   Pages:      mongoose.model('Pages',      PagesSchema,      'pages'),
   Subscriber: mongoose.model('Subscriber', SubscriberSchema, 'subscribers'),
   Log:        mongoose.model('Log',        LogSchema,        'logs'),
+  Event:      mongoose.model('Event',      EventSchema,      'events'),
   LogBackup:  mongoose.model('LogBackup',  LogBackupSchema,  'logbackups'),
 };

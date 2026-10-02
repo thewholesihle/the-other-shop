@@ -14,7 +14,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const { connect, getIsConnected } = require('./src/db/connection');
-const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log, LogBackup } = require('./src/db/models');
+const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log, LogBackup, Event } = require('./src/db/models');
 const zlib = require('zlib');
 const compression = require('compression');
 const { parseUserAgent } = require('./src/device');
@@ -748,7 +748,7 @@ async function adjustVariantStock(query, size, color, delta) {
 
 /** Assemble the full store data shape expected by the frontend */
 async function readData() {
-  const [site, categories, products, orders, lookbooks, community, pages, subscribers] = await Promise.all([
+  const [site, categories, products, orders, lookbooks, community, pages, subscribers, events] = await Promise.all([
     Settings.findOne({ _id: 'main' }).lean(),
     Category.find().lean(),
     Product.find().lean(),
@@ -757,6 +757,7 @@ async function readData() {
     Article.find().lean(),
     Pages.findOne({ _id: 'main' }).lean(),
     Subscriber.find().sort({ date: -1 }).lean(),
+    Event.find().sort({ date: 1, startTime: 1 }).lean(),
   ]);
 
   return {
@@ -765,6 +766,7 @@ async function readData() {
     products:    products    || [],
     orders:      orders      || [],
     lookbooks:   lookbooks   || [],
+    events:      events      || [],
     community:   community   || [],
     pages:       pages       || { shipping: { content: '' }, faq: { items: [] }, contact: { address: '', details: [] } },
     subscribers: subscribers || [],
@@ -810,6 +812,13 @@ async function writeData(blob) {
       }
       return Product.findOneAndUpdate({ id: p.id }, { $set: p }, { upsert: true });
     }));
+  }
+
+  if (blob.events) {
+    // Only validated, well-formed events are written; the admin UI is the only caller (requireAdmin).
+    ops.push(...blob.events.filter(e => e && e.id && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date || '')).map(e =>
+      Event.findOneAndUpdate({ id: e.id }, { $set: e }, { upsert: true })
+    ));
   }
 
   if (blob.lookbooks) {
@@ -890,6 +899,21 @@ app.delete('/api/community/:id', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('DELETE /api/community/:id', err);
     res.status(500).json({ error: 'Could not delete post.' });
+  }
+});
+
+// ─── API: Delete Event ───────────────────────────────────────────────────────
+app.delete('/api/events/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const target = await Event.findOne({ id }).lean();
+    if (!target) return res.status(404).json({ error: 'Event not found.' });
+    if (target.image) await deleteCloudinaryAsset(target.image);
+    await Event.deleteOne({ id });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/events/:id', err);
+    res.status(500).json({ error: 'Could not delete event.' });
   }
 });
 
@@ -1741,7 +1765,7 @@ app.get('/api/data', async (req, res) => {
     if (!getIsConnected()) {
       return res.json({
         site: { name: 'Others. (DATABASE OFFLINE)', logo: '', currency: 'R', navLogoSize: 40 },
-        categories: [], products: [], orders: [], lookbooks: [], community: [], subscribers: [],
+        categories: [], products: [], orders: [], lookbooks: [], events: [], community: [], subscribers: [],
         pages: { shipping: { content: '' }, faq: { items: [] }, contact: { address: '', details: [] } },
         _db_offline: true
       });
@@ -1756,6 +1780,7 @@ app.get('/api/data', async (req, res) => {
       data.site = publicSite;
       data.orders = [];
       data.subscribers = [];
+      data.events = data.events.filter(e => e.published); // drafts stay private
     }
     res.json(data);
   } catch (err) {

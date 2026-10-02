@@ -7,6 +7,7 @@
   import ImageIcon from 'lucide-svelte/icons/image';
   import FileText from 'lucide-svelte/icons/file-text';
   import Files from 'lucide-svelte/icons/files';
+  import CalendarDays from 'lucide-svelte/icons/calendar-days';
   import Megaphone from 'lucide-svelte/icons/megaphone';
   import Users from 'lucide-svelte/icons/users';
   import Settings2 from 'lucide-svelte/icons/settings-2';
@@ -37,6 +38,7 @@
     { title: 'Content', items: [
       { key: 'lookbook',    label: 'Lookbook',    icon: ImageIcon },
       { key: 'community',   label: 'Community',   icon: FileText },
+      { key: 'events',      label: 'Events',      icon: CalendarDays },
       { key: 'pages',       label: 'Pages',       icon: Files },
       { key: 'newsletter',  label: 'Newsletter',  icon: Megaphone },
       { key: 'subscribers', label: 'Subscribers', icon: Users },

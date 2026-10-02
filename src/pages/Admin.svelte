@@ -8,6 +8,7 @@
   import AdminSettings from '../components/admin/AdminSettings.svelte';
   import AdminLookbook from '../components/admin/AdminLookbook.svelte';
   import AdminCommunity from '../components/admin/AdminCommunity.svelte';
+  import AdminEvents from '../components/admin/AdminEvents.svelte';
   import AdminPages from '../components/admin/AdminPages.svelte';
   import AdminSubscribers from '../components/admin/AdminSubscribers.svelte';
   import AdminNewsletter from '../components/admin/AdminNewsletter.svelte';
@@ -20,7 +21,7 @@
   import { notifyDesktop, beep } from '../lib/alerts.js';
   import { saveBrand } from '../lib/brand.js';
 
-  const SECTIONS = ['dashboard', 'products', 'categories', 'orders', 'status', 'lookbook', 'community', 'pages', 'subscribers', 'newsletter', 'settings'];
+  const SECTIONS = ['dashboard', 'products', 'categories', 'orders', 'status', 'lookbook', 'community', 'events', 'pages', 'subscribers', 'newsletter', 'settings'];
 
   function sectionFromPath(path) {
     const seg = path.replace(/^\/admin\/?/, '').split('/').filter(Boolean)[0];
@@ -234,6 +235,7 @@
   function updateSite(site)             { return updateSection('site',        site);         }
   function updateLookbooks(lookbooks)   { return updateSection('lookbooks',   lookbooks);    }
   function updateCommunity(community)   { return updateSection('community',   community);    }
+  function updateEvents(events)         { return updateSection('events',      events);       }
   function updatePages(pages)           { return updateSection('pages',       pages);        }
   function updateSubscribers(subs)      { return updateSection('subscribers', subs);         }
   function updateCategories(cats)       { return updateSection('categories',  cats);         }
@@ -242,6 +244,7 @@
   function updateProductsLocal(products)   { updateLocal('products', products); }
   function updateLookbooksLocal(lookbooks) { updateLocal('lookbooks', lookbooks); }
   function updateCommunityLocal(community) { updateLocal('community', community); }
+  function updateEventsLocal(events)       { updateLocal('events', events); }
 
   function navigate(section) {
     activeSection = section;
@@ -286,6 +289,8 @@
       <AdminLookbook lookbooks={data.lookbooks} onUpdate={updateLookbooks} onLocalUpdate={updateLookbooksLocal} />
     {:else if activeSection === 'community'}
       <AdminCommunity community={data.community} onUpdate={updateCommunity} onLocalUpdate={updateCommunityLocal} />
+    {:else if activeSection === 'events'}
+      <AdminEvents events={data.events || []} onUpdate={updateEvents} onLocalUpdate={updateEventsLocal} />
     {:else if activeSection === 'pages'}
       <AdminPages pages={data.pages} onUpdate={updatePages} />
     {:else if activeSection === 'subscribers'}

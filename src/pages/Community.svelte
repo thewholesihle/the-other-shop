@@ -6,6 +6,7 @@
   import Navbar from '../components/Navbar.svelte';
   import Footer from '../components/Footer.svelte';
   import Loader from '../components/Loader.svelte';
+  import EventsSection from '../components/EventsSection.svelte';
 
   let data = null;
   let loading = true;
@@ -27,7 +28,7 @@
 
 <svelte:head>
   <title>{data ? `Community — ${data.site.metaTitle || data.site.name}` : 'Community'}</title>
-  <meta name="description" content={data?.site?.metaDescription || "Stories, news, and culture from the Others. community. Collections, collaborations and announcements."} />
+  <meta name="description" content={data?.site?.metaDescription || "Events, pop-ups, stories and culture from the Others. community."} />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Community — {data?.site?.name || 'Others.'}" />
   <meta property="og:description" content={data?.site?.metaDescription || "Stories, news, and culture from the Others. community."} />
@@ -41,8 +42,16 @@
 
     <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
       <div class="mb-10">
-        <p class="text-label mb-2">Journal</p>
+        <p class="text-label mb-2">Others.</p>
         <h1 use:cutReveal class="text-4xl md:text-5xl font-display font-bold">Community</h1>
+      </div>
+
+      <!-- Upcoming events & pop-ups (managed in the admin) -->
+      <EventsSection events={data.events || []} siteName={data.site.name} />
+
+      <div class="mb-8 border-t border-border pt-12">
+        <p class="text-label mb-2">Journal</p>
+        <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight">Stories &amp; news</h2>
       </div>
 
       <!-- Category filter -->
