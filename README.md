@@ -18,7 +18,6 @@ Single codebase, single deploy: Express serves both the API and the built SPA.
 | Images/video | Cloudinary |
 | Payments | PayFast (South African gateway) |
 | Transactional email | Resend (HTTPS API — not SMTP) |
-| Courier fulfillment | Courier Guy, via the Ship Logic API |
 | Auth | HTTP Basic Auth on `/admin*` and all admin API routes |
 
 ---
@@ -31,8 +30,6 @@ src/
   db/
     models.js              Mongoose schemas (Settings, Product, Order, Category, ...)
     connection.js           MongoDB connect with capped-backoff auto-retry
-  services/
-    courierGuy.js           Ship Logic API client (rates, shipments, tracking)
   lib/                       Frontend-only helpers (storeData fetch/cache, cloudinary URLs, motion)
   App.svelte                 Client-side router root
   pages/                     One component per route (Index, Shop, Product, Cart, Admin, ...)
@@ -49,7 +46,7 @@ scripts/migrate.js           One-off data migration script
 
 ## Getting started
 
-**Requires Node 18+** (the email and courier integrations use the native `fetch`/`AbortController` APIs).
+**Requires Node 18+** (the email integration uses the native `fetch`/`AbortController` APIs).
 
 ```bash
 npm install
@@ -87,7 +84,6 @@ See [`.env.example`](.env.example) for the full annotated list. Summary:
 | Variable | Enables |
 |---|---|
 | `RESEND_API_KEY`, `SMTP_FROM`, `ADMIN_EMAIL`, `UNSUBSCRIBE_SECRET` | Order-status emails, admin notifications, newsletter broadcasts, critical-error alerts |
-| `COURIER_GUY_API_KEY` (or `COURIER_GUY`), `COURIER_GUY_SANDBOX` | Admin-side Courier Guy shipment booking, tracking, and label/sticker retrieval |
 | `PAYFAST_PASSPHRASE_SANDBOX` / `_LIVE` | Only if your PayFast account has a passphrase configured |
 
 Missing MongoDB doesn't crash the server — see **Resilience** below.
@@ -114,7 +110,7 @@ Every one of these has a matching server-side route in `server.js` (not just the
 
 Eleven sections, all under HTTP Basic Auth:
 
-**Dashboard** · **Products** (variant stock matrix, per-color images, optional shipping weight/dimensions) · **Categories** · **Orders** (status pipeline, shipping-details capture, Courier Guy fulfillment, PDF invoice export) · **Status** (DB/Cloudinary/email health, live diagnostics) · **Lookbook** · **Community** · **Pages** (Shipping & Returns / FAQ / Contact content) · **Subscribers** · **Newsletter** (rich-text broadcast with per-recipient sending and one-click unsubscribe) · **Settings** (branding, colors, SEO defaults, email templates, Courier Guy collection address, maintenance mode).
+**Dashboard** · **Products** (variant stock matrix, per-color images) · **Categories** · **Orders** (status pipeline, manual shipping-details capture, PDF invoice export) · **Status** (DB/Cloudinary/email health, live diagnostics) · **Lookbook** · **Community** · **Pages** (Shipping & Returns / FAQ / Contact content) · **Subscribers** · **Newsletter** (rich-text broadcast with per-recipient sending and one-click unsubscribe) · **Settings** (branding, colors, SEO defaults, email templates, maintenance mode).
 
 Most sections save via a full-data-blob endpoint (`GET`/`POST /api/data`); Orders and a few others use dedicated REST endpoints instead so a slow full-blob save from one open admin tab can't clobber a fast-moving field (like order status) changed from another.
 
@@ -124,12 +120,7 @@ Most sections save via a full-data-blob endpoint (`GET`/`POST /api/data`); Order
 
 Checkout deducts stock per size/color variant atomically (a conditional `$inc` guard), so two simultaneous checkouts can't both claim the last unit of the same variant. PayFast confirms payment via a server-to-server ITN webhook, independently verified against PayFast's own servers rather than trusted at face value.
 
-Once an order is paid, the admin Orders tab can hand it to **Courier Guy** for physical fulfillment:
-1. Fetch live rates for the order's parcel (weight summed from real per-product weights where set, falling back to a site-wide default; box dimensions from the site default).
-2. Pick a service level and book the shipment.
-3. Print the waybill label or parcel sticker, track status, or cancel — all against the real Ship Logic API (sandbox or live, per `COURIER_GUY_SANDBOX`).
-
-This requires the store's own pickup address to be filled in under **Settings → Courier Guy** first — that's the *collection* address Courier Guy picks up from, distinct from each order's delivery address.
+Shipping is handled manually. Once an order is paid, the admin Orders tab shows the customer's delivery address (also stored as separate street/city/province/postal-code fields) so the parcel can be packed and sent by hand. Marking an order **shipped** lets the admin enter a carrier, tracking number and estimated delivery, which are emailed to the customer.
 
 ---
 
@@ -137,7 +128,7 @@ This requires the store's own pickup address to be filled in under **Settings �
 
 - **MongoDB down or unreachable:** the connection layer retries with capped exponential backoff (5s → up to 60s) rather than giving up after one failed attempt. While disconnected, public traffic sees a maintenance page (email collection optional) instead of a broken site; `/admin` still loads so you can see what's happening.
 - **Unhandled server errors:** logged to MongoDB (inspectable from the admin Status tab) and, if `ADMIN_EMAIL`/`RESEND_API_KEY` are set, emailed to the admin — throttled to once per 15 minutes so a recurring error doesn't flood the inbox.
-- **Cross-origin mutation guard:** state-changing requests (`POST`/`PATCH`/`DELETE`) are rejected if their `Origin`/`Referer` doesn't match the request host — mitigates a malicious page riding an admin's cached Basic Auth credentials. PayFast's ITN webhook and Courier Guy's one-click-unsubscribe callback are explicitly exempted, since neither is a browser request and both are independently verified another way.
+- **Cross-origin mutation guard:** state-changing requests (`POST`/`PATCH`/`DELETE`) are rejected if their `Origin`/`Referer` doesn't match the request host — mitigates a malicious page riding an admin's cached Basic Auth credentials. PayFast's ITN webhook and the newsletter one-click-unsubscribe callback are explicitly exempted, since neither is a browser request and both are independently verified another way.
 
 ---
 

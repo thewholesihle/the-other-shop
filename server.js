@@ -16,7 +16,6 @@ const rateLimit = require('express-rate-limit');
 const { connect, getIsConnected } = require('./src/db/connection');
 const { Settings, Category, Product, Order, Lookbook, Article, Pages, Subscriber, Log } = require('./src/db/models');
 const crypto = require('crypto');
-const courierGuy = require('./src/services/courierGuy');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -141,31 +140,41 @@ app.use((req, res, next) => {
   next();
 });
 
-function basicAuth(req, res, next) {
+/** True if the request carries valid admin Basic Auth credentials. */
+function hasValidAdminAuth(req) {
   const h = req.headers['authorization'];
-  if (!h || !h.startsWith('Basic ')) {
-    res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
-    return res.status(401).send('Authentication required.');
-  }
-  
+  if (!h || !h.startsWith('Basic ')) return false;
+
   try {
-    const [user, pass] = Buffer.from(h.slice(6), 'base64').toString().split(':');
-    
+    const decoded = Buffer.from(h.slice(6), 'base64').toString();
+    // Split on the first colon only — passwords may legitimately contain ':'.
+    const sep = decoded.indexOf(':');
+    if (sep === -1) return false;
+    const user = decoded.slice(0, sep);
+    const pass = decoded.slice(sep + 1);
+
     // Timing-safe comparison to prevent side-channel attacks
     const userBuffer = Buffer.from(user);
     const adminUserBuffer = Buffer.from(ADMIN_USER);
     const passBuffer = Buffer.from(pass);
     const adminPassBuffer = Buffer.from(ADMIN_PASS);
 
-    if (userBuffer.length === adminUserBuffer.length &&
-        passBuffer.length === adminPassBuffer.length &&
-        crypto.timingSafeEqual(userBuffer, adminUserBuffer) &&
-        crypto.timingSafeEqual(passBuffer, adminPassBuffer)) {
-      return next();
-    }
+    return userBuffer.length === adminUserBuffer.length &&
+      passBuffer.length === adminPassBuffer.length &&
+      crypto.timingSafeEqual(userBuffer, adminUserBuffer) &&
+      crypto.timingSafeEqual(passBuffer, adminPassBuffer);
   } catch (e) {
-    // Basic auth format error
+    return false; // Basic auth format error
   }
+}
+
+function basicAuth(req, res, next) {
+  const h = req.headers['authorization'];
+  if (!h || !h.startsWith('Basic ')) {
+    res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
+    return res.status(401).send('Authentication required.');
+  }
+  if (hasValidAdminAuth(req)) return next();
 
   res.set('WWW-Authenticate', 'Basic realm="Others. Admin"');
   return res.status(401).send('Invalid credentials.');
@@ -287,7 +296,9 @@ function primaryContactEmail(site) {
 // just by guessing/editing the query string — sign each link with an HMAC so only
 // a link this server actually generated (i.e. sent to that address) is honored.
 function unsubscribeSecret() {
-  return process.env.UNSUBSCRIBE_SECRET || process.env.ADMIN_PASS || 'others-unsubscribe-fallback-secret';
+  // ADMIN_PASS is guaranteed set (the server exits at boot without it), so there's
+  // no need for — and no safe — hardcoded fallback that an attacker could know.
+  return process.env.UNSUBSCRIBE_SECRET || ADMIN_PASS;
 }
 function unsubscribeToken(email) {
   return crypto.createHmac('sha256', unsubscribeSecret()).update(String(email).toLowerCase().trim()).digest('hex').slice(0, 32);
@@ -632,25 +643,6 @@ async function adjustVariantStock(query, size, color, delta) {
     // Legacy product with no matching variant — just adjust the aggregate so we don't lose the count.
     await Product.updateOne(query, { $inc: { stock: delta } });
   }
-}
-
-/** Looks up the current product behind each order line item — needed to read real
- * weight/dimensions for a courier parcel, since OrderItemSchema only snapshots
- * name/price/qty at checkout time, not shipping data. Keyed by `item.id` (not
- * the resolved Mongo query) so courierGuy.buildParcel can look items up the same
- * way it iterates `order.items`. Missing/deleted products are silently skipped —
- * buildParcel falls back to the site's default per-unit weight for those. */
-async function resolveOrderProducts(order) {
-  const map = new Map();
-  for (const item of order.items || []) {
-    const pId = item.productId || item.id;
-    if (!pId) continue;
-    let query = { id: pId };
-    if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
-    const product = await Product.findOne(query).lean();
-    if (product) map.set(item.id, product);
-  }
-  return map;
 }
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
@@ -1028,160 +1020,6 @@ app.delete('/api/orders/:id', basicAuth, async (req, res) => {
   }
 });
 
-// ─── API: Courier Guy (Ship Logic) fulfillment ───────────────────────────────
-// Every route here is admin-only — booking/cancelling a real shipment (and, in
-// live mode, spending real money) is never something a customer or public
-// request should be able to trigger.
-
-/** Response shape for /shipments/label and /shipments/label/stickers isn't
- * pinned down by the docs beyond "a signed URL" — checked defensively against
- * a few plausible field names rather than assuming one. */
-function extractCourierUrl(data) {
-  if (typeof data === 'string') return data;
-  return data?.url || data?.signed_url || data?.label_url || data?.download_url || null;
-}
-
-app.get('/api/courier/status', basicAuth, (req, res) => {
-  res.json({ configured: courierGuy.isConfigured(), sandbox: courierGuy.isSandbox() });
-});
-
-app.post('/api/courier/orders/:id/rates', basicAuth, async (req, res) => {
-  try {
-    const order = await Order.findOne({ id: req.params.id }).lean();
-    if (!order) return res.status(404).json({ error: 'Order not found.' });
-    const site = await Settings.findOne({ _id: 'main' }).lean();
-    const products = await resolveOrderProducts(order);
-    const parcels = courierGuy.buildParcel({ order, site, products, overrides: req.body?.parcel || {} });
-
-    const result = await courierGuy.getRates({ site, order, parcels, declaredValue: req.body?.declaredValue });
-    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
-    // Confirmed live shape: { message, service_days, rates: [...] } — the actual
-    // quotes are nested under `.rates`, not the response itself. Unwrapping here
-    // means AdminOrders.svelte can treat `rates` as the array it actually wants
-    // instead of getting the whole envelope wrapped up as one fake "rate".
-    res.json({ ok: true, rates: result.data?.rates || [], parcels });
-  } catch (err) {
-    console.error('POST /api/courier/orders/:id/rates', err);
-    res.status(500).json({ error: 'Could not fetch courier rates.' });
-  }
-});
-
-app.post('/api/courier/orders/:id/shipments', basicAuth, async (req, res) => {
-  try {
-    const order = await Order.findOne({ id: req.params.id }).lean();
-    if (!order) return res.status(404).json({ error: 'Order not found.' });
-    if (order.courierShipmentId && order.courierStatus !== 'cancelled') {
-      return res.status(400).json({ error: `This order already has a Courier Guy shipment (${order.courierTrackingReference || order.courierShipmentId}). Cancel it first to book another.` });
-    }
-
-    const site = await Settings.findOne({ _id: 'main' }).lean();
-    const products = await resolveOrderProducts(order);
-    const parcels = courierGuy.buildParcel({ order, site, products, overrides: req.body?.parcel || {} });
-    const { serviceLevelCode, serviceLevelId, declaredValue, specialInstructions } = req.body || {};
-
-    const result = await courierGuy.createShipment({
-      site, order, parcels, serviceLevelCode, serviceLevelId, declaredValue, specialInstructions,
-    });
-
-    if (!result.ok) {
-      // Kept on the order (not just returned) so a failed booking is still
-      // visible to anyone looking at the order later, not only in this response.
-      await Order.updateOne({ id: order.id }, { $set: { courierError: result.error } }).catch(() => {});
-      return res.status(result.status || 502).json({ error: result.error });
-    }
-
-    const shipment = result.data || {};
-    const update = {
-      courierProvider: 'courier-guy',
-      courierShipmentId: typeof shipment.id === 'number' ? shipment.id : null,
-      courierTrackingReference: shipment.custom_tracking_reference || shipment.short_tracking_reference || shipment.tracking_reference || '',
-      courierServiceLevelCode: shipment.service_level_code || serviceLevelCode || '',
-      courierServiceLevelName: shipment.service_level_name || '',
-      courierRate: typeof shipment.rate === 'number' ? shipment.rate : null,
-      courierStatus: shipment.status || 'submitted',
-      courierError: '',
-      courierBookedAt: new Date(),
-      courierRaw: shipment,
-    };
-    const updated = await Order.findOneAndUpdate({ id: order.id }, { $set: update }, { returnDocument: 'after' });
-
-    await Log.create({
-      id: `log-${Date.now()}-courier`,
-      type: 'info', message: `Courier Guy shipment booked for order ${order.id}`,
-      context: 'COURIER', data: { orderId: order.id, trackingReference: update.courierTrackingReference }
-    }).catch(() => {});
-
-    res.json({ ok: true, order: updated, shipment });
-  } catch (err) {
-    console.error('POST /api/courier/orders/:id/shipments', err);
-    res.status(500).json({ error: 'Could not book courier shipment.' });
-  }
-});
-
-app.post('/api/courier/orders/:id/cancel', basicAuth, async (req, res) => {
-  try {
-    const order = await Order.findOne({ id: req.params.id }).lean();
-    if (!order) return res.status(404).json({ error: 'Order not found.' });
-
-    const result = await courierGuy.cancelShipment({ trackingReference: order.courierTrackingReference });
-    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
-
-    const updated = await Order.findOneAndUpdate(
-      { id: order.id },
-      { $set: { courierStatus: 'cancelled', courierError: '' } },
-      { returnDocument: 'after' }
-    );
-    res.json({ ok: true, order: updated });
-  } catch (err) {
-    console.error('POST /api/courier/orders/:id/cancel', err);
-    res.status(500).json({ error: 'Could not cancel courier shipment.' });
-  }
-});
-
-app.get('/api/courier/orders/:id/track', basicAuth, async (req, res) => {
-  try {
-    const order = await Order.findOne({ id: req.params.id }).lean();
-    if (!order) return res.status(404).json({ error: 'Order not found.' });
-
-    const result = await courierGuy.trackShipment({ trackingReference: order.courierTrackingReference });
-    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
-
-    const status = result.data?.status || '';
-    if (status) await Order.updateOne({ id: order.id }, { $set: { courierStatus: status } }).catch(() => {});
-
-    res.json({ ok: true, tracking: result.data, statusInfo: courierGuy.statusInfo(status) });
-  } catch (err) {
-    console.error('GET /api/courier/orders/:id/track', err);
-    res.status(500).json({ error: 'Could not fetch courier tracking.' });
-  }
-});
-
-app.get('/api/courier/orders/:id/label', basicAuth, async (req, res) => {
-  try {
-    const order = await Order.findOne({ id: req.params.id }).lean();
-    if (!order) return res.status(404).json({ error: 'Order not found.' });
-    const result = await courierGuy.getLabelUrl({ shipmentId: order.courierShipmentId });
-    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
-    res.json({ ok: true, url: extractCourierUrl(result.data) });
-  } catch (err) {
-    console.error('GET /api/courier/orders/:id/label', err);
-    res.status(500).json({ error: 'Could not fetch shipping label.' });
-  }
-});
-
-app.get('/api/courier/orders/:id/sticker', basicAuth, async (req, res) => {
-  try {
-    const order = await Order.findOne({ id: req.params.id }).lean();
-    if (!order) return res.status(404).json({ error: 'Order not found.' });
-    const result = await courierGuy.getStickerUrl({ shipmentId: order.courierShipmentId });
-    if (!result.ok) return res.status(result.status || 502).json({ error: result.error });
-    res.json({ ok: true, url: extractCourierUrl(result.data) });
-  } catch (err) {
-    console.error('GET /api/courier/orders/:id/sticker', err);
-    res.status(500).json({ error: 'Could not fetch shipping sticker.' });
-  }
-});
-
 // ─── API: Upload ──────────────────────────────────────────────────────────────
 app.post('/api/upload', basicAuth, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
@@ -1298,6 +1136,16 @@ app.get('/api/data', async (req, res) => {
       });
     }
     const data = await readData();
+    // This endpoint is public (the storefront needs it) but the full blob is also what
+    // the admin panel loads. Customer PII (orders, subscribers) and admin-only settings
+    // (notification emails, email templates) are only
+    // included when the request carries valid admin credentials.
+    if (!hasValidAdminAuth(req)) {
+      const { adminNotificationEmails, emailTemplates, ...publicSite } = data.site || {};
+      data.site = publicSite;
+      data.orders = [];
+      data.subscribers = [];
+    }
     res.json(data);
   } catch (err) {
     console.error('API Error:', err);
@@ -1307,6 +1155,9 @@ app.get('/api/data', async (req, res) => {
 
 app.post('/api/data', basicAuth, async (req, res) => {
   try {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({ error: 'Invalid data payload.' });
+    }
     await writeData(req.body);
     res.json({ ok: true });
   } catch (err) {
@@ -1318,7 +1169,10 @@ app.post('/api/data', basicAuth, async (req, res) => {
 // ─── API: Products (granular) ─────────────────────────────────────────────────
 app.get('/api/products', async (_req, res) => {
   try { res.json(await Product.find().lean()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) {
+    console.error('GET /api/products', err);
+    res.status(500).json({ error: 'Could not fetch products.' });
+  }
 });
 
 // Lean endpoint for the admin panel's background refresh — pulling just orders +
@@ -1326,7 +1180,10 @@ app.get('/api/products', async (_req, res) => {
 // community, pages, and subscribers on every 20s poll for data that rarely changes).
 app.get('/api/orders', basicAuth, async (_req, res) => {
   try { res.json(await Order.find().sort({ createdAt: -1 }).lean()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) {
+    console.error('GET /api/orders', err);
+    res.status(500).json({ error: 'Could not fetch orders.' });
+  }
 });
 
 // ─── API: Newsletter ──────────────────────────────────────────────────────────
@@ -1508,26 +1365,40 @@ app.post('/api/checkout', async (req, res) => {
     if (site?.shipping) shippingConfig = site.shipping;
   } catch { /* use defaults */ }
 
-  const subtotal     = parseFloat(order.total) || 0;
-  const shippingCost = subtotal >= shippingConfig.freeMinimum ? 0 : shippingConfig.standardRate;
-  const grandTotal   = (subtotal + shippingCost).toFixed(2);
   const orderId      = `ORD-${Date.now()}`;
 
   // ── Stock validation & deduction (per size/color variant) ──────────────────
-  const orderItems = Array.isArray(order.items) ? order.items : [];
+  // Prices, names and images are re-read from the product records — never taken
+  // from the client — so a tampered cart can't set its own price.
+  const requestedItems = Array.isArray(order.items) ? order.items : [];
+  if (requestedItems.length === 0) return res.status(400).json({ error: 'Your cart is empty.' });
+
+  const orderItems = []; // sanitized, server-priced line items persisted on the Order
+  let subtotal = 0;
   const stockErrors = [];
   const deducted = []; // successfully-deducted items, kept for rollback on partial failure
 
-  for (const item of orderItems) {
-    const pId = item.productId || item.id;
+  for (const rawItem of requestedItems) {
+    const item = {
+      ...rawItem,
+      quantity: Math.floor(Number(rawItem?.quantity)),
+    };
+    if (!Number.isFinite(item.quantity) || item.quantity < 1 || item.quantity > 99) {
+      stockErrors.push(`"${rawItem?.name || 'An item'}" has an invalid quantity.`);
+      continue;
+    }
+
+    const pId = String(item.productId || item.id || '');
     let query = { id: pId };
     if (mongoose.Types.ObjectId.isValid(pId)) query = { $or: [{ id: pId }, { _id: pId }] };
 
-    const product = await Product.findOne(query).lean();
+    const product = pId ? await Product.findOne(query).lean() : null;
     if (!product) {
       stockErrors.push(`"${item.name}" is no longer available.`);
       continue;
     }
+    // From here on the display name is the real product's, not the client's claim.
+    item.name = product.name;
 
     const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
     const size = item.size || '', color = item.color || '';
@@ -1570,6 +1441,17 @@ app.post('/api/checkout', async (req, res) => {
     }
 
     deducted.push({ query, size, color, quantity: item.quantity, hasVariants });
+    orderItems.push({
+      id: product.id,
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: item.quantity,
+      size,
+      color,
+      image: product.image || product.images?.[0] || '',
+    });
+    subtotal += product.price * item.quantity;
   }
 
   if (stockErrors.length > 0) {
@@ -1581,6 +1463,9 @@ app.post('/api/checkout', async (req, res) => {
     return res.status(400).json({ error: 'Some items are out of stock.', stockErrors });
   }
 
+  const shippingCost = subtotal >= shippingConfig.freeMinimum ? 0 : shippingConfig.standardRate;
+  const grandTotal   = (subtotal + shippingCost).toFixed(2);
+
   try {
     await Order.create({
       id: orderId,
@@ -1589,7 +1474,7 @@ app.post('/api/checkout', async (req, res) => {
       phone:    order.phone    || '',
       address:  order.address  || '',
       // Structured fields alongside the composed `address` display string above —
-      // Cart.svelte sends both; these are what a courier booking actually needs.
+      // Cart.svelte sends both; these are what shipping the order actually needs.
       deliveryStreet:     order.deliveryStreet     || '',
       deliveryCity:       order.deliveryCity       || '',
       deliveryProvince:   order.deliveryProvince   || '',
@@ -1602,6 +1487,11 @@ app.post('/api/checkout', async (req, res) => {
     });
   } catch (err) {
     console.error('Order save error:', err.message);
+    // Stock was already deducted above — give it back, otherwise a failed save strands it.
+    for (const d of deducted) {
+      if (d.hasVariants) await adjustVariantStock(d.query, d.size, d.color, d.quantity).catch(() => {});
+      else await Product.updateOne(d.query, { $inc: { stock: d.quantity } }).catch(() => {});
+    }
     return res.status(500).json({ error: 'Could not create order.' });
   }
 
@@ -1702,8 +1592,8 @@ app.post('/api/payfast/itn', async (req, res) => {
     const received = { ...itnData };
     delete received.signature;
     const computed = pfSignature(received);
-      console.error(`[ITN] Signature mismatch for #${orderId}`);
     if (computed !== itnData.signature) {
+      console.error(`[ITN] Signature mismatch for #${orderId}`);
       await Log.create({
         id: `log-${Date.now()}-itn-sig`,
         type: 'error', message: 'ITN: invalid signature (tampering check failed)',

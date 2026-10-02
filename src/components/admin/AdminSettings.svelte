@@ -9,14 +9,6 @@
 
   let form = JSON.parse(JSON.stringify(site));
   if (!form.shipping) form.shipping = { freeMinimum: 500, standardRate: 99, country: 'South Africa' };
-  if (!form.courier) {
-    form.courier = {
-      collectionContactName: '', collectionMobileNumber: '', collectionEmail: '',
-      collectionCompany: '', collectionStreet: '', collectionSuburb: '', collectionCity: '',
-      collectionProvince: '', collectionPostalCode: '', collectionCountry: 'ZA',
-      defaultParcelWeightKg: 1, defaultParcelLengthCm: 30, defaultParcelWidthCm: 25, defaultParcelHeightCm: 10,
-    };
-  }
   if (!form.hero) form.hero = {};
   if (form.hero.ctaLink === undefined) form.hero.ctaLink = '/shop';
   if (form.hero.video === undefined) form.hero.video = '';
@@ -50,11 +42,6 @@
   if (form.adminNotificationEmails === undefined) form.adminNotificationEmails = 'othersworldwide@gmail.com';
   let saved = false;
   let saving = false;
-
-  const COURIER_SA_PROVINCES = [
-    'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
-    'Limpopo', 'Mpumalanga', 'North West', 'Northern Cape', 'Western Cape',
-  ];
 
   async function handleSave() {
     if (saving) return;
@@ -258,85 +245,6 @@
         </div>
       </div>
       <p class="text-xs text-muted-foreground">Orders above the free shipping minimum qualify for free delivery. Checkout is restricted to South Africa only.</p>
-    </div>
-
-    <!-- Courier Guy -->
-    <div class="space-y-6 pt-10 pb-4 border-t border-border mt-10 first:mt-0 first:border-0 first:pt-0">
-      <div>
-        <h2 class="text-2xl font-display font-bold tracking-tight">COURIER GUY</h2>
-        <p class="text-xs text-muted-foreground mt-1">This is the address Courier Guy collects from on every shipment — it's the store's own pickup point, not anything from the order. Required before a shipment can be booked from the Orders tab.</p>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="cg-contact" class="text-label block mb-1.5">CONTACT NAME</label>
-          <input id="cg-contact" bind:value={form.courier.collectionContactName} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-        </div>
-        <div>
-          <label for="cg-company" class="text-label block mb-1.5">COMPANY NAME</label>
-          <input id="cg-company" bind:value={form.courier.collectionCompany} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="cg-mobile" class="text-label block mb-1.5">MOBILE NUMBER</label>
-          <input id="cg-mobile" type="tel" bind:value={form.courier.collectionMobileNumber} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-        </div>
-        <div>
-          <label for="cg-email" class="text-label block mb-1.5">EMAIL</label>
-          <input id="cg-email" type="email" bind:value={form.courier.collectionEmail} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-        </div>
-      </div>
-      <p class="text-xs text-muted-foreground -mb-2">At least one of mobile number or email is required by Courier Guy.</p>
-      <div>
-        <label for="cg-street" class="text-label block mb-1.5">STREET ADDRESS</label>
-        <input id="cg-street" bind:value={form.courier.collectionStreet} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="cg-suburb" class="text-label block mb-1.5">SUBURB</label>
-          <input id="cg-suburb" bind:value={form.courier.collectionSuburb} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-        </div>
-        <div>
-          <label for="cg-city" class="text-label block mb-1.5">CITY</label>
-          <input id="cg-city" bind:value={form.courier.collectionCity} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label for="cg-province" class="text-label block mb-1.5">PROVINCE</label>
-          <select id="cg-province" bind:value={form.courier.collectionProvince} class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors">
-            <option value="">Select province…</option>
-            {#each COURIER_SA_PROVINCES as p}<option value={p}>{p}</option>{/each}
-          </select>
-        </div>
-        <div>
-          <label for="cg-postal" class="text-label block mb-1.5">POSTAL CODE</label>
-          <input id="cg-postal" bind:value={form.courier.collectionPostalCode} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors" />
-        </div>
-      </div>
-
-      <div class="pt-4 border-t border-border/60">
-        <p class="text-label block mb-1.5">DEFAULT PARCEL SIZE</p>
-        <p class="text-xs text-muted-foreground mb-3">Used as the shipment's box size/weight whenever a product doesn't have its own weight and dimensions set (Products tab). Weight is summed per order from real product weights when available; box dimensions always use this default, since packing several items into one box doesn't make it as long as all of them stacked end to end.</p>
-        <div class="grid grid-cols-4 gap-4">
-          <div>
-            <label for="cg-w" class="text-label block mb-1.5">WEIGHT (KG)</label>
-            <input id="cg-w" type="number" min="0" step="0.1" bind:value={form.courier.defaultParcelWeightKg} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums" />
-          </div>
-          <div>
-            <label for="cg-l" class="text-label block mb-1.5">LENGTH (CM)</label>
-            <input id="cg-l" type="number" min="0" bind:value={form.courier.defaultParcelLengthCm} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums" />
-          </div>
-          <div>
-            <label for="cg-wd" class="text-label block mb-1.5">WIDTH (CM)</label>
-            <input id="cg-wd" type="number" min="0" bind:value={form.courier.defaultParcelWidthCm} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums" />
-          </div>
-          <div>
-            <label for="cg-h" class="text-label block mb-1.5">HEIGHT (CM)</label>
-            <input id="cg-h" type="number" min="0" bind:value={form.courier.defaultParcelHeightCm} class="w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors tabular-nums" />
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Hero -->

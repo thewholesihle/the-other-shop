@@ -30,28 +30,6 @@ const SettingsSchema = new mongoose.Schema({
     standardRate: { type: Number, default: 99 },
     country:      { type: String, default: 'South Africa' },
   },
-  // Courier Guy (Ship Logic) integration — the store's own pickup address and a
-  // fallback parcel size, both required to book a shipment. `collection*` is sent
-  // as the shipment's collection_address/collection_contact on every booking (it's
-  // the same every time — this is where the courier collects from, not the order's
-  // delivery address). defaultParcel* is used only when a product has no
-  // weight/dimensions of its own set in the admin product editor.
-  courier: {
-    collectionContactName:  { type: String, default: '' },
-    collectionMobileNumber: { type: String, default: '' },
-    collectionEmail:        { type: String, default: '' },
-    collectionCompany:      { type: String, default: '' },
-    collectionStreet:       { type: String, default: '' },
-    collectionSuburb:       { type: String, default: '' },
-    collectionCity:         { type: String, default: '' },
-    collectionProvince:     { type: String, default: '' },
-    collectionPostalCode:   { type: String, default: '' },
-    collectionCountry:      { type: String, default: 'ZA' },
-    defaultParcelWeightKg:  { type: Number, default: 1 },
-    defaultParcelLengthCm:  { type: Number, default: 30 },
-    defaultParcelWidthCm:   { type: Number, default: 25 },
-    defaultParcelHeightCm:  { type: Number, default: 10 },
-  },
   colors: {
     background: { type: String, default: '' },
     foreground: { type: String, default: '' },
@@ -130,18 +108,14 @@ const ProductSchema = new mongoose.Schema({
   variants:    [VariantSchema],
   isNew:       { type: Boolean, default: false },
   isFeatured:  { type: Boolean, default: false },
-  // Optional — used to build an accurate courier parcel when this product is
-  // shipped. 0 means "not set"; the site's default parcel size (Settings >
-  // courier.defaultParcel*) is used instead until an admin fills these in.
-  weightKg:    { type: Number, default: 0, min: 0 },
-  lengthCm:    { type: Number, default: 0, min: 0 },
-  widthCm:     { type: Number, default: 0, min: 0 },
-  heightCm:    { type: Number, default: 0, min: 0 },
 }, { strict: true, versionKey: false, suppressReservedKeysWarning: true });
 
 // ── Order ─────────────────────────────────────────────────────────────────────
 const OrderItemSchema = new mongoose.Schema({
   id:       String,
+  // Must be declared: strict mode silently drops undeclared fields, and the stock-
+  // restore code looks items up by productId || id.
+  productId: String,
   name:     String,
   price:    Number,
   quantity: Number,
@@ -162,34 +136,20 @@ const OrderSchema = new mongoose.Schema({
   status:       { type: String, default: 'pending', enum: ['pending', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] },
   payfastId:    { type: String, default: '' },
   adminNote:    { type: String, default: '' },
-  // Shipment details — set by admin when marking an order 'shipped', surfaced as
-  // reference info in the customer status email (no tracking-link CTA — no courier
-  // integration or tracking page exists yet to justify a clickable "track" button).
+  // Shipment details — entered manually by the admin when marking an order 'shipped',
+  // and surfaced as reference info in the customer status email.
   carrier:           { type: String, default: '' },
   trackingNumber:    { type: String, default: '' },
   estimatedDelivery: { type: String, default: '' },
   // Structured delivery address, collected at checkout alongside (not instead of)
   // `address` above — `address` stays the free-text display string used by emails
-  // and the admin order list; these are what the courier API actually needs, since
-  // it requires real street/city/province/postal-code fields rather than one blob.
+  // and the admin order list; kept separately so each part is available on its own, since
+  // handy for packing/addressing a parcel without re-parsing the free-text blob.
   deliveryStreet:     { type: String, default: '' },
   deliveryCity:       { type: String, default: '' },
   deliveryProvince:   { type: String, default: '' },
   deliveryPostalCode: { type: String, default: '' },
   deliveryCountry:    { type: String, default: 'ZA' },
-  // Courier Guy (Ship Logic) shipment — populated once booked from the admin
-  // Orders panel; empty/null until then. `courierRaw` keeps the full last
-  // create/track response so a field we didn't think to extract isn't lost.
-  courierProvider:          { type: String, default: '' },
-  courierShipmentId:        { type: Number, default: null },
-  courierTrackingReference: { type: String, default: '' },
-  courierServiceLevelCode:  { type: String, default: '' },
-  courierServiceLevelName:  { type: String, default: '' },
-  courierRate:              { type: Number, default: null },
-  courierStatus:            { type: String, default: '' },
-  courierError:             { type: String, default: '' },
-  courierBookedAt:          { type: Date, default: null },
-  courierRaw:               { type: mongoose.Schema.Types.Mixed, default: null },
   createdAt:    { type: Date, default: Date.now },
 }, { strict: true, versionKey: false });
 
