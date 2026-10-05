@@ -42,7 +42,8 @@
   });
 
   let email = "";
-  let submitted = false;
+  // What happened to the address: 'done' (subscribed), 'pending' (we emailed a confirmation link), 'already' (it was on the list), or '' (not submitted yet).
+  let outcome = "";
   let submitting = false;
   let submitError = "";
 
@@ -57,11 +58,12 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Something went wrong.");
-      submitted = true;
+      const body = await res.json().catch(() => ({}));
+      if (res.status === 429) throw new Error("Too many attempts from this connection. Please try again later.");
+      if (!res.ok) throw new Error(body.error || "Something went wrong. Please try again.");
+      outcome = body.already ? "already" : body.pending ? "pending" : "done";
     } catch (err) {
-      submitError = err.message;
+      submitError = err instanceof TypeError ? "Couldn't reach the server. Check your connection and try again." : err.message;
     } finally {
       submitting = false;
     }
@@ -101,7 +103,7 @@
 
     {#if collectEmails}
       <div class="mt-10">
-        {#if submitted}
+        {#if outcome}
           <div
             class="flex items-center justify-center gap-2 text-sm {background
               ? 'text-white'
@@ -116,7 +118,15 @@
               stroke="currentColor"
               stroke-width="2"><path d="M20 6 9 17l-5-5" /></svg
             >
-            You're on the list — we'll notify you when we're back!
+            <span role="status">
+              {#if outcome === "already"}
+                You're already on the list — we'll let you know when we're back.
+              {:else if outcome === "pending"}
+                Almost there — check your inbox and confirm your email to get notified.
+              {:else}
+                You're on the list — we'll notify you when we're back!
+              {/if}
+            </span>
           </div>
         {:else}
           <p class="text-xs opacity-60 mb-3 tracking-widest uppercase">
