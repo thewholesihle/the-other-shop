@@ -51,7 +51,7 @@
 
       <div class="mb-8 border-t border-border pt-12">
         <p class="text-label mb-2">Journal</p>
-        <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight">Stories &amp; news</h2>
+        <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight md:leading-[1.1111]">Stories &amp; news</h2>
       </div>
 
       <!-- Category filter -->

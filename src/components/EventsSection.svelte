@@ -36,7 +36,7 @@
   <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
     <div>
       <p class="text-label mb-2">What’s on</p>
-      <h2 id="events-heading" use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight">Events &amp; Pop-ups</h2>
+      <h2 id="events-heading" use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight md:leading-[1.1111]">Events &amp; Pop-ups</h2>
     </div>
     {#if hasBoth}
       <div class="flex gap-2" role="group" aria-label="Filter events">

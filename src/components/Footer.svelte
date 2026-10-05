@@ -118,7 +118,7 @@
             placeholder="Email address"
             bind:value={email}
             onkeydown={(e) => e.key === 'Enter' && subscribe()}
-            class="bg-transparent border border-primary-foreground/20 px-4 py-3 text-sm text-primary-foreground placeholder:text-on-dark flex-1 md:w-64 focus:outline-none focus:border-primary-foreground/50 transition-colors"
+            class="bg-transparent border border-primary-foreground/20 px-4 py-3 text-sm text-primary-foreground placeholder:text-on-dark flex-1 md:w-64 focus:outline-hidden focus:border-primary-foreground/50 transition-colors"
           />
           <button
             onclick={subscribe}

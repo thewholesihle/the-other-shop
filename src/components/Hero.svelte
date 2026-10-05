@@ -33,7 +33,7 @@
   <!-- Dark overlay for legibility -->
   <div class="absolute inset-0 bg-black/25"></div>
   <!-- Bottom-up scrim: the headline and CTA sit low, so that is where light text needs the most help on bright photos. -->
-  <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent"></div>
+  <div class="absolute inset-0 bg-linear-to-t from-black/55 via-black/10 to-transparent"></div>
 
   <div class="absolute inset-0 flex items-end">
     <div class="px-6 md:px-10 pb-16 md:pb-20 max-w-lg">
@@ -42,7 +42,7 @@
           {hero.label}
         </p>
       {/if}
-      <h1 use:cutReveal={{ delay: 250, stagger: 90 }} class="text-5xl md:text-7xl font-display font-bold leading-[0.9] mb-4" style="color:hsl(40,20%,97%)">
+      <h1 use:cutReveal={{ delay: 250, stagger: 90 }} class="text-5xl md:text-7xl font-display font-bold leading-[0.9] md:leading-[1] mb-4" style="color:hsl(40,20%,97%)">
         {#each words as word}
           {word}<br />
         {/each}

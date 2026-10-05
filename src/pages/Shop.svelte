@@ -156,7 +156,7 @@
           <span class="text-xs tracking-[0.15em] uppercase text-muted-foreground whitespace-nowrap">Sort By</span>
           <select
             bind:value={sortMode}
-            class="bg-transparent border border-border px-3 py-2 text-[11px] uppercase tracking-[0.15em] focus:outline-none focus:border-foreground transition-colors cursor-pointer w-full md:w-auto"
+            class="bg-transparent border border-border px-3 py-2 text-[11px] uppercase tracking-[0.15em] focus:outline-hidden focus:border-foreground transition-colors cursor-pointer w-full md:w-auto"
           >
             <option value="newest">Featured / Newest</option>
             <option value="price-asc">Price: Low to High</option>

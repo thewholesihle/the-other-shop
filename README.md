@@ -12,7 +12,7 @@ Single codebase, single deploy: Express serves both the API and the built SPA.
 
 | Layer | Technology |
 |---|---|
-| Frontend | Svelte 5 (runes), Tailwind CSS, hand-rolled client-side router (no `svelte-routing` in use despite the dependency) |
+| Frontend | Svelte 5 (runes), Tailwind CSS 4 (theme in `tailwind.config.js`, loaded with `@config`), hand-rolled client-side router |
 | Backend | Express 5, Mongoose 9 / MongoDB |
 | Bundler | Rollup |
 | Images/video | Cloudinary |
@@ -59,7 +59,7 @@ The server will refuse to start (`FATAL`, exit 1) without `ADMIN_USER` plus `ADM
 
 Admin panel: `http://localhost:3000/admin` — sign in with the credentials from `.env` (see **Admin security** below).
 
-There's no `dev` script wired to `nodemon` in `package.json` despite it being a devDependency — during active backend development, run `npx nodemon server.js` directly, or rebuild (`npm run build`) after frontend changes and restart `npm start`.
+`npm run dev` runs the server with Node's built-in watcher (`node --watch`), restarting on backend changes; rebuild with `npm run build` after frontend changes. (`nodemon` was removed: its dependency chain carried an unpatched `braces` advisory, and Node's watcher does the same job.)
 
 ---
 

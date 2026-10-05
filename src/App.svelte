@@ -117,7 +117,7 @@
       }
     }
 
-    /* Keyboard focus: a visible two-tone ring on every control (the page colour fills the gap so it
+    /* Keyboard focus: a visible two-tone ring-3 on every control (the page colour fills the gap so it
        reads on photos and on the dark footer alike). */
     body *:focus-visible {
       outline: 2px solid hsl(var(--ring)) !important;

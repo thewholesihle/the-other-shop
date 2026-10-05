@@ -102,7 +102,7 @@
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   aria-pressed={showPassword}
                   onclick={() => (showPassword = !showPassword)}
-                  class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground"
+                  class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:text-foreground"
                 >
                   {#if showPassword}<EyeOff size={16} />{:else}<Eye size={16} />{/if}
                 </button>

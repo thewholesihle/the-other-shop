@@ -137,7 +137,7 @@
   {/if}
 
   <div class="md:pl-60">
-    <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur md:px-8">
+    <header class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-sm md:px-8">
       <button type="button" class="md:hidden rounded-md p-1.5 hover:bg-accent" aria-label="Open menu" onclick={() => (sidebarOpen = true)}><Menu size={20} /></button>
       {#if logoSrc}<AdaptiveLogo src={site.logo} alt={brandName} surface="--background" theme={$resolvedTheme} class="h-6 w-auto max-w-[110px] object-contain md:hidden" widths={[110, 220, 330]} fallbackWidth={220} sizes="110px" />{/if}
       <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm">

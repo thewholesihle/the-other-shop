@@ -89,12 +89,12 @@
       : ''}"
   >
     {#if logo}
-      <Img src={logo} alt={siteName} widths={[160, 320, 480]} fallbackWidth={320} sizes="200px" priority style={logoHasAlpha ? `filter: ${logoFilter}` : ''} class="h-10 w-auto mx-auto mb-10 object-contain {logoHasAlpha && logoWhite ? 'drop-shadow' : ''}" />
+      <Img src={logo} alt={siteName} widths={[160, 320, 480]} fallbackWidth={320} sizes="200px" priority style={logoHasAlpha ? `filter: ${logoFilter}` : ''} class="h-10 w-auto mx-auto mb-10 object-contain {logoHasAlpha && logoWhite ? 'drop-shadow-sm' : ''}" />
     {:else}
       <p class="text-label tracking-[0.4em] mb-10 opacity-60">{siteName}</p>
     {/if}
 
-    <h1 class="font-display text-3xl md:text-4xl font-bold mb-5 leading-tight">
+    <h1 class="font-display text-3xl md:text-4xl font-bold mb-5 leading-tight md:leading-[1.1111]">
       {title}
     </h1>
     <p class="text-sm leading-relaxed opacity-75 max-w-sm mx-auto">{message}</p>
@@ -128,7 +128,7 @@
               required
               bind:value={email}
               placeholder="your@email.com"
-              class="flex-1 px-4 py-2.5 text-sm bg-transparent border focus:outline-none transition-colors
+              class="flex-1 px-4 py-2.5 text-sm bg-transparent border focus:outline-hidden transition-colors
                 {background
                 ? 'border-white/40 text-white placeholder-white/40 focus:border-white/80'
                 : 'border-border focus:border-foreground'}"

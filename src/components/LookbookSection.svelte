@@ -55,7 +55,7 @@
 <section bind:this={ref} class="px-6 md:px-10 pb-20 md:pb-32">
   <div class="mb-12 {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'}">
     <p class="text-label mb-2">Editorial</p>
-    <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight">
+    <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight md:leading-[1.1111]">
       {lb ? lb.title : 'Lookbook'}
     </h2>
   </div>
@@ -71,7 +71,7 @@
         >
           <Img src={img} alt={lb.title} sizes="(max-width: 768px) 50vw, 25vw" class="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" />
           <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500"></div>
-          <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-linear-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <span class="text-label text-white tracking-widest">{i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE'}</span>
           </div>
         </a>
@@ -84,7 +84,7 @@
         <a href="/lookbook" onclick={(e) => goTo('/lookbook', e)}
           class="{getGridClass(3, i)} {visible ? 'opacity-0 animate-fade-up' : 'opacity-0'} bg-secondary"
           style="animation-delay:{0.1 + i * 0.15}s">
-          <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent">
+          <div class="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end bg-linear-to-t from-black/60 to-transparent">
             <span class="text-label text-white">{i === 0 ? 'VIEW LOOKBOOK' : 'EXPLORE'}</span>
           </div>
         </a>

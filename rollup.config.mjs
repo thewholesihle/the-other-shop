@@ -1,8 +1,7 @@
 import svelte from 'rollup-plugin-svelte';
 import resolve from '@rollup/plugin-node-resolve';
 import postcss from 'rollup-plugin-postcss';
-import tailwindcss from 'tailwindcss';
-import autoprefixer from 'autoprefixer';
+import tailwindcss from '@tailwindcss/postcss';
 import terser from '@rollup/plugin-terser';
 
 export default {
@@ -25,11 +24,12 @@ export default {
     }),
     postcss({
       extract: 'bundle.css',
-      minimize: true,
+      // Not `minimize: true`: the cssnano it runs wrongly merges Tailwind 4's `.text-x` and `.text-x/30` rules (plain
+      // text came out at 30% opacity). Tailwind's own optimizer (lightningcss) minifies correctly.
+      minimize: false,
       sourceMap: true,
       plugins: [
-        tailwindcss('./tailwind.config.js'),
-        autoprefixer(),
+        tailwindcss({ optimize: { minify: true } }),
       ],
     }),
     // Minify the bundle (it shipped as ~1 MB of unminified JS).

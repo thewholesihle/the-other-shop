@@ -67,7 +67,7 @@
 
       <header class="mb-8">
         <span class="text-label text-xs text-muted-foreground">{post.category} · {post.date} · {post.author}</span>
-        <h1 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight mt-2">{post.title}</h1>
+        <h1 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight md:leading-[1.1111] mt-2">{post.title}</h1>
         {#if post.excerpt}
           <p class="text-lg text-muted-foreground mt-3 leading-relaxed">{post.excerpt}</p>
         {/if}

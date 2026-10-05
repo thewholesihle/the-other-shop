@@ -115,7 +115,7 @@
         type="button"
         aria-label="Remove image"
         onclick={() => { value = ''; onChange(''); }}
-        class="absolute right-1 top-1 rounded-md bg-background/90 p-1 text-foreground shadow transition-colors hover:bg-destructive hover:text-white"
+        class="absolute right-1 top-1 rounded-md bg-background/90 p-1 text-foreground shadow-sm transition-colors hover:bg-destructive hover:text-white"
       ><X size={12} /></button>
     </div>
   {/if}
@@ -124,14 +124,14 @@
   {#if multi && values.length}
     <div class="flex flex-wrap gap-2">
       {#each values as url, i}
-        <div class="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border">
+        <div class="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border">
           <img src={thumb(url, 80)} alt="Preview {i + 1}" loading="lazy" decoding="async" class="h-full w-full object-cover" />
           {#if i === 0}<span class="absolute bottom-0 left-0 right-0 bg-black/60 py-0.5 text-center text-[10px] font-medium text-white">Cover</span>{/if}
           <button
             type="button"
             aria-label="Remove image"
             onclick={() => removeImage(url)}
-            class="absolute right-1 top-1 rounded-md bg-background/90 p-1 text-foreground shadow transition-colors hover:bg-destructive hover:text-white"
+            class="absolute right-1 top-1 rounded-md bg-background/90 p-1 text-foreground shadow-sm transition-colors hover:bg-destructive hover:text-white"
           ><X size={12} /></button>
         </div>
       {/each}

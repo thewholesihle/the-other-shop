@@ -214,9 +214,9 @@
                   <td class={tdCls}>
                     <button type="button" class="flex items-center gap-3 text-left" onclick={() => startEditing(p, false)}>
                       {#if p.image || p.images?.[0]}
-                        <img src={thumb(p.image || p.images?.[0], 40)} loading="lazy" decoding="async" alt="" class="h-10 w-10 flex-shrink-0 rounded-md bg-muted object-cover" />
+                        <img src={thumb(p.image || p.images?.[0], 40)} loading="lazy" decoding="async" alt="" class="h-10 w-10 shrink-0 rounded-md bg-muted object-cover" />
                       {:else}
-                        <div class="h-10 w-10 flex-shrink-0 rounded-md bg-muted"></div>
+                        <div class="h-10 w-10 shrink-0 rounded-md bg-muted"></div>
                       {/if}
                       <span>
                         <span class="block font-medium">{p.name}</span>
@@ -393,7 +393,7 @@
       </div>
     </div>
 
-    <div class="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur md:left-60">
+    <div class="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur-sm md:left-60">
       <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
         <p class="text-sm {dirty ? 'text-foreground' : 'text-muted-foreground'}">{dirty ? 'You have unsaved changes' : 'No changes yet'}</p>
         <div class="flex gap-2">

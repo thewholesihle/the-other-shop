@@ -22,8 +22,8 @@
       title="{o.label}"
       onclick={() => setThemeMode(o.value)}
       class={cn(
-        'flex h-7 items-center justify-center rounded-[5px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        $themeMode === o.value && 'bg-background text-foreground shadow-sm'
+        'flex h-7 items-center justify-center rounded-[5px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+        $themeMode === o.value && 'bg-background text-foreground shadow-xs'
       )}
     >
       <o.icon size={14} />

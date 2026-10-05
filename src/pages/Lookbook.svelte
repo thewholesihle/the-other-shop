@@ -63,7 +63,7 @@
                 {/if}
                 <!-- Count badge -->
                 {#if count > 0}
-                  <span class="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm text-foreground text-[10px] tracking-[0.15em] uppercase px-2 py-1">
+                  <span class="absolute bottom-3 right-3 bg-background/90 backdrop-blur-xs text-foreground text-[10px] tracking-[0.15em] uppercase px-2 py-1">
                     {count} {count === 1 ? 'image' : 'images'}
                   </span>
                 {/if}

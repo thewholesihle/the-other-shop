@@ -296,7 +296,7 @@
   <div class="flex min-h-screen items-center justify-center flex-col gap-4">
     <p class="text-muted-foreground">Could not connect to the database.</p>
     {#if saveError}<p class="text-xs text-destructive">{saveError}</p>{/if}
-    <button onclick={() => location.reload()} class="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm hover:bg-accent transition-colors">Retry</button>
+    <button onclick={() => location.reload()} class="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm font-medium shadow-xs hover:bg-accent transition-colors">Retry</button>
   </div>
 {:else}
   <AdminLayout {activeSection} {navigate} {badges} site={data.site} onLogout={logout}>

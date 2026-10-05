@@ -23,7 +23,7 @@
 
 {#if show}
   <div
-    class="fixed inset-0 z-[999] bg-foreground/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in"
+    class="fixed inset-0 z-[999] bg-foreground/80 backdrop-blur-xs flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in"
     role="dialog"
     aria-modal="true"
     aria-label="Shipping restriction notice"

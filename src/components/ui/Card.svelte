@@ -5,7 +5,7 @@
   let { title = '', description = '', class: className = '', actions, children, ...rest } = $props();
 </script>
 
-<section class={cn('rounded-xl border border-border bg-card text-card-foreground shadow-sm', className)} {...rest}>
+<section class={cn('rounded-xl border border-border bg-card text-card-foreground shadow-xs', className)} {...rest}>
   {#if title || actions}
     <header class="flex items-start justify-between gap-4 p-6 pb-0">
       <div class="space-y-1">

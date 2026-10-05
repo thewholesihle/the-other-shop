@@ -91,7 +91,7 @@
         <p class="py-6 text-center text-sm text-muted-foreground">No subscribers yet.</p>
       {:else}
         <div class="max-h-56 overflow-y-auto rounded-lg border border-border">
-          <label class="sticky top-0 flex cursor-pointer items-center gap-3 border-b border-border bg-muted/60 px-4 py-2.5 text-sm font-medium backdrop-blur">
+          <label class="sticky top-0 flex cursor-pointer items-center gap-3 border-b border-border bg-muted/60 px-4 py-2.5 text-sm font-medium backdrop-blur-sm">
             <input type="checkbox" checked={allSelected} onchange={toggleSelectAll} class="h-4 w-4 accent-primary" /> Select all
           </label>
           {#each subscribers as sub (idOf(sub))}

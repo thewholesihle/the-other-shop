@@ -2,13 +2,13 @@
 // Native <input>/<select>/<textarea> are used (rather than wrapper components) so
 // `bind:value` keeps its type coercion — e.g. type="number" binding to a Number.
 export const inputCls =
-  'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors ' +
-  'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ' +
+  'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors ' +
+  'placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/40 ' +
   'focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 export const textareaCls =
-  'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors ' +
-  'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ' +
+  'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs transition-colors ' +
+  'placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/40 ' +
   'focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 export const selectCls = inputCls + ' cursor-pointer pr-8';

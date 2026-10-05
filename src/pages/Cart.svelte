@@ -208,7 +208,7 @@
   }
 
   function inputClass() {
-    return 'w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors';
+    return 'w-full bg-transparent border border-border px-3 py-2.5 text-sm focus:outline-hidden focus:border-foreground transition-colors';
   }
 
   const SA_PROVINCES = [
@@ -229,7 +229,7 @@
     <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-5xl mx-auto">
 
       {#if processingPayment}
-        <div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs">
           <div class="bg-card p-10 shadow-2xl text-center border border-border border-b-4 border-b-foreground max-w-md mx-4 animate-fade-up">
             <div class="w-10 h-10 border-4 border-foreground/20 border-t-foreground rounded-full animate-spin mx-auto mb-6"></div>
             <h2 class="text-2xl font-bold font-display mb-3">Processing Payment</h2>
@@ -295,7 +295,7 @@
             <div class="space-y-4">
               {#each $cart as item}
                 <div class="flex gap-4 border-b border-border pb-4">
-                  <Img src={item.image} alt={item.name} widths={[160, 320]} fallbackWidth={320} sizes="80px" class="w-20 h-24 object-cover bg-secondary flex-shrink-0" />
+                  <Img src={item.image} alt={item.name} widths={[160, 320]} fallbackWidth={320} sizes="80px" class="w-20 h-24 object-cover bg-secondary shrink-0" />
                   <div class="flex-1 min-w-0">
                     <p class="font-medium">{item.name}</p>
                     <p class="text-xs text-muted-foreground mt-0.5">{[item.size && `Size: ${item.size}`, item.color && `Color: ${item.color}`].filter(Boolean).join(' · ')}</p>
@@ -307,7 +307,7 @@
                       <button aria-label="Remove item" onclick={() => cart.removeItem(item.key)} class="ml-2 text-xs text-muted-foreground hover:text-destructive transition-colors">Remove</button>
                     </div>
                   </div>
-                  <p class="font-medium tabular-nums flex-shrink-0">{currency}{(item.price * item.quantity).toFixed(2)}</p>
+                  <p class="font-medium tabular-nums shrink-0">{currency}{(item.price * item.quantity).toFixed(2)}</p>
                 </div>
               {/each}
             </div>
@@ -335,7 +335,7 @@
                   <span class="tabular-nums">{currency}{grandTotal.toFixed(2)}</span>
                 </div>
               </div>
-              <div class="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded">
+              <div class="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-[0.25rem]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 {selectedMethod ? `Secured by ${selectedMethod.label}` : 'Secure checkout'} · SA only
               </div>
@@ -403,7 +403,7 @@
               </div>
               <div>
                 <label for="co-prov" class="text-label block mb-1.5">PROVINCE</label>
-                <select id="co-prov" required bind:value={form.province} class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground transition-colors">
+                <select id="co-prov" required bind:value={form.province} class="w-full bg-background border border-border px-3 py-2.5 text-sm focus:outline-hidden focus:border-foreground transition-colors">
                   <option value="">Select province…</option>
                   {#each SA_PROVINCES as p}<option value={p}>{p}</option>{/each}
                 </select>
@@ -478,7 +478,7 @@
             <h2 class="text-label">ORDER SUMMARY</h2>
             {#each $cart as item}
               <div class="flex gap-3 text-sm">
-                <Img src={item.image} alt={item.name} widths={[96, 192]} fallbackWidth={192} sizes="48px" class="w-12 h-12 object-cover bg-secondary flex-shrink-0" />
+                <Img src={item.image} alt={item.name} widths={[96, 192]} fallbackWidth={192} sizes="48px" class="w-12 h-12 object-cover bg-secondary shrink-0" />
                 <div class="flex-1">
                   <p class="font-medium">{item.name}</p>
                   <p class="text-xs text-muted-foreground">{[item.size, item.color].filter(Boolean).join(' / ')} × {item.quantity}</p>

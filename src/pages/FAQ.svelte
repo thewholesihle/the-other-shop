@@ -36,7 +36,7 @@
               onclick={() => (open = open === item.id ? null : item.id)}
               class="w-full flex items-center justify-between py-5 text-left font-medium hover:text-foreground transition-colors">
               <span>{item.question}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="flex-shrink-0 transition-transform duration-200 {open === item.id ? 'rotate-180' : ''}"><path d="m6 9 6 6 6-6"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="shrink-0 transition-transform duration-200 {open === item.id ? 'rotate-180' : ''}"><path d="m6 9 6 6 6-6"/></svg>
             </button>
             {#if open === item.id}
               <p class="pb-5 text-sm text-muted-foreground leading-relaxed animate-fade-in">{item.answer}</p>

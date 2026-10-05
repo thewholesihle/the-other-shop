@@ -232,7 +232,7 @@
             <div>
               <label for="c-{key}" class="mb-2 block text-sm font-medium leading-none">{label}</label>
               <div class="flex items-center gap-2 rounded-md border border-input bg-background p-1">
-                <input id="c-{key}" type="color" bind:value={form.colors[key]} class="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+                <input id="c-{key}" type="color" bind:value={form.colors[key]} class="h-8 w-8 cursor-pointer rounded-[0.25rem] border-0 bg-transparent p-0" />
                 <span class="text-xs uppercase tabular-nums text-muted-foreground">{form.colors[key]}</span>
               </div>
             </div>
@@ -309,7 +309,7 @@
                     <button type="button" onclick={() => (form.hero.video = '')} class="text-xs text-destructive hover:underline">Remove</button>
                   </div>
                 {/if}
-                <label class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring/50">
+                <label class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium shadow-xs transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring/50">
                   {#if uploadingVideo}<LoaderCircle size={15} class="animate-spin" /> Uploading…{:else}<Upload size={15} /> Upload video or GIF{/if}
                   <input type="file" accept="video/mp4,video/webm,image/gif" class="sr-only" onchange={uploadHeroVideo} />
                 </label>
@@ -406,12 +406,12 @@
                   <TriangleAlert size={15} class="mt-0.5 shrink-0" />
                   <p>
                     {#if p.id === 'payfast'}
-                      PayFast credentials aren’t set on the server, so it won’t be offered{enabled ? '' : ' even if switched on'}. Add <code class="rounded bg-muted px-1 text-xs text-foreground">PAYFAST_MERCHANT_ID_*</code> and <code class="rounded bg-muted px-1 text-xs text-foreground">PAYFAST_MERCHANT_KEY_*</code>, then restart.
+                      PayFast credentials aren’t set on the server, so it won’t be offered{enabled ? '' : ' even if switched on'}. Add <code class="rounded-[0.25rem] bg-muted px-1 text-xs text-foreground">PAYFAST_MERCHANT_ID_*</code> and <code class="rounded-[0.25rem] bg-muted px-1 text-xs text-foreground">PAYFAST_MERCHANT_KEY_*</code>, then restart.
                     {:else if p.info?.keyMismatch}
-                      The Yoco key doesn’t match the mode: a {p.info.mode === 'test' ? 'live' : 'test'} key is set while the server is in <strong>{p.info.mode}</strong> mode. Fix <code class="rounded bg-muted px-1 text-xs text-foreground">YOCO_SANDBOX</code> or the key, then restart.
+                      The Yoco key doesn’t match the mode: a {p.info.mode === 'test' ? 'live' : 'test'} key is set while the server is in <strong>{p.info.mode}</strong> mode. Fix <code class="rounded-[0.25rem] bg-muted px-1 text-xs text-foreground">YOCO_SANDBOX</code> or the key, then restart.
                     {:else}
                       Yoco isn’t finished being set up{enabled ? '' : ', so switching it on won’t show it yet'}:
-                      {#if !p.info?.hasKey}add <code class="rounded bg-muted px-1 text-xs text-foreground">YOCO_SECRET_KEY_{p.info?.mode === 'live' ? 'LIVE' : 'TEST'}</code>{/if}{#if !p.info?.hasKey && !p.info?.hasWebhookSecret} and {/if}{#if !p.info?.hasWebhookSecret}register the webhook (below) and add <code class="rounded bg-muted px-1 text-xs text-foreground">YOCO_WEBHOOK_SECRET_{p.info?.mode === 'live' ? 'LIVE' : 'TEST'}</code>{/if}. Restart the server afterwards.
+                      {#if !p.info?.hasKey}add <code class="rounded-[0.25rem] bg-muted px-1 text-xs text-foreground">YOCO_SECRET_KEY_{p.info?.mode === 'live' ? 'LIVE' : 'TEST'}</code>{/if}{#if !p.info?.hasKey && !p.info?.hasWebhookSecret} and {/if}{#if !p.info?.hasWebhookSecret}register the webhook (below) and add <code class="rounded-[0.25rem] bg-muted px-1 text-xs text-foreground">YOCO_WEBHOOK_SECRET_{p.info?.mode === 'live' ? 'LIVE' : 'TEST'}</code>{/if}. Restart the server afterwards.
                     {/if}
                   </p>
                 </div>
@@ -425,7 +425,7 @@
                     <code class="min-w-0 flex-1 truncate rounded-md border border-input bg-muted px-3 py-2 text-xs" title={pay.yoco.webhookUrl}>{pay.yoco.webhookUrl}</code>
                     <Button variant="outline" size="sm" onclick={() => copyText(pay.yoco.webhookUrl)} aria-label="Copy webhook address"><Copy size={14} /> Copy</Button>
                   </div>
-                  <p class={hintCls}>Register it once with <code class="rounded bg-muted px-1 text-xs">node scripts/yoco-webhook.js {pay.yoco.webhookUrl}</code> and save the printed secret as <code class="rounded bg-muted px-1 text-xs">YOCO_WEBHOOK_SECRET_{pay.yoco.mode === 'live' ? 'LIVE' : 'TEST'}</code>.</p>
+                  <p class={hintCls}>Register it once with <code class="rounded-[0.25rem] bg-muted px-1 text-xs">node scripts/yoco-webhook.js {pay.yoco.webhookUrl}</code> and save the printed secret as <code class="rounded-[0.25rem] bg-muted px-1 text-xs">YOCO_WEBHOOK_SECRET_{pay.yoco.mode === 'live' ? 'LIVE' : 'TEST'}</code>.</p>
                 </div>
               {/if}
             </div>
@@ -459,7 +459,7 @@
             <p class={hintCls}>Separate several addresses with commas. They receive new-order and system alerts.</p>
           </div>
           <div class="space-y-4 border-t border-border pt-5">
-            <p class="text-sm text-muted-foreground">Use <code class="rounded bg-muted px-1.5 py-0.5 text-xs">{'{orderId}'}</code> to insert the order reference.</p>
+            <p class="text-sm text-muted-foreground">Use <code class="rounded-[0.25rem] bg-muted px-1.5 py-0.5 text-xs">{'{orderId}'}</code> to insert the order reference.</p>
             {#each EMAIL_TEMPLATES as [key, label]}
               <div>
                 <label for="template-{key}" class={labelCls}>{label}</label>
@@ -530,7 +530,7 @@
     </div>
   </div>
 
-  <div class="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur md:left-60">
+  <div class="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur-sm md:left-60">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
       <p class="text-sm {dirty ? 'text-foreground' : 'text-muted-foreground'}">{dirty ? 'You have unsaved changes' : 'All changes saved'}</p>
       <div class="flex gap-2">

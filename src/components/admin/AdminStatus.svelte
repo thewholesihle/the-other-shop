@@ -232,7 +232,7 @@
 
   <Card title="Log backups" description="Snapshots of the system logs, kept separately so history survives clearing the live log.">
     {#snippet actions()}
-      <a href="/api/admin/weekly-report?format=html" target="_blank" rel="noopener" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent"><FileText size={14} /> Preview weekly summary</a>
+      <a href="/api/admin/weekly-report?format=html" target="_blank" rel="noopener" class="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-xs transition-colors hover:bg-accent"><FileText size={14} /> Preview weekly summary</a>
       <Button variant="outline" size="sm" disabled={sendingWeekly} onclick={sendWeeklyNow}>
         {#if sendingWeekly}<LoaderCircle size={14} class="animate-spin" /> Sending…{:else}<Mail size={14} /> Email it now{/if}
       </Button>
@@ -256,7 +256,7 @@
                 <p class="text-xs text-muted-foreground">{b.count} {b.count === 1 ? 'entry' : 'entries'} · {fmtBytes(b.bytes)}</p>
               </div>
               <Badge variant={b.reason === 'before-clear' ? 'warning' : 'secondary'}>{REASON[b.reason] || b.reason}</Badge>
-              <a href="/api/admin/log-backups/{b.id}/download" download class="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent"><Download size={13} /> Download</a>
+              <a href="/api/admin/log-backups/{b.id}/download" download class="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-xs transition-colors hover:bg-accent"><Download size={13} /> Download</a>
             </li>
           {/each}
         </ul>
@@ -295,7 +295,7 @@
                   </p>
                 {/if}
                 {#if log.data?.path}
-                  <p class="mt-1.5 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{log.data.method} {log.data.path}</p>
+                  <p class="mt-1.5 inline-block rounded-[0.25rem] bg-muted px-1.5 py-0.5 font-mono text-xs">{log.data.method} {log.data.path}</p>
                 {/if}
                 {#if log.data?.stack}
                   <details class="mt-2 text-xs text-muted-foreground">

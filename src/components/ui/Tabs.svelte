@@ -14,8 +14,8 @@
       onclick={() => (value = item.value)}
       class={cn(
         'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition-all',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
-        value === item.value ? 'bg-background text-foreground shadow' : 'hover:text-foreground'
+        'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50',
+        value === item.value ? 'bg-background text-foreground shadow-sm' : 'hover:text-foreground'
       )}
     >
       {item.label}

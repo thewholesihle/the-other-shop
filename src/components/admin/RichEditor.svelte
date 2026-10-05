@@ -198,10 +198,10 @@
     { icon: Undo2, title: 'Undo', action: () => exec('undo') },
     { icon: Redo2, title: 'Redo', action: () => exec('redo') },
   ];
-  const btnCls = 'inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50';
+  const btnCls = 'inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50';
 </script>
 
-<div class="overflow-hidden rounded-md border border-input bg-background shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
+<div class="overflow-hidden rounded-md border border-input bg-background shadow-xs transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
   <!-- Toolbar -->
   <div class="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/50 p-1.5" role="toolbar" aria-label="Formatting">
     {#each tools as tool}
@@ -229,7 +229,7 @@
     tabindex="0"
     ondblclick={handleDoubleClick}
     onpaste={handlePaste}
-    class="min-h-[280px] p-4 text-sm focus:outline-none [&_h2]:font-semibold [&_h2]:text-xl [&_h2]:my-3 [&_h3]:font-semibold [&_h3]:text-lg [&_h3]:my-2 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_a]:underline [&_a]:text-foreground [&_img]:max-w-full [&_img]:rounded [&_video]:max-w-full [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_u]:underline [&_s]:line-through"
+    class="min-h-[280px] p-4 text-sm focus:outline-hidden [&_h2]:font-semibold [&_h2]:text-xl [&_h2]:my-3 [&_h3]:font-semibold [&_h3]:text-lg [&_h3]:my-2 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_a]:underline [&_a]:text-foreground [&_img]:max-w-full [&_img]:rounded-[0.25rem] [&_video]:max-w-full [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_u]:underline [&_s]:line-through"
     oninput={emit}
   ></div>
 </div>

@@ -40,7 +40,7 @@
   <div class="flex items-end justify-between mb-12">
     <div>
       <p class="text-label mb-2">{mode === 'arrivals' ? 'Just landed' : 'Latest'}</p>
-      <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight">{mode === 'arrivals' ? 'New Arrivals' : 'New Drops'}</h2>
+      <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight md:leading-[1.1111]">{mode === 'arrivals' ? 'New Arrivals' : 'New Drops'}</h2>
     </div>
     <a href={viewAllHref} onclick={shopAll} class="text-label hover:text-foreground transition-colors border-b border-current pb-0.5">VIEW ALL</a>
   </div>

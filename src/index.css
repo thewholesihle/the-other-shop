@@ -2,9 +2,11 @@
    than @import'd here — an @import nested inside this bundled stylesheet wouldn't be
    discovered until bundle.css itself finished loading, adding a full serial round-trip
    before the font even started downloading. See index.html for the real link. */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind 4. The theme (colours from CSS variables, radii, keyframes, the animate plugin) still lives in
+   tailwind.config.js and is loaded with @config. Source detection is limited to src/ so nothing else is scanned. */
+@import "tailwindcss" source(none);
+@source "./**/*.{svelte,html,js,ts}";
+@config "../tailwind.config.js";
 
 @layer base {
   :root {
@@ -158,6 +160,12 @@
     @apply border-border;
   }
 
+  /* Tailwind 4 stopped making buttons show the pointer cursor; this app relies on it. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
@@ -168,22 +176,24 @@
   }
 }
 
-@layer utilities {
-  .text-label {
-    @apply uppercase tracking-[0.2em] text-xs font-medium;
-  }
-  /* The default label colour has ZERO specificity (:where), so an explicit text colour on the same
-     element always wins. Before, `.text-label` out-ranked utilities like text-primary-foreground and
-     rendered muted-grey labels on dark buttons, tabs and the footer (≈2.8:1). */
+/* The label style. Deliberately NOT a utility: as plain, unlayered CSS it outranks utilities like tracking-* and
+   text-[10px] on the same element, exactly as it did under Tailwind 3 (so every existing label keeps its look). */
+.text-label {
+  @apply uppercase tracking-[0.2em] text-xs font-medium;
+}
+/* The default label colour has ZERO specificity (:where) and sits in the base layer, so an explicit text colour
+   (a utility) always wins, and so does a button's own `color: inherit` from the reset. Same result as under
+   Tailwind 3, where specificity decided it. */
+@layer base {
   :where(.text-label) {
     color: hsl(var(--muted-foreground));
   }
+}
 
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
     display: none;
   }
 }

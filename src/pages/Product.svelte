@@ -244,7 +244,7 @@
                       type="button"
                       onclick={() => openZoom(i)}
                       aria-label="Zoom photo {i + 1} of {images.length}"
-                      class="block w-full overflow-hidden rounded bg-secondary cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+                      class="block w-full overflow-hidden rounded-[0.25rem] bg-secondary cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
                     >
                       <Img
                         src={img}
@@ -274,7 +274,7 @@
             {#if product.isNew}
               <span class="inline-block text-[10px] tracking-[0.2em] uppercase bg-foreground text-primary-foreground px-2 py-0.5 mb-3">New</span>
             {/if}
-            <h1 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight mb-2">{product.name}</h1>
+            <h1 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight md:leading-[1.1111] mb-2">{product.name}</h1>
             <p class="text-2xl font-medium tabular-nums">{data.site.currency}{product.price.toFixed(2)}</p>
             {#if stockInfo}
               <p
@@ -306,7 +306,7 @@
                       aria-pressed={selectedColor === color}
                       aria-label="{color}{out ? ' (sold out)' : ''}"
                       title={color}
-                      class="relative w-16 sm:w-[72px] overflow-hidden rounded border-2 bg-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground {selectedColor === color ? 'border-foreground' : 'border-transparent hover:border-foreground/50'} {out ? 'cursor-not-allowed opacity-40' : ''}">
+                      class="relative w-16 sm:w-[72px] overflow-hidden rounded-[0.25rem] border-2 bg-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground {selectedColor === color ? 'border-foreground' : 'border-transparent hover:border-foreground/50'} {out ? 'cursor-not-allowed opacity-40' : ''}">
                       <Img src={thumbSrc} alt="" widths={[72, 144, 216]} fallbackWidth={144} sizes="72px" width="72" height="90" class="aspect-[4/5] w-full object-cover" />
                       {#if out}<span class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top_right,transparent_calc(50%-1px),hsl(var(--foreground)/0.6)_50%,transparent_calc(50%+1px))]"></span>{/if}
                     </button>

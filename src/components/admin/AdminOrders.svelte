@@ -472,7 +472,7 @@
               {@const st = statusOf(order.status)}
               <tr class="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-muted/50 {selectedId === order.id && sheetOpen ? 'bg-muted/60' : ''}" onclick={() => openOrder(order)}>
                 <td class={tdCls}>
-                  <button type="button" class="text-left font-medium tabular-nums focus-visible:underline focus-visible:outline-none">{order.id}</button>
+                  <button type="button" class="text-left font-medium tabular-nums focus-visible:underline focus-visible:outline-hidden">{order.id}</button>
                   <div class="text-xs text-muted-foreground">{fmtDate(order, { dateStyle: 'medium', timeStyle: 'short' })}</div>
                 </td>
                 <td class="{tdCls} hidden md:table-cell">
