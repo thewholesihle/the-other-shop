@@ -40,7 +40,7 @@
   $: socials = site.socials ? Object.entries(site.socials).filter(([_, href]) => href && href.trim() !== '') : [];
 
   let email = '';
-  let subState = 'idle'; // 'idle' | 'loading' | 'done' | 'error' | 'exists'
+  let subState = 'idle'; // 'idle' | 'loading' | 'done' | 'pending' (check your inbox) | 'error' | 'exists'
 
   async function subscribe() {
     if (!email || subState === 'loading') return;
@@ -53,8 +53,8 @@
       });
       const data = await res.json();
       if (!res.ok) { subState = 'error'; return; }
-      subState = data.already ? 'exists' : 'done';
-      if (subState === 'done') email = '';
+      subState = data.already ? 'exists' : data.pending ? 'pending' : 'done';
+      if (subState === 'done' || subState === 'pending') email = '';
     } catch { subState = 'error'; }
   }
 
@@ -98,7 +98,12 @@
       <p class="text-label text-on-dark mb-2">NEWSLETTER</p>
       <p class="text-sm text-on-dark">Sign up for drops, exclusives &amp; community news.</p>
     </div>
-    {#if subState === 'done'}
+    {#if subState === 'pending'}
+      <div class="flex items-center gap-2 text-sm text-on-dark" role="status">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        Almost there — check your inbox to confirm.
+      </div>
+    {:else if subState === 'done'}
       <div class="flex items-center gap-2 text-sm text-on-dark">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6 9 17l-5-5"/></svg>
         You're subscribed!

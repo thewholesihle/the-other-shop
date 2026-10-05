@@ -76,14 +76,14 @@
   // `updated` here is always merged against a freshly-fetched copy of the data
   // (see updateSection), so this never re-persists a stale snapshot of
   // sections it didn't intend to touch.
-  async function saveData(updated) {
+  async function saveData(partial, key, value) {
     saveError = null;
     saving = true;
     try {
       const res = await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
+        body: JSON.stringify(partial),
         credentials: 'include',
       });
       if (!res.ok) {
@@ -91,9 +91,9 @@
         throw new Error(body.error || `Save failed: ${res.status}`);
       }
       toast.success('Saved to database');
-      // The blob we just sent IS what's now persisted — trust it instead of a
-      // second round-trip GET, so the UI doesn't flash/reset after every save.
-      data = updated;
+      // What we just sent IS what's now persisted — trust it instead of a second round-trip GET,
+      // so the UI doesn't flash/reset after every save.
+      data = { ...data, [key]: value };
     } finally {
       saving = false;
     }
@@ -212,10 +212,32 @@
   // (a customer checkout, an order cancellation) may have changed since.
   async function updateSection(key, value) {
     try {
-      const fresh = await loadData();
-      const updated = { ...fresh, [key]: value };
-      data = updated; // optimistic update
-      await saveData(updated);
+      // Send ONLY what changed. The rest of the store (stock, orders, subscribers…) keeps changing under an open
+      // admin tab, and re-sending a copy of it would overwrite those newer values. For lists that means only the
+      // documents that differ from what this tab loaded, plus the ids that were removed (deleting by omission would
+      // also delete anything added since the tab loaded).
+      const prev = data?.[key];
+      let payload = { [key]: value };
+      if (Array.isArray(value) && Array.isArray(prev)) {
+        const before = new Map(prev.map(d => [d.id, JSON.stringify(d)]));
+        const now = new Set(value.map(d => d.id));
+        let changed = value.filter(d => before.get(d.id) !== JSON.stringify(d));
+        if (key === 'products') {
+          // Stock changes by sales while this tab is open, so say what stock we started from; the server then applies
+          // only the difference to the live number (see mergeProductStock in server.js).
+          const loaded = new Map(prev.map(p => [p.id, p]));
+          changed = changed.map(p => {
+            const old = loaded.get(p.id);
+            return old ? { ...p, _base: { stock: old.stock, variants: (old.variants || []).map(v => ({ size: v.size, color: v.color, stock: v.stock })) } } : p;
+          });
+        }
+        payload = {
+          [key]: changed,
+          removed: { [key]: prev.filter(d => !now.has(d.id)).map(d => d.id) },
+        };
+      }
+      data = { ...data, [key]: value }; // optimistic update
+      await saveData(payload, key, value);
     } catch (e) {
       toast.error(e.message);
       throw e;
@@ -297,7 +319,7 @@
     {:else if activeSection === 'subscribers'}
       <AdminSubscribers subscribers={data.subscribers} onUpdate={updateSubscribers} />
     {:else if activeSection === 'newsletter'}
-      <AdminNewsletter subscribers={data.subscribers} siteName={data.site?.name} />
+      <AdminNewsletter subscribers={data.subscribers.filter(s => s.confirmed !== false)} siteName={data.site?.name} />
     {:else if activeSection === 'status'}
       <AdminStatus />
     {:else if activeSection === 'settings'}

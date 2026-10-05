@@ -44,5 +44,6 @@ module.exports = {
   WeeklySummary: { brand, report, adminUrl: 'https://others.example/admin/status' },
   TestEmail: { brand, from: 'onboarding@resend.dev', sandbox: true },
   Newsletter: { brand, subject: 'New drop: Spring capsule', html: newsletterHtml, preview: 'Six new pieces are live today.', unsubscribeUrl: 'https://others.example/api/newsletter/unsubscribe?email=a%40b.co&token=x' },
+  ConfirmSubscription: { brand, confirmUrl: 'https://others.example/api/newsletter/confirm?email=a%40b.co&token=x' },
   SystemAlert: { brand, heading: 'Site alert', message: 'The system detected an internal error that might need your attention.', errorMessage: 'MongoServerError: connection 4 to db timed out', path: 'POST /api/checkout', adminUrl: 'https://others.example/admin/status' },
 };

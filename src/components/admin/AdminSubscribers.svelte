@@ -76,7 +76,7 @@
         <tbody>
           {#each filtered as sub (sub.id)}
             <tr class="border-b border-border/60 last:border-0 hover:bg-muted/50">
-              <td class="{tdCls} font-medium">{sub.email}</td>
+              <td class="{tdCls} font-medium">{sub.email}{#if sub.confirmed === false} <span class="ml-2 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">Awaiting confirmation</span>{/if}</td>
               <td class="{tdCls} hidden text-muted-foreground md:table-cell">{sub.date}</td>
               <td class="{tdCls} text-right">
                 <Button variant="ghost" size="icon" aria-label="Remove {sub.email}" class="hover:text-destructive" onclick={() => removeSubscriber(sub)}><Trash2 size={15} /></Button>

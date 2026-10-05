@@ -20,6 +20,7 @@ const compression = require('compression');
 const { parseUserAgent } = require('./src/device');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
+const { isDeepStrictEqual } = require('util');
 const auth = require('./src/auth');
 const { yocoConfig, YocoError, createYocoCheckout, verifyYocoWebhook } = require('./src/services/yoco');
 const { renderEmail, sanitizeEmailHtml } = require('./src/emails');
@@ -241,6 +242,10 @@ function emitOrderEvent(action, order) {
     id: order?.id, customer: order?.customer, total: order?.total, status: order?.status,
   });
 }
+
+// The caller's address as Express resolves it through the one trusted proxy (see `trust proxy`). Reading the raw
+// X-Forwarded-For header instead would let any caller claim to be PayFast's servers.
+const clientIp = (req) => String(req.ip || req.socket?.remoteAddress || '').replace(/^::ffff:/, '');
 
 // ─── PayFast Config ───────────────────────────────────────────────────────────
 const isSandbox = process.env.PAYFAST_SANDBOX === 'true';
@@ -550,11 +555,42 @@ const deleteCloudinaryAsset = async (url) => {
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 // The Yoco webhook is signed over the exact bytes it sent, so keep the raw body for that one route.
+// Big bodies only where an admin sends them (the data blob, newsletter HTML); everything public — checkout,
+// subscribe, webhooks — is capped small so it can't be used to make the server buffer megabytes per request.
+app.use(['/api/data', '/api/newsletter/broadcast'], express.json({ limit: '10mb' }));
 app.use(express.json({
-  limit: '10mb',
+  limit: '200kb',
   verify: (req, _res, buf) => { if (req.originalUrl.startsWith('/api/yoco/webhook')) req.rawBody = buf; },
 }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200kb' }));
+// ─── robots.txt + sitemap.xml ─────────────────────────────────────────────────
+// Built from the live catalogue so new products, lookbooks and stories are discoverable without anyone
+// maintaining a file. The admin and the API are kept out of search results.
+const siteBase = (req) => (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(['User-agent: *', 'Allow: /', 'Disallow: /admin', 'Disallow: /api/', 'Disallow: /cart', 'Disallow: /payment/', '', `Sitemap: ${siteBase(req)}/sitemap.xml`, ''].join('\n'));
+});
+const xmlEsc = (v) => String(v).replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const base = siteBase(req);
+    const [products, lookbooks, articles] = await Promise.all([
+      Product.find().select('id').lean(), Lookbook.find().select('id').lean(), Article.find({ published: true }).select('slug id').lean(),
+    ]);
+    const urls = [
+      ...['/', '/shop', '/lookbook', '/community', '/contact', '/faq', '/shipping-returns'],
+      ...products.map(p => `/shop/${encodeURIComponent(p.id)}`),
+      ...lookbooks.map(l => `/lookbook/${encodeURIComponent(l.id)}`),
+      ...articles.map(a => `/community/${encodeURIComponent(a.slug || a.id)}`),
+    ];
+    res.type('application/xml').set('Cache-Control', 'public, max-age=3600')
+      .send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `  <url><loc>${xmlEsc(base + u)}</loc></url>`).join('\n')}\n</urlset>\n`);
+  } catch (err) {
+    console.error('sitemap', err.message);
+    res.status(503).type('text/plain').send('Sitemap unavailable.');
+  }
+});
+
 // `index: false` — otherwise this would auto-serve the bare index.html for GET /
 // before the SEO-meta-injecting route below ever gets a chance to run.
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -583,12 +619,12 @@ async function adjustVariantStock(query, size, color, delta) {
   const s = size || '', c = color || '';
   const result = await Product.updateOne(
     { ...query, variants: { $elemMatch: { size: s, color: c } } },
-    { $inc: { 'variants.$[v].stock': delta, stock: delta } },
+    { $inc: { rev: 1, 'variants.$[v].stock': delta, stock: delta } },
     { arrayFilters: [{ 'v.size': s, 'v.color': c }] }
   );
   if (result.matchedCount === 0) {
     // Legacy product with no matching variant — just adjust the aggregate so we don't lose the count.
-    await Product.updateOne(query, { $inc: { stock: delta } });
+    await Product.updateOne(query, { $inc: { rev: 1, stock: delta } });
   }
 }
 
@@ -621,9 +657,53 @@ async function readData() {
   };
 }
 
-/** Persist a full data blob (from admin save) back to MongoDB */
+/** True when `doc` carries nothing the stored copy doesn't already have (so there's nothing to write). */
+const strip = (d) => { const { _id, __v, createdAt, updatedAt, rev, ...rest } = d || {}; return rest; };
+const unchanged = (existing, doc) => Boolean(existing) && Object.keys(strip(doc)).every(k => isDeepStrictEqual(strip(existing)[k], strip(doc)[k]));
+
+const { mergeProductStock } = require('./src/stockMerge');
+
+/** Writes admin product edits. Each product is read, merged with its live stock, and written only if its revision
+ *  hasn't moved in between (a sale bumps it); if it has, it is re-read and merged again. */
+async function writeProducts(list) {
+  for (const raw of list) {
+    if (!raw || !raw.id) continue;
+    const { _base: base, rev: _rev, _id, ...incoming } = raw;
+    let done = false;
+    for (let attempt = 0; attempt < 6 && !done; attempt++) {
+      const stored = await Product.findOne({ id: incoming.id }).lean();
+      if (!stored) {
+        const fresh = mergeProductStock({ stock: 0, variants: [] }, incoming, null);
+        await Product.findOneAndUpdate({ id: incoming.id }, { $set: fresh }, { upsert: true });
+        done = true; break;
+      }
+      const merged = mergeProductStock(stored, incoming, base);
+      if (unchanged(stored, merged)) { done = true; break; }
+      const guard = stored.rev === undefined ? { rev: { $exists: false } } : { rev: stored.rev };
+      const res = await Product.updateOne({ id: incoming.id, ...guard }, { $set: merged, $inc: { rev: 1 } });
+      done = res.matchedCount > 0; // 0 → a sale changed it between the read and the write: loop and merge again
+    }
+    if (!done) throw new Error(`"${raw.name || raw.id}" was changing too quickly to save safely. Try again.`);
+  }
+}
+
+/** Persist (parts of) the admin's data blob back to MongoDB.
+ *
+ * The admin saves one section at a time, and within a section only documents that really differ from what is
+ * stored are written. That matters because customers keep changing live data underneath an open admin tab —
+ * above all product stock, which every checkout decrements. Re-writing an unchanged product from a copy loaded a
+ * moment earlier would silently undo a purchase made in between. */
 async function writeData(blob) {
   const ops = [];
+
+  // Upsert each doc in `list` into `Model` (matched on `key`), skipping the ones already identical.
+  const upsertChanged = async (Model, list, key = 'id', prep = (d) => d) => {
+    const docs = list.filter(Boolean).map(prep);
+    const stored = new Map((await Model.find({ [key]: { $in: docs.map(d => d[key]) } }).lean()).map(d => [d[key], d]));
+    for (const d of docs) {
+      if (!unchanged(stored.get(d[key]), d)) ops.push(Model.findOneAndUpdate({ [key]: d[key] }, { $set: d }, { upsert: true }));
+    }
+  };
 
   if (blob.site) {
     ops.push(Settings.findOneAndUpdate(
@@ -638,13 +718,14 @@ async function writeData(blob) {
     // reappearing after reload, and products that referenced it were left pointing
     // at a dangling id. Diff against what's currently stored so a removal actually
     // deletes the category and reassigns its products to "uncategorized".
+    // The admin lists exactly which ids it removed; an older client that doesn't falls back to "not in the list".
     const existingCategoryIds = (await Category.find().select('id').lean()).map(c => c.id);
     const keptIds = new Set(blob.categories.map(c => c.id));
-    const removedIds = existingCategoryIds.filter(id => !keptIds.has(id));
+    const removedIds = Array.isArray(blob.removed?.categories)
+      ? blob.removed.categories.filter(id => typeof id === 'string' && existingCategoryIds.includes(id))
+      : existingCategoryIds.filter(id => !keptIds.has(id));
 
-    ops.push(...blob.categories.map(c =>
-      Category.findOneAndUpdate({ id: c.id }, { $set: c }, { upsert: true })
-    ));
+    await upsertChanged(Category, blob.categories);
 
     if (removedIds.length) {
       ops.push(Category.deleteMany({ id: { $in: removedIds } }));
@@ -652,34 +733,15 @@ async function writeData(blob) {
     }
   }
 
-  if (blob.products) {
-    ops.push(...blob.products.map(p => {
-      // Keep the aggregate `stock` total in sync with per-variant stock entered in the admin UI.
-      if (Array.isArray(p.variants) && p.variants.length > 0) {
-        p = { ...p, stock: p.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0) };
-      }
-      return Product.findOneAndUpdate({ id: p.id }, { $set: p }, { upsert: true });
-    }));
-  }
+  if (blob.products) await writeProducts(blob.products); // (also keeps the aggregate `stock` total in sync with the variants)
 
   if (blob.events) {
     // Only validated, well-formed events are written; the admin UI is the only caller (requireAdmin).
-    ops.push(...blob.events.filter(e => e && e.id && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date || '')).map(e =>
-      Event.findOneAndUpdate({ id: e.id }, { $set: e }, { upsert: true })
-    ));
+    await upsertChanged(Event, blob.events.filter(e => e && e.id && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date || '')));
   }
 
-  if (blob.lookbooks) {
-    ops.push(...blob.lookbooks.map(lb =>
-      Lookbook.findOneAndUpdate({ id: lb.id }, { $set: lb }, { upsert: true })
-    ));
-  }
-
-  if (blob.community) {
-    ops.push(...blob.community.map(a =>
-      Article.findOneAndUpdate({ id: a.id }, { $set: a }, { upsert: true })
-    ));
-  }
+  if (blob.lookbooks) await upsertChanged(Lookbook, blob.lookbooks);
+  if (blob.community) await upsertChanged(Article, blob.community);
 
   if (blob.pages) {
     ops.push(Pages.findOneAndUpdate(
@@ -691,17 +753,14 @@ async function writeData(blob) {
   if (blob.subscribers) {
     // Same missing-deletion gap as categories: removing a row from this array must
     // actually delete it, not just leave it unupserted (which reappears on reload).
+    // Only rows that existed when this section was loaded may be deleted — never ones added since.
     const existingSubscriberIds = (await Subscriber.find().select('id').lean()).map(s => s.id);
     const keptIds = new Set(blob.subscribers.map(s => s.id));
-    const removedIds = existingSubscriberIds.filter(id => !keptIds.has(id));
+    const removedIds = Array.isArray(blob.removed?.subscribers)
+      ? blob.removed.subscribers.filter(id => typeof id === 'string' && existingSubscriberIds.includes(id))
+      : existingSubscriberIds.filter(id => !keptIds.has(id));
 
-    ops.push(...blob.subscribers.map(s =>
-      Subscriber.findOneAndUpdate(
-        { email: s.email?.toLowerCase() },
-        { $set: s },
-        { upsert: true }
-      )
-    ));
+    await upsertChanged(Subscriber, blob.subscribers.filter(x => x.email).map(x => ({ ...x, email: x.email.toLowerCase() })), 'email');
 
     if (removedIds.length) {
       ops.push(Subscriber.deleteMany({ id: { $in: removedIds } }));
@@ -1544,25 +1603,78 @@ app.get('/api/orders', requireAdmin, async (_req, res) => {
 });
 
 // ─── API: Newsletter ──────────────────────────────────────────────────────────
-app.post('/api/newsletter', async (req, res) => {
-  const email = (req.body.email || '').toLowerCase().trim();
-  if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+// Signing up is the one public form that makes the server email a stranger, so it is limited tightly per
+// connection, and nobody is subscribed until the address owner confirms (double opt-in).
+const subscribeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many sign-ups from this connection. Please try again later.' },
+});
+app.post('/api/newsletter', subscribeLimiter, async (req, res) => {
+  const email = String(req.body.email || '').toLowerCase().trim();
+  if (!email || email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return res.status(400).json({ error: 'Invalid email.' });
   }
   try {
     const existing = await Subscriber.findOne({ email });
-    if (existing) return res.json({ ok: true, already: true });
+    if (existing && existing.confirmed !== false) return res.json({ ok: true, already: true });
 
-    await Subscriber.create({
-      id: `s-${Date.now()}`,
-      email,
-      date: new Date().toISOString().slice(0, 10),
-    });
-    res.json({ ok: true });
+    const emailOn = Boolean(process.env.RESEND_API_KEY);
+    if (!existing) {
+      await Subscriber.create({
+        id: `s-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+        email,
+        date: new Date().toISOString().slice(0, 10),
+        confirmed: !emailOn, // with no email service there is no way to confirm, so don't strand the signup
+        requestedAt: new Date(),
+      });
+    }
+    if (!emailOn) return res.json({ ok: true });
+
+    // A pending address asking again within two minutes is not mailed again (stops it being used to spam someone).
+    const recent = existing && Date.now() - new Date(existing.requestedAt || 0).getTime() < 2 * 60 * 1000;
+    if (!recent) {
+      if (existing) await Subscriber.updateOne({ email }, { $set: { requestedAt: new Date() } });
+      const { site, contactAddress } = await getEmailBranding();
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const confirmUrl = `${baseUrl}/api/newsletter/confirm?email=${encodeURIComponent(email)}&token=${unsubscribeToken('confirm:' + email)}`;
+      await sendTemplate('ConfirmSubscription', {
+        brand: await emailBrand(site, contactAddress, baseUrl), confirmUrl,
+      }, {
+        from: `${site?.name || 'Others.'} <${EMAIL_FROM}>`, to: email,
+        subject: `Confirm your subscription to ${site?.name || 'Others.'}`,
+      }, `Confirm your subscription: ${confirmUrl}`);
+    }
+    res.json({ ok: true, pending: true });
   } catch (err) {
     console.error('POST /api/newsletter', err);
     res.status(500).json({ error: 'Could not save subscriber.' });
   }
+});
+
+// The link in the confirmation email. GET because it is clicked from an inbox; the token proves the link was
+// issued for that address.
+app.get('/api/newsletter/confirm', async (req, res) => {
+  const email = String(req.query.email || '').toLowerCase().trim();
+  const valid = verifyUnsubscribeToken('confirm:' + email, req.query.token);
+  let confirmed = false;
+  if (valid) {
+    try { confirmed = (await Subscriber.updateOne({ email }, { $set: { confirmed: true } })).matchedCount > 0; } catch (e) { console.error('Confirm failed:', e.message); }
+  }
+  res.status(confirmed ? 200 : 400).send(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${confirmed ? 'Subscription confirmed' : 'Link invalid'}</title>
+<style>
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#f4f4f5; margin:0; padding:60px 20px; text-align:center; color:#09090b; }
+  .card { max-width:420px; margin:0 auto; background:#fff; padding:40px 32px; border:1px solid #e4e4e7; border-radius:8px; }
+  h1 { font-size:20px; margin:0 0 12px; }
+  p { font-size:14px; color:#52525b; line-height:1.6; margin:0 0 20px; }
+  a { display:inline-block; background:#18181b; color:#fafafa; text-decoration:none; padding:10px 20px; border-radius:6px; font-size:14px; }
+</style></head>
+<body><div class="card">
+${confirmed
+  ? `<h1>You're subscribed</h1><p>Thanks. ${escapeHtmlAttr(email)} will now get our newsletter. You can unsubscribe from any email.</p><a href="/">Back to the store</a>`
+  : `<h1>Link invalid or expired</h1><p>We couldn't confirm this address. Enter it in the newsletter form again to get a new link.</p><a href="/">Back to the store</a>`}
+</div></body></html>`);
 });
 
 // ─── API: Newsletter Broadcast (Admin Only) ──────────────────────────────────
@@ -1572,9 +1684,9 @@ app.post('/api/newsletter/broadcast', requireAdmin, async (req, res) => {
   if (!process.env.RESEND_API_KEY) return res.status(500).json({ error: 'RESEND_API_KEY not configured on server.' });
 
   try {
-    let query = {};
+    let query = { confirmed: { $ne: false } }; // never mail someone who hasn't confirmed
     if (subscriberIds && Array.isArray(subscriberIds) && subscriberIds.length > 0) {
-      query = { _id: { $in: subscriberIds } };
+      query = { _id: { $in: subscriberIds }, confirmed: { $ne: false } };
     }
 
     const subscribers = await Subscriber.find(query).lean();
@@ -1716,6 +1828,24 @@ const PF_IPS = [
   '41.74.179.194',  '41.74.179.195',  '41.74.179.196',  '41.74.179.197',
 ];
 
+// Order numbers stay "ORD-<timestamp>" but are strictly increasing within the process, so two checkouts in the same
+// millisecond can't collide (the unique index would reject the second one with a 500).
+let lastOrderStamp = 0;
+function nextOrderId() {
+  const now = Date.now();
+  lastOrderStamp = now > lastOrderStamp ? now : lastOrderStamp + 1;
+  return `ORD-${lastOrderStamp}`;
+}
+
+/** True when the request proves it belongs to this order's buyer (orders created before tokens existed have none). */
+async function orderTokenOk(orderId, given) {
+  const o = await Order.findOne({ id: orderId }).select('+token').lean();
+  if (!o) return { found: false, ok: false };
+  if (!o.token) return { found: true, ok: true };
+  const a = Buffer.from(o.token), b = Buffer.from(String(given || ''));
+  return { found: true, ok: a.length === b.length && crypto.timingSafeEqual(a, b) };
+}
+
 // ─── API: Checkout (PayFast) ──────────────────────────────────────────────────
 app.post('/api/checkout', async (req, res) => {
   const { order } = req.body;
@@ -1744,7 +1874,8 @@ app.post('/api/checkout', async (req, res) => {
     if (site?.shipping) shippingConfig = site.shipping;
   } catch { /* use defaults */ }
 
-  const orderId      = `ORD-${Date.now()}`;
+  const orderId      = nextOrderId();
+  const orderToken   = crypto.randomBytes(16).toString('hex');
 
   // ── Stock validation & deduction (per size/color variant) ──────────────────
   // Prices, names and images are re-read from the product records — never taken
@@ -1755,6 +1886,7 @@ app.post('/api/checkout', async (req, res) => {
   const orderItems = []; // sanitized, server-priced line items persisted on the Order
   let subtotal = 0;
   const stockErrors = [];
+  const priceChanges = []; // the customer's cart showed a different price than the store now charges
   const deducted = []; // successfully-deducted items, kept for rollback on partial failure
 
   for (const rawItem of requestedItems) {
@@ -1778,6 +1910,14 @@ app.post('/api/checkout', async (req, res) => {
     }
     // From here on the display name is the real product's, not the client's claim.
     item.name = product.name;
+
+    // Charging a different price than the one on screen is a trust problem even when the server's price is right:
+    // stop and let the customer see the new price before any stock is reserved for this line.
+    const claimed = Number(rawItem?.price);
+    if (Number.isFinite(claimed) && Math.abs(claimed - product.price) > 0.005) {
+      priceChanges.push({ key: `${product.id}-${item.size || ''}-${item.color || ''}`, name: product.name, was: claimed, now: product.price });
+      continue;
+    }
 
     const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
     const size = item.size || '', color = item.color || '';
@@ -1804,13 +1944,13 @@ app.post('/api/checkout', async (req, res) => {
     if (hasVariants) {
       result = await Product.updateOne(
         { ...query, variants: { $elemMatch: { size, color, stock: { $gte: item.quantity } } } },
-        { $inc: { 'variants.$[v].stock': -item.quantity, stock: -item.quantity } },
+        { $inc: { rev: 1, 'variants.$[v].stock': -item.quantity, stock: -item.quantity } },
         { arrayFilters: [{ 'v.size': size, 'v.color': color }] }
       );
     } else {
       result = await Product.updateOne(
         { ...query, stock: { $gte: item.quantity } },
-        { $inc: { stock: -item.quantity } }
+        { $inc: { rev: 1, stock: -item.quantity } }
       );
     }
 
@@ -1833,11 +1973,14 @@ app.post('/api/checkout', async (req, res) => {
     subtotal += product.price * item.quantity;
   }
 
-  if (stockErrors.length > 0) {
+  if (stockErrors.length > 0 || priceChanges.length > 0) {
     // Roll back anything already deducted so a partial failure doesn't strand stock.
     for (const d of deducted) {
       if (d.hasVariants) await adjustVariantStock(d.query, d.size, d.color, d.quantity);
-      else await Product.updateOne(d.query, { $inc: { stock: d.quantity } });
+      else await Product.updateOne(d.query, { $inc: { rev: 1, stock: d.quantity } });
+    }
+    if (stockErrors.length === 0) {
+      return res.status(409).json({ error: 'Some prices have changed since you added them to your cart. We have updated your cart — please review it and try again.', code: 'price_changed', priceChanges });
     }
     return res.status(400).json({ error: 'Some items are out of stock.', stockErrors });
   }
@@ -1864,6 +2007,7 @@ app.post('/api/checkout', async (req, res) => {
       shippingCost,
       status: 'pending_payment',
       paymentMethod: method,
+      token: orderToken,
     });
     emitOrderEvent('created', { id: orderId, customer: order.customer, total: parseFloat(grandTotal), status: 'pending_payment' });
   } catch (err) {
@@ -1871,7 +2015,7 @@ app.post('/api/checkout', async (req, res) => {
     // Stock was already deducted above — give it back, otherwise a failed save strands it.
     for (const d of deducted) {
       if (d.hasVariants) await adjustVariantStock(d.query, d.size, d.color, d.quantity).catch(() => {});
-      else await Product.updateOne(d.query, { $inc: { stock: d.quantity } }).catch(() => {});
+      else await Product.updateOne(d.query, { $inc: { rev: 1, stock: d.quantity } }).catch(() => {});
     }
     return res.status(500).json({ error: 'Could not create order.' });
   }
@@ -1891,16 +2035,16 @@ app.post('/api/checkout', async (req, res) => {
       const checkout = await createYocoCheckout(YOCO, {
         amount: cents(parseFloat(grandTotal)),
         currency: 'ZAR',
-        successUrl: `${baseUrl}/payment/success?orderId=${orderId}&m=yoco`,
-        cancelUrl:  `${baseUrl}/payment/cancel?orderId=${orderId}`,
-        failureUrl: `${baseUrl}/payment/cancel?orderId=${orderId}&reason=failed`,
+        successUrl: `${baseUrl}/payment/success?orderId=${orderId}&t=${orderToken}&m=yoco`,
+        cancelUrl:  `${baseUrl}/payment/cancel?orderId=${orderId}&t=${orderToken}`,
+        failureUrl: `${baseUrl}/payment/cancel?orderId=${orderId}&t=${orderToken}&reason=failed`,
         clientReferenceId: orderId,
         externalId: orderId,
         metadata: { orderId },
         lineItems,
       }, `order-${orderId}`);
       await Order.updateOne({ id: orderId }, { $set: { yocoCheckoutId: checkout.id } });
-      return res.json({ method: 'yoco', redirectUrl: checkout.redirectUrl, orderId });
+      return res.json({ method: 'yoco', redirectUrl: checkout.redirectUrl, orderId, token: orderToken });
     } catch (err) {
       console.error(`[Yoco] Could not create checkout for ${orderId}:`, err.message);
       await dbLog({
@@ -1927,7 +2071,7 @@ app.post('/api/checkout', async (req, res) => {
   params.merchant_key  = PF.merchantKey;
   // Return URLs
   params.return_url    = `${baseUrl}/payment/success`;
-  params.cancel_url    = `${baseUrl}/payment/cancel?orderId=${orderId}`;
+  params.cancel_url    = `${baseUrl}/payment/cancel?orderId=${orderId}&t=${orderToken}`;
   params.notify_url    = `${baseUrl}/api/payfast/itn`;
   // Buyer details
   params.name_first    = (order.customer || 'Customer').split(' ')[0].slice(0, 100);
@@ -1949,7 +2093,7 @@ app.post('/api/checkout', async (req, res) => {
   // Generate signature
   params.signature = pfSignature(params);
 
-  res.json({ method: 'payfast', paymentUrl: PF_HOST, params, orderId });
+  res.json({ method: 'payfast', paymentUrl: PF_HOST, params, orderId, token: orderToken });
 });
 
 // ─── Order release / stock helpers ───────────────────────────────────────────
@@ -2001,6 +2145,8 @@ async function sweepAbandonedOrders() {
       try { if (await releaseOrder(id, 'abandoned', { olderThan: cutoff })) released++; }
       catch (e) { console.error(`[Abandoned] could not release ${id}:`, e.message); }
     }
+    // Sign-ups nobody confirmed within a week are dropped, so addresses entered by someone else don't linger.
+    await Subscriber.deleteMany({ confirmed: false, requestedAt: { $lt: new Date(Date.now() - 7 * 86400000) } }).catch(() => {});
     if (released) {
       console.log(`[Abandoned] Released ${released} unpaid order(s) older than ${minutes} min.`);
       await dbLog({ id: `log-${Date.now()}-abandoned`, type: 'info', message: `Released ${released} abandoned checkout${released === 1 ? '' : 's'} (unpaid after ${minutes} min)`, context: 'PAYMENT', data: { released, minutes } });
@@ -2027,11 +2173,11 @@ async function reclaimStock(items) {
     if (product && hasVariants) {
       result = await Product.updateOne(
         { ...query, variants: { $elemMatch: { size, color, stock: { $gte: item.quantity } } } },
-        { $inc: { 'variants.$[v].stock': -item.quantity, stock: -item.quantity } },
+        { $inc: { rev: 1, 'variants.$[v].stock': -item.quantity, stock: -item.quantity } },
         { arrayFilters: [{ 'v.size': size, 'v.color': color }] }
       );
     } else if (product) {
-      result = await Product.updateOne({ ...query, stock: { $gte: item.quantity } }, { $inc: { stock: -item.quantity } });
+      result = await Product.updateOne({ ...query, stock: { $gte: item.quantity } }, { $inc: { rev: 1, stock: -item.quantity } });
     }
     if (result.modifiedCount === 0) short.push(item.name || String(item.productId || item.id));
   }
@@ -2042,11 +2188,12 @@ async function reclaimStock(items) {
 // Where the customer lands after cancelling (or failing) at PayFast or Yoco. Only an order that is
 // still unpaid is touched; a paid one is never cancelled by this.
 async function cancelCheckoutHandler(req, res) {
-  const { orderId } = req.body || {};
+  const { orderId, token } = req.body || {};
   if (!orderId || typeof orderId !== 'string') return res.status(400).json({ error: 'Missing orderId.' });
   try {
-    const exists = await Order.exists({ id: orderId });
-    if (!exists) return res.status(404).json({ error: 'Order not found.' });
+    const check = await orderTokenOk(orderId, token);
+    if (!check.found) return res.status(404).json({ error: 'Order not found.' });
+    if (!check.ok) return res.status(403).json({ error: 'That cancellation link is not valid.' });
     const released = await releaseOrder(orderId, req.body.reason === 'failed' ? 'payment_failed' : 'customer');
     if (released) console.log(`[Checkout] Order ${orderId} cancelled by customer. Stock restored.`);
     res.json({ ok: true });
@@ -2065,6 +2212,8 @@ app.get('/api/checkout/status', async (req, res) => {
   const orderId = String(req.query.orderId || '');
   if (!orderId) return res.status(400).json({ error: 'Missing orderId.' });
   try {
+    const check = await orderTokenOk(orderId, req.query.t);
+    if (!check.found || !check.ok) return res.json({ state: 'unknown' }); // same answer either way: nothing to learn about other people's orders
     const order = await Order.findOne({ id: orderId }).select('status').maxTimeMS(3000).lean();
     if (!order) return res.json({ state: 'unknown' });
     const state = ['paid', 'processing', 'shipped', 'delivered'].includes(order.status) ? 'paid' : order.status === 'cancelled' ? 'cancelled' : 'pending';
@@ -2100,7 +2249,7 @@ app.get('/api/admin/payments', requireAdmin, (req, res) => {
 // to get a retry, while "this will never succeed" cases (unknown order, wrong amount) answer 200.
 app.post('/api/yoco/webhook', async (req, res) => {
   res.set('Cache-Control', 'no-store');
-  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const ip = clientIp(req);
   if (!YOCO.webhookSecret) {
     console.error('[Yoco] Webhook received but no YOCO_WEBHOOK_SECRET_* is configured.');
     return res.status(503).json({ error: 'Webhook not configured.' });
@@ -2193,19 +2342,19 @@ app.post('/api/yoco/webhook', async (req, res) => {
 
 app.post('/api/payfast/itn', async (req, res) => {
   // Step 1 — Respond 200 immediately so PayFast does not retry
-  console.log(`[ITN] Request received from PayFast (IP: ${req.headers["x-forwarded-for"] || req.socket.remoteAddress})`);
+  console.log(`[ITN] Request received from PayFast (IP: ${clientIp(req)})`);
   res.status(200).send('OK');
 
   await dbLog({
     id: `log-${Date.now()}-itn-rx`,
     type: 'info', message: 'ITN: Request received from PayFast',
-    context: 'PAYFAST_ITN', data: { body: req.body, ip: (req.headers['x-forwarded-for'] || req.socket.remoteAddress) }
+    context: 'PAYFAST_ITN', data: { body: req.body, ip: clientIp(req) }
   }).catch(() => {});
 
   try {
     // Step 2 — IP allowlist check (skip in sandbox mode)
     if (!PF.sandbox) {
-      const srcIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+      const srcIp = clientIp(req);
       if (!PF_IPS.includes(srcIp)) {
         await dbLog({
           id: `log-${Date.now()}-itn-ip`,
@@ -2671,12 +2820,34 @@ connect().catch(err => {
   console.error('Initial DB Connection failed - starting in failsafe mode');
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`\nOthers. Store  → http://localhost:${port}`);
   console.log(`PayFast mode   → ${PF.sandbox ? 'SANDBOX' : 'LIVE'}`);
   console.log(`Admin          → http://localhost:${port}/admin  [${ADMIN_USER}]`);
   console.log(`MongoDB        → ${getIsConnected() ? 'connected' : 'OFFLINE (failsafe active)'}\n`);
 });
+
+// ─── Process safety ───────────────────────────────────────────────────────────
+// An unhandled rejection or exception used to leave no trace (or, on modern Node, kill the process silently).
+// Log it where the admin can see it; after an uncaught exception the process state is unknown, so exit and let
+// the host restart it. SIGTERM (a deploy / restart) finishes in-flight requests before exiting.
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  console.error('[Process] Unhandled rejection:', err);
+  dbLog({ id: `log-${Date.now()}-unhandled`, type: 'error', message: `Unhandled rejection: ${err.message}`, context: 'PROCESS', data: { stack: String(err.stack || '').slice(0, 1500) } });
+});
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught exception:', err);
+  Promise.race([notifyAdminOfError(err, null, 'The server hit an unexpected error and is restarting.').catch(() => {}), new Promise(r => setTimeout(r, 3000))]).finally(() => process.exit(1));
+});
+function shutdown(signal) {
+  console.log(`[Process] ${signal} received — closing.`);
+  const force = setTimeout(() => process.exit(0), 10000); // long-lived SSE streams would otherwise hold it open
+  force.unref();
+  server.close(() => mongoose.connection.close().finally(() => process.exit(0)));
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Release abandoned checkouts: first pass 90s after boot, then every 5 minutes (ABANDON_SWEEP_MS shortens
 // both — a test hook; the time limit itself is the admin setting).

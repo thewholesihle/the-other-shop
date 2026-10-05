@@ -32,8 +32,9 @@
   let cancelReason = '';
   let pollTimer;
   const PENDING_KEY = 'others-pending-order';
-  const readPending = () => { try { return sessionStorage.getItem(PENDING_KEY) || ''; } catch { return ''; } };
-  const writePending = (id) => { try { id ? sessionStorage.setItem(PENDING_KEY, id) : sessionStorage.removeItem(PENDING_KEY); } catch { /* private mode */ } };
+  const readPending = () => { try { return JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch { return null; } };
+  // The unpaid order we sent the browser off with (id + its secret), so a Back-button return can release it.
+  const writePending = (id, token = '') => { try { id ? sessionStorage.setItem(PENDING_KEY, JSON.stringify({ id, token })) : sessionStorage.removeItem(PENDING_KEY); } catch { /* private mode */ } };
 
   async function loadMethods() {
     methodsError = false;
@@ -52,12 +53,12 @@
 
   // Yoco confirms payments by webhook, which can land a moment after the customer is sent back.
   // Ask the server (not the URL — anyone can type /payment/success) until it says paid.
-  function watchPayment(oid) {
+  function watchPayment(oid, token) {
     successState = 'confirming';
     const started = Date.now();
     const tick = async () => {
       try {
-        const res = await fetch(`/api/checkout/status?orderId=${encodeURIComponent(oid)}`, { cache: 'no-store' });
+        const res = await fetch(`/api/checkout/status?orderId=${encodeURIComponent(oid)}&t=${encodeURIComponent(token)}`, { cache: 'no-store' });
         const { state } = await res.json();
         if (state === 'paid') { successState = 'confirmed'; return; }
       } catch { /* keep trying until the deadline */ }
@@ -82,6 +83,7 @@
   onMount(async () => {
     try {
       data = await loadStoreData();
+      cart.syncPrices(data.products); // a price may have changed since the item was added
       const params = new URLSearchParams(window.location.search);
       const path = window.location.pathname;
 
@@ -91,7 +93,7 @@
         cart.clear();
         writePending('');
         const oid = params.get('orderId');
-        if (oid && params.get('m') === 'yoco') watchPayment(oid);
+        if (oid && params.get('m') === 'yoco') watchPayment(oid, params.get('t') || '');
       } else if (path === '/payment/cancel') {
         step = 'cancel';
         cancelReason = params.get('reason') === 'failed' ? 'failed' : '';
@@ -101,7 +103,7 @@
           fetch('/api/checkout/cancel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: oid, reason: cancelReason })
+            body: JSON.stringify({ orderId: oid, token: params.get('t') || '', reason: cancelReason })
           }).catch(console.error);
         }
       } else {
@@ -126,7 +128,7 @@
     const stale = readPending();
     if (stale) {
       writePending('');
-      fetch('/api/checkout/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: stale }) }).catch(() => {});
+      fetch('/api/checkout/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: stale.id, token: stale.token }) }).catch(() => {});
     }
     try {
       const res = await fetch('/api/checkout', {
@@ -155,6 +157,8 @@
         const body = await res.json().catch(() => ({}));
         stockErrors = body.stockErrors || [];
         checkoutError = body.error || 'Payment initialization failed. Please try again.';
+        // Prices moved since the items were added: bring the cart in line and say so.
+        if (body.code === 'price_changed') cart.applyPriceChanges(body.priceChanges);
         // The set of working methods changed (admin switched one off, provider down): show what's left.
         if (['method_unavailable', 'payment_unavailable', 'no_payment_method'].includes(body.code)) await loadMethods();
         processingPayment = false;
@@ -168,7 +172,7 @@
       }
       const result = await res.json();
       orderId = result.orderId;
-      writePending(result.orderId); // the cart is kept until the payment is actually confirmed
+      writePending(result.orderId, result.token); // the cart is kept until the payment is actually confirmed
 
       if (result.redirectUrl) {
         // Hosted checkout (Yoco): just go there. Only ever to an https link (or localhost in development).

@@ -5,6 +5,7 @@ import NewDeviceAlert from './NewDeviceAlert.jsx';
 import WeeklySummary from './WeeklySummary.jsx';
 import TestEmail from './TestEmail.jsx';
 import Newsletter from './Newsletter.jsx';
+import ConfirmSubscription from './ConfirmSubscription.jsx';
 import SystemAlert from './SystemAlert.jsx';
 
-export const templates = { OrderNotification, OrderUpdate, NewDeviceAlert, WeeklySummary, TestEmail, Newsletter, SystemAlert };
+export const templates = { OrderNotification, OrderUpdate, NewDeviceAlert, WeeklySummary, TestEmail, Newsletter, ConfirmSubscription, SystemAlert };

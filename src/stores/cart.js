@@ -46,6 +46,18 @@ function createCart() {
       update(items => items.map(i => i.key === key ? { ...i, quantity } : i));
     },
 
+    /** Brings stored prices in line with the store's current ones (prices can change while an item sits in a cart). */
+    syncPrices(products) {
+      const byId = new Map((products || []).map(p => [p.id, p.price]));
+      update(items => items.map(i => (byId.has(i.productId) && byId.get(i.productId) !== i.price ? { ...i, price: byId.get(i.productId) } : i)));
+    },
+
+    /** Applies the server's price corrections ({ key, now }) after a checkout was refused for price drift. */
+    applyPriceChanges(changes) {
+      const now = new Map((changes || []).map(c => [c.key, c.now]));
+      update(items => items.map(i => (now.has(i.key) ? { ...i, price: now.get(i.key) } : i)));
+    },
+
     clear() { set([]); },
   };
 }

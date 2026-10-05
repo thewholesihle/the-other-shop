@@ -8,7 +8,8 @@
     "start": "node server.js",
     "migrate": "node scripts/migrate.js",
     "emails:build": "node scripts/build-emails.js",
-    "emails:preview": "node scripts/build-emails.js && node scripts/preview-emails.js"
+    "emails:preview": "node scripts/build-emails.js && node scripts/preview-emails.js",
+    "test": "node --test \"tests/**/*.test.js\""
   },
   "keywords": [],
   "author": "",

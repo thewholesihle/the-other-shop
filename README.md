@@ -119,6 +119,21 @@ Most sections save via a full-data-blob endpoint (`GET`/`POST /api/data`); Order
 
 ---
 
+## Data safety and hardening
+
+- **Admin saves can't undo a customer's purchase.** The admin sends only the documents it changed (plus explicit lists of deleted ids), and the server skips documents identical to what is stored. Before this, saving anything re-wrote every product's stock from a copy loaded earlier, and deleting by "not in the list" also deleted subscribers who signed up in the meantime. Stock edits are merged too: the admin sends the stock it loaded next to the stock it wants, and the server applies only the difference to the live number (loaded 10, a customer buys 2, you restock to 15 → 13, not 15), with a per-product revision counter that retries if a sale lands mid-save.
+- **Checkout is tied to the buyer.** Each order gets a secret token, passed only to that browser; cancelling an order or polling its payment state needs it, so knowing an order number (they are timestamps) is no longer enough to cancel someone's checkout. Order numbers are guaranteed unique even for simultaneous checkouts.
+- **No surprise prices.** If a price changed since an item was added to the cart, the cart is corrected when it opens, and a checkout that still carries an old price is refused (409) with the new price shown, before any stock is reserved.
+- **Newsletter sign-up is double opt-in** (a confirmation email, nothing sent until the owner of the address clicks it, unconfirmed rows deleted after a week) and rate-limited to 10 per hour per connection; broadcasts only go to confirmed addresses. Existing subscribers count as confirmed.
+- **Request size caps:** public endpoints accept at most 200 KB; only the admin's data save and newsletter send accept 10 MB.
+- **PayFast IP allowlist** uses the proxy-aware client address instead of the raw `X-Forwarded-For` header, which any caller could set to a PayFast address.
+- **Process safety:** unhandled rejections are logged to the system log, an uncaught exception alerts you and restarts the process, and SIGTERM finishes in-flight requests before exiting. System logs expire after 180 days.
+- **Search:** `/sitemap.xml` is generated from the live catalogue and `/robots.txt` keeps the admin, API, cart and payment pages out of results.
+- `npm test` runs unit tests for webhook signatures, Yoco checkout errors, the newsletter sanitiser and logo-tone rules. `npm audit` reports 0 vulnerabilities.
+- Known limits: admin sessions live in memory (a restart signs you out; run a single instance), and the storefront sends no Content-Security-Policy.
+
+---
+
 ## Logos that adapt to the theme
 
 The logo in the storefront header and footer, the admin sidebar and the sign-in page is checked against the surface it sits on (the store's palette, or the admin's light/dark theme). A logo that already contrasts is left exactly as uploaded; one that would disappear (a black logo on a dark surface, a white one on a light surface) is drawn as a flat white or black silhouette instead, and it follows the admin theme toggle live. Logos with a solid background (JPG, opaque PNG) are never altered. Upload a transparent PNG or SVG for best results.

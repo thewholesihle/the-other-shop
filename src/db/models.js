@@ -118,6 +118,9 @@ const ProductSchema = new mongoose.Schema({
   // `variants` is the source of truth for per size/color availability.
   stock:       { type: Number, default: 0, min: 0 },
   variants:    [VariantSchema],
+  // Bumped by every stock change (a sale, a restock, an admin edit). The admin's product save uses it to notice a
+  // sale that landed mid-save and merge with it instead of overwriting it.
+  rev:         { type: Number, default: 0 },
   isNew:       { type: Boolean, default: false },
   isFeatured:  { type: Boolean, default: false },
 }, { strict: true, versionKey: false, suppressReservedKeysWarning: true });
@@ -147,6 +150,10 @@ const OrderSchema = new mongoose.Schema({
   shippingCost: { type: Number, default: 0 },
   status:       { type: String, default: 'pending', enum: ['pending', 'pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'] },
   payfastId:    { type: String, default: '' },
+  // Secret handed only to the buyer's browser at checkout; needed to cancel the order or poll its payment state, so
+  // knowing an order number (they are timestamps) isn't enough to interfere with someone else's checkout.
+  // Never returned by normal queries (select: false) — the admin blob can't leak it.
+  token:        { type: String, default: '', select: false },
   // How this order is paid. '' on orders created before online methods were recorded.
   paymentMethod: { type: String, default: '', enum: ['', 'payfast', 'yoco'] },
   // Why a cancelled order was cancelled: the customer backed out, they never paid (abandoned), the
@@ -235,6 +242,10 @@ const PagesSchema = new mongoose.Schema({
 // ── Subscriber ────────────────────────────────────────────────────────────────
 const SubscriberSchema = new mongoose.Schema({
   id:    { type: String, required: true, unique: true },
+  // Double opt-in: false until the address owner clicks the link we email them. Rows from before this existed have
+  // no value and count as confirmed. Unconfirmed rows are deleted after a week.
+  confirmed:   { type: Boolean, default: true },
+  requestedAt: { type: Date, default: Date.now },
   email: {
     type: String,
     required: true,
@@ -255,6 +266,8 @@ const LogSchema = new mongoose.Schema({
   context:   { type: String, default: '' }, // e.g. 'API', 'PAYMENT', 'STOCK'
   data:      { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { strict: true, versionKey: false });
+// Logs expire after 180 days (the weekly backups keep the history), so the collection can't grow without bound.
+LogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 180 * 86400 });
 
 // ── Event / pop-up (community page; managed only from the admin) ──────────────
 // Dates and times are wall-clock values in the store's timezone (South Africa, UTC+2, no DST), kept
