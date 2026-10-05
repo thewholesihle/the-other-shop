@@ -62,6 +62,8 @@ const SettingsSchema = new mongoose.Schema({
     message:       { type: String, default: 'Our store is currently undergoing scheduled maintenance. Please check back shortly.' },
     background:    { type: String, default: '' },
   },
+  // false = the home page shows no featured lookbook/article section at all.
+  featuredEditorialEnabled: { type: Boolean, default: true },
   featuredLookbook: { type: String, default: '' },
   featuredEditorialType: { type: String, default: 'lookbook' }, // 'lookbook' | 'article'
   featuredEditorialHeading: { type: String, default: '' },

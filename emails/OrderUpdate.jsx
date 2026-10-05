@@ -35,7 +35,7 @@ export default function OrderUpdate({ brand, order, currency = 'R', message, sup
     >
       <Badge tone={s.badge[0]}>{s.badge[1]}</Badge>
       <H1 style={{ margin: '12px 0 8px' }}>{headline}</H1>
-      <P style={{ color: '#52525b', margin: '0 0 24px' }}><Message text={message} orderId={order.id} /></P>
+      <P muted style={{ margin: '0 0 24px' }}><Message text={message} orderId={order.id} /></P>
 
       {order.adminNote ? <Alert tone="neutral" title="A note from us">{order.adminNote}</Alert> : null}
 

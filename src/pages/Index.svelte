@@ -22,6 +22,9 @@
   // The hero can be switched off in Settings → Homepage; the page then leads with New Arrivals.
   $: heroEnabled = data?.site?.hero?.enabled !== false;
 
+  // Settings → Homepage can switch the whole featured lookbook / article section off.
+  $: editorialEnabled = data?.site?.featuredEditorialEnabled !== false;
+
   $: featuredId = data?.site?.featuredLookbook;
   $: editorialType = data?.site?.featuredEditorialType || 'lookbook';
   
@@ -66,7 +69,9 @@
         <ProductGrid products={data.products} currency={data.site.currency} mode="arrivals" />
       {/if}
 
-      {#if editorialType === 'article'}
+      {#if !editorialEnabled}
+        <!-- featured editorial switched off -->
+      {:else if editorialType === 'article'}
         <ArticleSection article={featuredArticle} {allArticles} heading={data.site.featuredEditorialHeading} message={data.site.featuredEditorialMessage} cta={data.site.featuredEditorialCta} />
       {:else}
         <LookbookSection lookbook={featuredLookbook} {allLookbooks} />

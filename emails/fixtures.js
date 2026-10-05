@@ -2,7 +2,8 @@
 // Sample data for previewing every email (npm run emails:preview). Not used by the server.
 const brand = {
   name: 'Others.',
-  logoUrl: 'https://res.cloudinary.com/demo/image/upload/c_limit,w_360,f_png,q_auto/cloudinary_logo.png',
+  logoUrl: 'https://res.cloudinary.com/demo/image/upload/c_limit,w_360,f_png,q_auto/cloudinary_icon.png',
+  logoDarkUrl: 'https://res.cloudinary.com/demo/image/upload/e_colorize:100,co_rgb:ffffff/c_limit,w_360,f_png,q_auto/cloudinary_icon.png',
   url: 'https://others.example',
   contactUrl: 'https://others.example/contact',
   address: '1 Main Road, Parkhurst, Johannesburg, 2193',

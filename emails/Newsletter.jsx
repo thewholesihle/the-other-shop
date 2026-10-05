@@ -10,6 +10,7 @@ export default function Newsletter({ brand, subject, html, preview, unsubscribeU
       preview={preview || subject}
       reason={`You are receiving this because you subscribed to ${brand.name} updates. You can unsubscribe at any time.`}
       unsubscribeUrl={unsubscribeUrl}
+      forceLight
     >
       <div className="em-prose" style={{ fontSize: 15, lineHeight: '24px' }} dangerouslySetInnerHTML={{ __html: html }} />
     </Shell>

@@ -39,6 +39,7 @@
     f.socials.youtube ??= '';
     f.featuredLookbook ??= '';
     f.featuredEditorialType ??= 'lookbook';
+    f.featuredEditorialEnabled ??= true;
     f.colors ??= { background: '#f8f5f2', foreground: '#211c1a', primary: '#211c1a', border: '#dbd8d4', hover: '#ff4400' };
     f.colors.hover ??= f.colors.primary || '#ff4400';
     f.footerLogo ??= '';
@@ -318,8 +319,14 @@
           </div>
 
           <div class="space-y-4 border-t border-border pt-6">
-            <p class="text-sm font-semibold">Featured editorial</p>
-            <p class="text-sm text-muted-foreground">Promote an article or lookbook on the home page.</p>
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-semibold">Featured editorial</p>
+                <p class="text-sm text-muted-foreground">Promote an article or lookbook on the home page. Turn it off and the section disappears from the home page.</p>
+              </div>
+              <Switch bind:checked={form.featuredEditorialEnabled} aria-label="Show the featured editorial" />
+            </div>
+            {#if form.featuredEditorialEnabled}
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label for="fe-type" class={labelCls}>Type</label>
@@ -353,6 +360,7 @@
               <div><label for="fe-heading" class={labelCls}>Heading override (optional)</label><input id="fe-heading" bind:value={form.featuredEditorialHeading} class={inputCls} placeholder="e.g. Latest editorial" /></div>
               <div><label for="fe-msg" class={labelCls}>Message override (optional)</label><textarea id="fe-msg" bind:value={form.featuredEditorialMessage} rows={2} class={textareaCls} placeholder="e.g. Read the full story behind the collection…"></textarea></div>
               <div><label for="fe-cta" class={labelCls}>Button text (optional)</label><input id="fe-cta" bind:value={form.featuredEditorialCta} class={inputCls} placeholder="e.g. Read article" /></div>
+            {/if}
             {/if}
           </div>
         </div>

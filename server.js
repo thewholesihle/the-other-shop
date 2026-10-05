@@ -23,6 +23,7 @@ const { EventEmitter } = require('events');
 const auth = require('./src/auth');
 const { yocoConfig, YocoError, createYocoCheckout, verifyYocoWebhook } = require('./src/services/yoco');
 const { renderEmail, sanitizeEmailHtml } = require('./src/emails');
+const { emailLogoVariants } = require('./src/emailLogo');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -387,15 +388,18 @@ function cldEmail(url, { w, h, png = false } = {}) {
 
 /** Everything the shared email chrome needs (logo, links, address). Logos go out as PNG/JPG at a capped size —
  *  Outlook and some webmail can't show AVIF/WebP — and always over an absolute https URL. */
-function emailBrand(site, contactAddress, baseUrl = '') {
+async function emailBrand(site, contactAddress, baseUrl = '') {
   const base = String(baseUrl || '').replace(/\/+$/, '');
   const abs = (u) => (u && u.startsWith('/') && base ? base + u : u);
   const logo = abs(site?.emailLogo || site?.logo);
   const socials = [['instagram', 'Instagram'], ['twitter', 'X'], ['tiktok', 'TikTok'], ['youtube', 'YouTube']]
     .filter(([k]) => site?.socials?.[k]?.trim()).map(([k, label]) => ({ label, href: site.socials[k].trim() }));
+  // One image for the white card and one for the dark card (see src/emailLogo.js).
+  const logos = logo ? await emailLogoVariants(logo) : null;
   return {
     name: site?.name || 'Others.',
-    logoUrl: logo ? cldEmail(logo, { w: 360, png: true }) : '',
+    logoUrl: logos?.light || '',
+    logoDarkUrl: logos?.dark || '',
     url: base,
     contactUrl: base ? `${base}/contact` : '',
     address: contactAddress || '',
@@ -461,7 +465,7 @@ async function sendOrderNotification(order, baseUrl = '') {
     const currency = site?.currency || 'R';
 
     const props = {
-      brand: emailBrand(site, contactAddress, baseUrl),
+      brand: await emailBrand(site, contactAddress, baseUrl),
       currency,
       adminUrl: baseUrl ? `${baseUrl}/admin/orders` : '',
       order: {
@@ -817,7 +821,7 @@ async function sendCustomerStatusEmail(order, baseUrl = '') {
     const message = templates[order.status] || `Your order status has been updated to ${order.status}.`;
 
     await sendTemplate('OrderUpdate', {
-      brand: emailBrand(site, contactAddress, base),
+      brand: await emailBrand(site, contactAddress, base),
       currency,
       message,
       supportEmail: primaryContactEmail(site) || '',
@@ -1001,7 +1005,7 @@ async function sendNewDeviceAlert(req, info) {
   const { site, contactAddress } = await getEmailBranding();
   const baseUrl = process.env.PUBLIC_URL || (req ? `${req.protocol}://${req.get('host')}` : '');
   await sendTemplate('NewDeviceAlert', {
-    brand: emailBrand(site, contactAddress, baseUrl),
+    brand: await emailBrand(site, contactAddress, baseUrl),
     device: info.device, ip: info.ip, when,
     reviewUrl: baseUrl ? `${baseUrl.replace(/\/+$/, '')}/admin/status` : '',
   }, {
@@ -1177,7 +1181,7 @@ async function buildWeeklyReport(now = new Date()) {
 async function renderWeeklyReportEmail(r, baseUrl = '') {
   const { site, contactAddress, ...report } = r;
   return renderEmail('WeeklySummary', {
-    brand: emailBrand(site, contactAddress, baseUrl),
+    brand: await emailBrand(site, contactAddress, baseUrl),
     report,
     adminUrl: baseUrl ? `${baseUrl.replace(/\/+$/, '')}/admin/status` : '',
   });
@@ -1338,7 +1342,7 @@ app.post('/api/admin/test-email', requireAdmin, async (_req, res) => {
   try {
     const { site, contactAddress } = await getEmailBranding();
     await sendTemplate('TestEmail', {
-      brand: emailBrand(site, contactAddress, _req ? `${_req.protocol}://${_req.get('host')}` : ''),
+      brand: await emailBrand(site, contactAddress, _req ? `${_req.protocol}://${_req.get('host')}` : ''),
       from: EMAIL_FROM, sandbox: /resend\.dev$/i.test(EMAIL_FROM),
     }, {
       from: `${site?.name || 'Others.'} Alerts <${EMAIL_FROM}>`, to: recipients,
@@ -1609,7 +1613,7 @@ app.post('/api/newsletter/broadcast', requireAdmin, async (req, res) => {
         const token = unsubscribeToken(sub.email);
         const unsubscribeUrl = `${baseUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(sub.email)}&token=${token}`;
         const { html: emailHtml, text: emailText } = await renderEmail('Newsletter', {
-          brand: emailBrand(site, contactAddress, baseUrl),
+          brand: await emailBrand(site, contactAddress, baseUrl),
           subject,
           html: cleanBody,
           preview: previewText,
@@ -2711,7 +2715,7 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
     const baseUrl = req ? `${req.protocol}://${req.get('host')}` : (process.env.PUBLIC_URL || `http://localhost:${port}`);
     const shortMessage = String(err.message || 'Unknown error').slice(0, 300);
     await sendTemplate('SystemAlert', {
-      brand: emailBrand(site, contactAddress, baseUrl),
+      brand: await emailBrand(site, contactAddress, baseUrl),
       heading: customMsg ? 'Site alert' : 'Critical site error',
       message: customMsg || 'The system detected an internal error that might need your attention.',
       errorMessage: shortMessage,
