@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { Shell, H1, Muted, KeyValue, Alert, Btn } from './ui.jsx';
 
-export default function SystemAlert({ brand, heading, message, path, errorMessage, adminUrl }) {
+export default function SystemAlert({ brand, heading, message, path, errorMessage, adminUrl, tone = 'destructive', label = 'Error' }) {
   return (
     <Shell
       brand={brand}
@@ -12,7 +12,7 @@ export default function SystemAlert({ brand, heading, message, path, errorMessag
     >
       <H1>{heading}</H1>
       <Muted>{message}</Muted>
-      <Alert tone="destructive" title="Error">{errorMessage}</Alert>
+      <Alert tone={tone} title={label}>{errorMessage}</Alert>
       <KeyValue rows={[{ label: 'Where', value: path }]} />
       {adminUrl ? <Btn href={adminUrl}>Open site status</Btn> : null}
     </Shell>

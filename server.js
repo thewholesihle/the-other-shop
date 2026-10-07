@@ -566,7 +566,27 @@ app.use(express.urlencoded({ extended: true, limit: '200kb' }));
 // ─── robots.txt + sitemap.xml ─────────────────────────────────────────────────
 // Built from the live catalogue so new products, lookbooks and stories are discoverable without anyone
 // maintaining a file. The admin and the API are kept out of search results.
-const siteBase = (req) => (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+// The site's public address, for links in emails and the sitemap. PUBLIC_URL wins. Otherwise it is the address a real
+// visitor used (remembered from requests), so mail sent with NO request in hand — a database alert, the weekly summary —
+// still links to the live domain. It is never localhost in production: if nothing is known, links are simply left out.
+let learnedBase = '';
+const isLocalHost = (h) => /^(localhost|127\.|0\.0\.0\.0|\[?::1\]?|10\.|192\.168\.)/i.test(h);
+app.use((req, _res, next) => {
+  if (!process.env.PUBLIC_URL) {
+    const host = req.get('host') || '';
+    if (host && !isLocalHost(host)) learnedBase = `${req.protocol}://${host}`;
+  }
+  next();
+});
+function publicBaseUrl(req = null) {
+  const env = (process.env.PUBLIC_URL || '').replace(/\/+$/, '');
+  if (env) return env;
+  const host = req?.get?.('host');
+  if (host && !isLocalHost(host)) return `${req.protocol}://${host}`;
+  if (learnedBase) return learnedBase;
+  return host ? `${req.protocol}://${host}` : ''; // local development, or nothing known yet
+}
+const siteBase = (req) => publicBaseUrl(req);
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(['User-agent: *', 'Allow: /', 'Disallow: /admin', 'Disallow: /api/', 'Disallow: /cart', 'Disallow: /payment/', '', `Sitemap: ${siteBase(req)}/sitemap.xml`, ''].join('\n'));
 });
@@ -1062,7 +1082,7 @@ async function sendNewDeviceAlert(req, info) {
   if (!recipients.length) return;
   const when = new Date().toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' });
   const { site, contactAddress } = await getEmailBranding();
-  const baseUrl = process.env.PUBLIC_URL || (req ? `${req.protocol}://${req.get('host')}` : '');
+  const baseUrl = publicBaseUrl(req);
   await sendTemplate('NewDeviceAlert', {
     brand: await emailBrand(site, contactAddress, baseUrl),
     device: info.device, ip: info.ip, when,
@@ -1256,7 +1276,7 @@ async function emailLogBackup(force = false, baseUrl = '') {
 
   const report = await buildWeeklyReport();
   const logs = await Log.find(lastMail?.to ? { timestamp: { $gt: lastMail.to } } : {}).sort({ timestamp: 1 }).lean();
-  const { html, text } = await renderWeeklyReportEmail(report, baseUrl || process.env.PUBLIC_URL || '');
+  const { html, text } = await renderWeeklyReportEmail(report, baseUrl || publicBaseUrl());
   const day = new Date().toISOString().slice(0, 10);
   const attention = report.flags.filter(f => f.severity !== 'info').length;
   const email = {
@@ -2232,7 +2252,7 @@ app.get('/api/payment-methods', async (_req, res) => {
 
 // For Settings → Payments: whether each provider's credentials are in place (never the credentials themselves).
 app.get('/api/admin/payments', requireAdmin, (req, res) => {
-  const base = (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+  const base = publicBaseUrl(req);
   res.json({
     payfast: { configured: PF_CONFIGURED, mode: PF.sandbox ? 'sandbox' : 'live' },
     yoco: {
@@ -2329,7 +2349,7 @@ app.post('/api/yoco/webhook', async (req, res) => {
 
     emitOrderEvent('paid', updated);
     await dbLog({ id: `log-${Date.now()}-pay-ok`, type: 'info', message: `Payment completed for order ${order.id}`, context: 'PAYMENT', data: { orderId: order.id, method: 'yoco', paymentId: payment.id } });
-    const base = (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+    const base = publicBaseUrl(req);
     sendOrderNotification(updated, base).catch(e => console.error('Error sending Yoco admin notification:', e));
     sendCustomerStatusEmail(updated, base).catch(e => console.error('Error sending Yoco customer email:', e));
     console.log(`✓ Yoco: order ${order.id} marked PAID (payment ${payment.id})`);
@@ -2860,22 +2880,50 @@ setTimeout(logBackupTick, 60 * 1000).unref();
 setInterval(logBackupTick, 30 * 60 * 1000).unref();
 
 // ─── Database Alerts ─────────────────────────────────────────────────────────
+// A dropped connection usually heals itself within seconds (hosted databases close idle connections and the driver
+// reconnects straight away), and the site shows its maintenance page for just that moment. Emailing on every blip was
+// noise, so an alert only goes out if the database is STILL unreachable after a grace period, and a short
+// "reconnected" note follows once it is back. The server keeps retrying by itself throughout.
+const DB_ALERT_GRACE_MS = Number(process.env.DB_ALERT_GRACE_MS) || 60 * 1000; // (env: a test hook)
+let dbDownTimer = null, dbDownSince = 0, dbAlertSent = false;
 mongoose.connection.on('disconnected', () => {
-  notifyAdminOfError(
-    new Error('DATABASE_CONNECTION_LOST'),
-    null,
-    'CRITICAL: The store database has disconnected. Automated Hard Maintenance mode is now active.'
-  ).catch(e => console.error('Failsafe alert failed:', e.message));
+  if (dbDownTimer) return;
+  dbDownSince = Date.now();
+  dbDownTimer = setTimeout(() => {
+    dbDownTimer = null;
+    if (mongoose.connection.readyState === 1) return; // it came back while we waited
+    dbAlertSent = true;
+    notifyAdminOfError(
+      new Error('Database connection lost (DATABASE_CONNECTION_LOST)'), null,
+      'The store database has been unreachable for over a minute, so visitors are seeing the maintenance page. The server keeps retrying by itself and will recover as soon as the database answers.',
+      { force: true }
+    ).catch(e => console.error('Failsafe alert failed:', e.message));
+  }, DB_ALERT_GRACE_MS);
 });
+const dbBackUp = () => {
+  clearTimeout(dbDownTimer); dbDownTimer = null;
+  if (!dbAlertSent) return;                       // a blip nobody was told about needs no all-clear
+  dbAlertSent = false;
+  const minutes = Math.max(1, Math.round((Date.now() - dbDownSince) / 60000));
+  notifyAdminOfError(
+    new Error(`The database is back after about ${minutes} minute${minutes === 1 ? '' : 's'}.`), null,
+    'The database connection has been restored and the store is serving customers normally again. No action is needed.',
+    { force: true, tone: 'success', label: 'Recovered', heading: 'Database reconnected', subject: 'Database reconnected: the store is back to normal' }
+  ).catch(e => console.error('Recovery notice failed:', e.message));
+};
+mongoose.connection.on('reconnected', dbBackUp);
+mongoose.connection.on('connected', dbBackUp);
 
 // ─── Error Notification ──────────────────────────────────────────────────────
 let lastErrorEmailTime = 0;
 const ERROR_EMAIL_THROTTLE = 15 * 60 * 1000; // 15 minutes
 
-async function notifyAdminOfError(err, req = null, customMsg = null) {
+// opts: force (an outage / all-clear notice must not be swallowed by the throttle), tone/label/heading/subject (to
+// reuse this for good news too).
+async function notifyAdminOfError(err, req = null, customMsg = null, opts = {}) {
   if (!process.env.RESEND_API_KEY) return;
   const now = Date.now();
-  if (now - lastErrorEmailTime < ERROR_EMAIL_THROTTLE) return;
+  if (!opts.force && now - lastErrorEmailTime < ERROR_EMAIL_THROTTLE) return;
 
   lastErrorEmailTime = now;
   try {
@@ -2883,18 +2931,19 @@ async function notifyAdminOfError(err, req = null, customMsg = null) {
     if (recipients.length === 0) return;
 
     const { site, contactAddress } = await getEmailBranding();
-    const baseUrl = req ? `${req.protocol}://${req.get('host')}` : (process.env.PUBLIC_URL || `http://localhost:${port}`);
+    const baseUrl = publicBaseUrl(req); // '' when unknown: the button is left out rather than pointing at localhost
     const shortMessage = String(err.message || 'Unknown error').slice(0, 300);
     await sendTemplate('SystemAlert', {
       brand: await emailBrand(site, contactAddress, baseUrl),
-      heading: customMsg ? 'Site alert' : 'Critical site error',
+      heading: opts.heading || (customMsg ? 'Site alert' : 'Critical site error'),
+      tone: opts.tone || 'destructive', label: opts.label || 'Error',
       message: customMsg || 'The system detected an internal error that might need your attention.',
       errorMessage: shortMessage,
       path: req ? `${req.method} ${req.url}` : '',
-      adminUrl: `${baseUrl.replace(/\/+$/, '')}/admin/status`,
+      adminUrl: baseUrl ? `${baseUrl}/admin/status` : '',
     }, {
       from: `${site?.name || 'Others.'} Alerts <${EMAIL_FROM}>`, to: recipients,
-      subject: `Site alert: ${shortMessage.slice(0, 60)}`, headers: AUTO_HEADERS,
+      subject: opts.subject || `Site alert: ${shortMessage.slice(0, 60)}`, headers: AUTO_HEADERS,
     }, `${customMsg || 'Site error'}: ${shortMessage}`);
   } catch (e) {
     console.error('Failed to send error notification email:', e);
