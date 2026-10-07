@@ -1507,58 +1507,44 @@ app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
 
 // ─── API: Store Data ──────────────────────────────────────────────────────────
 
-// ─── Favicon ─────────────────────────────────────────────────────────────────
-// Browsers (and crawlers) request /favicon.ico on their own, whatever the HTML says. It resolves to
-// the store's own favicon/logo — never a file bundled with the project — and falls back to a
-// generated monogram until a logo is uploaded.
+// ─── Favicon, app icons & web app manifest ────────────────────────────────────
+// Everything here comes from the logo / favicon uploaded in Settings (see src/brandIcon.js): a multi-size
+// .ico, an SVG that follows the browser's light/dark theme, an Apple touch icon, and a manifest with maskable icons.
+const brandIcon = require('./src/brandIcon');
+
 app.get('/favicon.ico', async (_req, res) => {
   const info = await getBrandInfo();
+  const ico = await brandIcon.faviconIco(info).catch(() => null);
   res.set('Cache-Control', 'public, max-age=3600');
-  res.redirect(302, brandIconUrl(info, 64) || '/favicon.svg');
+  if (ico) return res.type('image/x-icon').send(ico);
+  res.redirect(302, '/favicon.svg');
 });
 
 app.get('/favicon.svg', async (_req, res) => {
   const info = await getBrandInfo();
-  const ok = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : null);
-  const letter = escapeHtmlAttr((info.name || 'O').trim().charAt(0).toUpperCase() || 'O');
-  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=3600').send(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${ok(info.fg) || '#211c1a'}"/><text x="32" y="45" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-weight="700" font-size="38" fill="${ok(info.bg) || '#f8f5f2'}">${letter}</text></svg>`
-  );
+  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=3600').send(await brandIcon.faviconSvg(info));
 });
 
-// ─── PWA & Favicon Manifest ───────────────────────────────────────────────────
-app.get('/manifest.json', async (req, res) => {
+// iOS asks for this exact path by itself when a page doesn't name an icon (e.g. from a bookmark).
+app.get('/apple-touch-icon.png', async (_req, res) => {
+  const info = await getBrandInfo();
+  const url = await brandIcon.appleTouchUrl(info, info.bg);
+  if (!url) return res.status(404).end();
+  res.set('Cache-Control', 'public, max-age=3600').redirect(302, url);
+});
+
+async function manifestHandler(_req, res) {
+  let site = null;
+  try { if (getIsConnected()) site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1500).lean(); } catch { /* defaults */ }
   try {
-    const site = await Settings.findOne({ _id: 'main' }).lean();
-    if (!site) return res.status(404).json({ error: 'Settings not found.' });
-
-    const name = site.name || 'Others.';
-    const iconBase = site.favicon || site.logo || '';
-    
-    let icons = [];
-    if (iconBase && !iconBase.includes('cloudinary.com')) {
-      icons = [{ src: iconBase, sizes: '512x512', type: 'image/png' }];
-    } else if (iconBase.includes('cloudinary.com')) {
-      icons = [
-        { src: iconBase.replace('/upload/', '/upload/c_pad,f_png,q_auto,w_192,h_192/'), sizes: '192x192', type: 'image/png' },
-        { src: iconBase.replace('/upload/', '/upload/c_pad,f_png,q_auto,w_512,h_512/'), sizes: '512x512', type: 'image/png' },
-        { src: iconBase.replace('/upload/', '/upload/c_pad,f_png,q_auto,w_180,h_180/'), sizes: '180x180', type: 'image/png', purpose: 'apple-touch-icon' }
-      ];
-    }
-
-    res.json({
-      name,
-      short_name: name,
-      start_url: '/',
-      display: 'standalone',
-      background_color: site.colors?.background || '#ffffff',
-      theme_color: site.colors?.primary || '#111111',
-      icons
-    });
+    res.type('application/manifest+json').set('Cache-Control', 'public, max-age=3600').send(JSON.stringify(await brandIcon.manifest(site || {})));
   } catch (err) {
+    console.warn('manifest failed:', err.message);
     res.status(500).json({ error: 'Failed to generate manifest.' });
   }
-});
+}
+app.get('/manifest.webmanifest', manifestHandler);
+app.get('/manifest.json', manifestHandler); // the original path, kept for installs that already use it
 
 app.get('/api/data', async (req, res) => {
   try {
@@ -1595,6 +1581,9 @@ app.post('/api/data', requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Invalid data payload.' });
     }
     await writeData(req.body);
+    // A changed logo, favicon or palette shows up in the tab, the loading screen and the manifest right away,
+    // not after the one-minute cache runs out.
+    if (req.body.site) { brandInfoCache = { at: 0, info: null }; bootCache = { at: 0, admin: null, store: null }; }
     res.json({ ok: true });
   } catch (err) {
     console.error('POST /api/data', err);
@@ -2595,15 +2584,6 @@ function renderMetaTags({ siteName, title, description, image, url, type = 'webs
 // colours, so the very first paint is already on-brand. Cached briefly — it's on every page view.
 let bootCache = { at: 0, admin: null, store: null };
 
-/** The store's brand icon (favicon, else logo) as a square PNG of the given size; '' if none is set. */
-function brandIconUrl(site, size) {
-  const base = site?.favicon || site?.logo || '';
-  if (!base) return '';
-  return base.includes('res.cloudinary.com') && base.includes('/upload/')
-    ? base.replace('/upload/', `/upload/c_pad,f_png,q_auto,w_${size},h_${size}/`)
-    : base;
-}
-
 /** Name/logo/colours/favicon for the HTML shell, cached for a minute (it's read on every page view). */
 let brandInfoCache = { at: 0, info: null };
 async function getBrandInfo() {
@@ -2624,17 +2604,7 @@ async function getBrandInfo() {
 }
 
 /** <link>/<meta> tags for the browser tab, home-screen and PWA install — always the store's own icon. */
-function iconHead(info, bg) {
-  const icon32 = brandIconUrl(info, 64);
-  const apple = brandIconUrl(info, 180);
-  const safeBg = /^#[0-9a-f]{3,8}$/i.test(bg || '') ? bg : '#ffffff';
-  return [
-    icon32 ? `<link rel="icon" type="image/png" href="${escapeHtmlAttr(icon32)}">` : '<link rel="icon" type="image/svg+xml" href="/favicon.svg">',
-    apple ? `<link rel="apple-touch-icon" href="${escapeHtmlAttr(apple)}">` : '',
-    '<link rel="manifest" href="/manifest.json">',
-    `<meta name="theme-color" content="${safeBg}">`,
-  ].join('\n  ');
-}
+const iconHead = (info, bg, admin = false) => brandIcon.headTags(info, { admin, bg });
 
 async function bootBrand(admin) {
   const slot = admin ? 'admin' : 'store';
@@ -2643,7 +2613,7 @@ async function bootBrand(admin) {
   const { name, logo, bg, fg } = info;
   const safeColor = (c, d) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : d);
   const brand = {
-    icons: iconHead(info, admin ? '#fafafa' : safeColor(bg, '#f8f5f2')),
+    icons: await iconHead(info, admin ? '#fafafa' : safeColor(bg, '#f8f5f2'), admin),
     style: admin ? 'background:#fafafa;color:#09090b' : `background:${safeColor(bg, '#f8f5f2')};color:${safeColor(fg, '#211c1a')}`,
     inner: logo
       ? `<img class="boot-logo" src="${escapeHtmlAttr(logo.includes('res.cloudinary.com') && logo.includes('/upload/') ? logo.replace('/upload/', '/upload/c_limit,w_440,f_auto,q_auto/') : logo)}" alt="${escapeHtmlAttr(name)}">`

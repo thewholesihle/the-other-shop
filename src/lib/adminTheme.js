@@ -30,7 +30,12 @@ export function setThemeMode(mode) {
 
 // Svelte action for the admin root: keeps the `dark` class in step with the resolved theme.
 export function adminThemeClass(node) {
-  const apply = (t) => { node.classList.toggle('dark', t === 'dark'); node.style.colorScheme = t; };
+  const apply = (t) => {
+    node.classList.toggle('dark', t === 'dark');
+    node.style.colorScheme = t;
+    // Browser bar / mobile status bar follow the chosen theme, including a manual switch against the OS setting.
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute('content', t === 'dark' ? '#09090b' : '#fafafa'));
+  };
   const unsub = resolvedTheme.subscribe(apply);
   return { destroy: unsub };
 }

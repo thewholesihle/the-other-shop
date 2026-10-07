@@ -69,4 +69,4 @@ async function emailLogoVariants(url) {
   return { light: make(toneFor(info, SURFACE.light)), dark: make(toneFor(info, SURFACE.dark)) };
 }
 
-module.exports = { emailLogoVariants, toneFor, measure, SURFACE };
+module.exports = { emailLogoVariants, toneFor, measure, SURFACE, analyze, isCloudinary, withTransform };

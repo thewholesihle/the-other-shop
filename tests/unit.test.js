@@ -9,6 +9,7 @@ const { yocoConfig, verifyYocoWebhook, createYocoCheckout, YocoError } = require
 const { sanitizeEmailHtml } = require('../src/emails');
 const { measure, toneFor, SURFACE } = require('../src/emailLogo');
 const { mergeProductStock } = require('../src/stockMerge');
+const icons = require('../src/brandIcon');
 
 // ── Yoco webhook signatures ──────────────────────────────────────────────────
 const secretBytes = Buffer.from('unit-test-webhook-secret-0123456789');
@@ -122,4 +123,57 @@ test('stock merge: new variants take the typed value; variants added by someone 
 test('stock merge: products without variants, and old clients with no baseline', () => {
   assert.equal(mergeProductStock({ stock: 8 }, { stock: 15 }, { stock: 10 }).stock, 13);
   assert.equal(mergeProductStock({ stock: 8 }, { stock: 15 }, null).stock, 15);   // no baseline: the typed value wins
+});
+
+// ── Favicon / app icons / manifest ────────────────────────────────────────────
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+test('ico: a valid multi-size container with the PNGs at the offsets it declares', () => {
+  const img = (n) => Buffer.concat([PNG_SIG, Buffer.alloc(n, 7)]);
+  const ico = icons.buildIco([{ size: 16, data: img(10) }, { size: 32, data: img(20) }, { size: 48, data: img(30) }]);
+  assert.equal(ico.readUInt16LE(2), 1);            // type: icon
+  assert.equal(ico.readUInt16LE(4), 3);            // three images
+  const sizes = [0, 1, 2].map(i => ico.readUInt8(6 + 16 * i));
+  assert.deepEqual(sizes, [16, 32, 48]);
+  for (let i = 0; i < 3; i++) {
+    const len = ico.readUInt32LE(6 + 16 * i + 8), off = ico.readUInt32LE(6 + 16 * i + 12);
+    assert.equal(ico.subarray(off, off + 8).equals(PNG_SIG), true);
+    assert.equal(len, 8 + [10, 20, 30][i]);
+  }
+});
+test('colours: hex normalising and luminance', () => {
+  assert.equal(icons.hex6('#fff', '000000'), 'ffffff');
+  assert.equal(icons.hex6('nope', 'abcdef'), 'abcdef');
+  assert.ok(icons.hexLum('#ffffff') > 0.99 && icons.hexLum('#000000') < 0.001);
+});
+test('icon urls: transparent padded tab icons vs solid maskable-safe app icons (Cloudinary only)', () => {
+  const src = 'https://res.cloudinary.com/demo/image/upload/v1/logo.png';
+  assert.match(icons.tabUrl(src, 'asis', 32), /\/upload\/c_pad,w_32,h_32,f_png,q_auto\/v1/);
+  assert.match(icons.tabUrl(src, 'white', 32), /e_colorize:100,co_rgb:ffffff\/c_pad,w_32/);
+  assert.match(icons.solidUrl(src, 'asis', 512, 0.6, 'f8f5f2'), /c_fit,w_307,h_307\/c_pad,w_512,h_512,b_rgb:f8f5f2/);
+  assert.equal(icons.tabUrl('/uploads/logo.png', 'white', 32), '/uploads/logo.png');   // not on Cloudinary: used as it is
+});
+test('manifest: page-coloured theme, usable name, shortcuts, and a fallback icon with no logo', async () => {
+  const m = await icons.manifest({ name: 'The Very Long Store Name', colors: { background: '#f8f5f2', primary: '#111111' }, tagline: 'Streetwear' });
+  assert.equal(m.theme_color, '#f8f5f2');          // the page colour, not the dark primary
+  assert.equal(m.background_color, '#f8f5f2');
+  assert.ok(m.short_name.length <= 12);
+  assert.equal(m.description, 'Streetwear');
+  assert.equal(m.shortcuts.length, 2);
+  assert.equal(m.icons[0].src, '/favicon.svg');
+  const empty = await icons.manifest({});
+  assert.equal(empty.theme_color, '#ffffff');      // never an invalid colour
+});
+test('favicon svg without a logo: a monogram that flips for dark tabs', async () => {
+  const svg = await icons.faviconSvg({ name: 'Others.', bg: '#f8f5f2', fg: '#211c1a' });
+  assert.match(svg, /prefers-color-scheme:dark/);
+  assert.match(svg, />O<\/text>/);
+});
+test('head tags: store uses its own palette, admin gets light + dark browser-bar colours', async () => {
+  const store = await icons.headTags({ name: 'Others.' }, { bg: '#111111' });
+  assert.match(store, /theme-color" content="#111111"/);
+  assert.match(store, /color-scheme" content="dark"/);        // a dark palette → dark form controls and scrollbars
+  assert.match(store, /rel="manifest" href="\/manifest\.webmanifest"/);
+  const admin = await icons.headTags({ name: 'Others.' }, { admin: true, bg: '#fafafa' });
+  assert.match(admin, /prefers-color-scheme: dark/);
+  assert.match(admin, /color-scheme" content="light dark"/);
 });

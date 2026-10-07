@@ -135,6 +135,18 @@ Most sections save via a full-data-blob endpoint (`GET`/`POST /api/data`); Order
 
 ---
 
+## Favicon, app icons & manifest
+
+All icons are generated from the logo (or favicon) uploaded in Settings (`src/brandIcon.js`); nothing ships with the project.
+
+- **Sharp at every size:** `/favicon.ico` is a real multi-size file (16, 32 and 48 px renditions, not one downscaled image), `/favicon.svg` is offered to browsers that take it, the Apple touch icon (180 px) sits on a solid background (iOS turns transparency black), and the manifest lists 192 and 512 px icons in both normal and **maskable** form (the logo kept inside the safe zone so Android's circle/squircle crop doesn't cut it).
+- **Follows the browser theme:** the SVG favicon carries a light and a dark version and switches with `prefers-color-scheme` (Chrome, Edge, Firefox). A logo that would vanish on a tab, a black one on a dark tab or a white one on a light tab, becomes a flat white or black silhouette for that theme; one that already contrasts, or has a solid background, is left alone (same rule as the email logos). Without a logo you get a monogram tile that flips in dark mode. Safari uses the ICO and doesn't switch.
+- **Browser chrome matches the site:** the storefront's `theme-color` is the page colour you chose (and `color-scheme` follows its brightness, so scrollbars and form controls suit a dark palette); the admin gets a light and a dark `theme-color`, updated live when you flip the admin theme switch.
+- **Manifest** (`/manifest.webmanifest`, the old `/manifest.json` still works): `theme_color` and `background_color` are the page colour (they were the dark primary), plus `id`, `scope`, description, `short_name` (max 12 characters), category and Shop / Cart shortcuts.
+- Saving Settings refreshes all of this immediately, instead of after the one-minute cache. Resizing needs the logo on Cloudinary; a logo hosted elsewhere is used as it is.
+
+---
+
 ## Logos that adapt to the theme
 
 The logo in the storefront header and footer, the admin sidebar and the sign-in page is checked against the surface it sits on (the store's palette, or the admin's light/dark theme). A logo that already contrasts is left exactly as uploaded; one that would disappear (a black logo on a dark surface, a white one on a light surface) is drawn as a flat white or black silhouette instead, and it follows the admin theme toggle live. Logos with a solid background (JPG, opaque PNG) are never altered. Upload a transparent PNG or SVG for best results.
