@@ -42,18 +42,22 @@ function toneFor(info, surface) {
   return surface < 0.4 ? 'white' : 'black';
 }
 
+// A failed analysis is remembered only briefly. It used to be cached for hours, so ONE slow first request to Cloudinary
+// (a new logo is transformed on its first fetch) left the logo "unreadable" and wrongly treated as fine as-is.
+const NEGATIVE_TTL_MS = 30 * 1000;
+
 async function analyze(url) {
   const hit = cache.get(url);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
+  if (hit && Date.now() - hit.at < (hit.value ? TTL_MS : NEGATIVE_TTL_MS)) return hit.value;
   let value = null;
-  try {
-    // Ask Cloudinary for a small PNG (never AVIF/WebP, which can't be decoded here). Other hosts: only PNGs.
-    const sample = isCloudinary(url) ? withTransform(url, 'c_limit,w_64,f_png') : (/\.png(\?|$)/i.test(url) ? url : '');
-    if (sample) {
-      const res = await fetch(sample, { signal: AbortSignal.timeout(4000) });
+  // Ask Cloudinary for a small PNG (never AVIF/WebP, which can't be decoded here). Other hosts: only PNGs.
+  const sample = isCloudinary(url) ? withTransform(url, 'c_limit,w_64,f_png') : (/\.png(\?|$)/i.test(url) ? url : '');
+  for (let attempt = 0; sample && attempt < 2 && !value; attempt++) {
+    try {
+      const res = await fetch(sample, { signal: AbortSignal.timeout(8000) });
       if (res.ok) value = measure(PNG.sync.read(Buffer.from(await res.arrayBuffer())).data);
-    }
-  } catch { value = null; }
+    } catch { value = null; }
+  }
   cache.set(url, { at: Date.now(), value });
   return value;
 }

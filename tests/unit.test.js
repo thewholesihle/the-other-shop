@@ -177,3 +177,32 @@ test('head tags: store uses its own palette, admin gets light + dark browser-bar
   assert.match(admin, /prefers-color-scheme: dark/);
   assert.match(admin, /color-scheme" content="light dark"/);
 });
+
+test('app icon tile: always a colour the logo contrasts with, so the icon is never blank', () => {
+  const store = ['f8f5f2', '211c1a'];                                    // cream page, dark text
+  const white = { hasAlpha: true, lum: 1 }, black = { hasAlpha: true, lum: 0.01 }, orange = { hasAlpha: true, lum: 0.25 };
+  assert.equal(icons.chooseTile(white, store).bg, '211c1a');             // white logo -> the dark tile, NOT cream (the blank iOS icon)
+  assert.equal(icons.chooseTile(black, store).bg, 'f8f5f2');             // dark logo -> the page colour
+  assert.equal(icons.chooseTile(orange, store).bg, 'f8f5f2');
+  assert.equal(icons.chooseTile(white, store).tone, 'asis');             // the logo keeps its own colours
+  assert.equal(icons.chooseTile(white, ['18181b', 'fafafa']).bg, '18181b'); // admin tile: dark zinc, white logo as it is
+  assert.equal(icons.chooseTile(black, ['18181b', 'fafafa']).bg, 'fafafa'); // ...and a dark logo falls to the light one
+  assert.equal(icons.chooseTile({ hasAlpha: false, lum: 1 }, store).bg, 'f8f5f2'); // logos with their own background are not second-guessed
+  const unknown = icons.chooseTile(null, store);                         // analysis failed: a neutral tile that shows black AND white
+  assert.equal(unknown.bg, icons.UNKNOWN_TILE);
+  assert.ok(icons.hexLum('#' + unknown.bg) > 0.12 && icons.hexLum('#' + unknown.bg) < 0.3);
+});
+test('store and admin are separate web apps', async () => {
+  const store = await icons.manifest({ name: 'Others.', colors: { background: '#f8f5f2' } });
+  const admin = await icons.adminManifest({ name: 'Others.', colors: { background: '#f8f5f2' } });
+  assert.deepEqual([store.id, store.scope, store.start_url], ['/', '/', '/']);
+  assert.deepEqual([admin.id, admin.scope, admin.start_url], ['/admin/', '/admin/', '/admin/']);
+  assert.notEqual(store.name, admin.name);
+  assert.match(admin.name, /Admin$/);
+  assert.ok(admin.short_name.length <= 12);
+  assert.ok(admin.shortcuts.every(s => s.url.startsWith('/admin/')));
+  assert.ok(store.shortcuts.every(s => !s.url.startsWith('/admin')));
+  const tags = await icons.headTags({ name: 'Others.' }, { admin: true, bg: '#fafafa' });
+  assert.match(tags, /href="\/admin\.webmanifest"/);
+  assert.match(tags, /apple-mobile-web-app-title" content="Others\. Admin"/);
+});

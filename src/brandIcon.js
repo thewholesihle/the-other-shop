@@ -1,6 +1,7 @@
 'use strict';
-// The store's icons: browser tab, home-screen / app icon and web app manifest, all derived from the logo (or favicon)
-// uploaded in Settings. Nothing is bundled with the project.
+// The icons for the store and for the admin, derived from the logo (or favicon) uploaded in Settings. Nothing is bundled
+// with the project. The store and the admin are installable as SEPARATE web apps, so each has its own manifest, name,
+// scope, start URL, shortcuts and home-screen icon.
 //
 //  • Sharp at every size: real 16/32/48 renditions packed into /favicon.ico (not one downscaled 64px image), an SVG
 //    favicon for browsers that take it, a solid-background Apple touch icon (iOS turns transparency black), and
@@ -8,15 +9,22 @@
 //  • Adapts to the browser theme: the SVG favicon carries a light and a dark rendition and switches with
 //    prefers-color-scheme (Chrome, Firefox, Edge). A logo that would vanish on a tab becomes a flat white or black
 //    silhouette for that theme; one that already contrasts, or that has a solid background, is left alone. Same rule as
-//    src/emailLogo.js. Transforms need Cloudinary; a logo hosted elsewhere is used as it is.
+//    src/emailLogo.js.
+//  • App icons are always legible: the tile colour is CHOSEN to contrast with the logo (a white logo gets a dark tile, a
+//    dark logo a light one) instead of hoping the logo's colour suits the store's background — a white logo on a cream
+//    tile came out as a blank square on iOS. If the logo can't be analysed, the tile is a neutral mid-grey that shows
+//    both black and white logos.
+// Resizing needs the logo on Cloudinary; a logo hosted elsewhere is used as it is.
 const { analyze, toneFor, isCloudinary, withTransform } = require('./emailLogo');
 
 // Relative luminance of a browser tab in light and in dark mode (light-grey strip / dark-grey tab).
 const TAB = { light: 0.85, dark: 0.035 };
+const UNKNOWN_TILE = '71717a';            // zinc-500: ≥ 4:1 against both pure white and pure black
 
 const isHex = (c) => /^#[0-9a-f]{3,8}$/i.test(c || '');
 function hex6(c, fallback) {
-  const v = isHex(c) ? c.slice(1) : fallback;
+  const bare = String(c || '').replace(/^#/, '');          // accepts "#f8f5f2" and "f8f5f2"
+  const v = /^[0-9a-f]{3,8}$/i.test(bare) ? bare : fallback;
   return (v.length === 3 ? v.split('').map(x => x + x).join('') : v.slice(0, 6)).toLowerCase();
 }
 function hexLum(c, fallback = 'ffffff') {
@@ -24,31 +32,60 @@ function hexLum(c, fallback = 'ffffff') {
   const lin = (i) => { const v = parseInt(h.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
   return 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
 }
+const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 
 const source = (info) => info?.favicon || info?.logo || '';
 const colorize = (tone) => (tone === 'asis' ? '' : `e_colorize:100,co_rgb:${tone === 'white' ? 'ffffff' : '000000'}/`);
 
 /** Square, transparent-background PNG for a browser tab. */
 const tabUrl = (src, tone, size) => (isCloudinary(src) ? withTransform(src, `${colorize(tone)}c_pad,w_${size},h_${size},f_png,q_auto`) : src);
-/** Square PNG on a solid colour with the logo at `scale` of the width (Apple touch / app icons; maskable uses a smaller scale). */
-const solidUrl = (src, tone, size, scale, bg) => {
+
+/**
+ * Square PNG on a solid colour with the logo at `scale` of the width (Apple touch / app icons; maskable uses a smaller
+ * scale). `badge` writes a small label along the bottom edge (the admin app's "ADMIN"), so the two apps are told apart
+ * on a home screen even when their logos match.
+ */
+const solidUrl = (src, tone, size, scale, bg, badge = '') => {
   if (!isCloudinary(src)) return src;
   const inner = Math.round(size * scale);
-  return withTransform(src, `${colorize(tone)}c_fit,w_${inner},h_${inner}/c_pad,w_${size},h_${size},b_rgb:${bg},f_png,q_auto`);
+  let t = `${colorize(tone)}c_fit,w_${inner},h_${inner}/c_pad,w_${size},h_${size},b_rgb:${bg},f_png,q_auto`;
+  if (badge) {
+    const text = hexLum(bg) < 0.4 ? 'fafafa' : '18181b';
+    t += `/l_text:Arial_${Math.max(10, Math.round(size * 0.085))}_bold_letter_spacing_2:${badge},co_rgb:${text},b_rgb:${bg}/fl_layer_apply,g_south,y_${Math.round(size * 0.05)}`;
+  }
+  return withTransform(src, t);
 };
 
-/** How the logo should be drawn for each surface, or null when there's nothing to analyse (no logo / not on Cloudinary). */
-async function tonesFor(info, bg) {
+/** How the logo should be drawn for browser tabs, or null when there's nothing to analyse (no logo / not on Cloudinary). */
+async function tonesFor(info) {
   const src = source(info);
   if (!isCloudinary(src)) return null;
   const a = await analyze(src);
-  return { tabLight: toneFor(a, TAB.light), tabDark: toneFor(a, TAB.dark), solid: toneFor(a, hexLum(bg)) };
+  return { tabLight: toneFor(a, TAB.light), tabDark: toneFor(a, TAB.dark) };
+}
+
+/**
+ * The tile for an app / home-screen icon: the first candidate colour the logo contrasts with (≥ 3:1), logo untouched.
+ * Only if none does is the logo flattened to white/black. Store tiles prefer the store's colours; the admin's prefer the
+ * dark zinc tile that marks it as the admin app.
+ */
+function chooseTile(a, candidates) {
+  if (!a) return { bg: UNKNOWN_TILE, tone: 'asis' };                      // couldn't read the logo: a tile that suits both
+  if (!a.hasAlpha) return { bg: candidates[0], tone: 'asis' };           // the logo brings its own background
+  for (const c of candidates) if (ratio(a.lum, hexLum(c)) >= 3) return { bg: c, tone: 'asis' };
+  return { bg: candidates[0], tone: hexLum(candidates[0]) < 0.4 ? 'white' : 'black' };   // mid-tone logo: flatten it
+}
+async function appTile(info, { admin = false, bg, fg } = {}) {
+  const src = source(info);
+  const candidates = admin ? ['18181b', 'fafafa'] : [hex6(bg, 'ffffff'), hex6(fg, '18181b'), 'ffffff', '18181b'];
+  if (!isCloudinary(src)) return { bg: candidates[0], tone: 'asis' };
+  return chooseTile(await analyze(src), candidates);
 }
 
 // ── fetching renditions (for the ICO and the SVG, which must embed their images) ─────────────────────────────
 async function grab(url) {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
     return res.ok ? Buffer.from(await res.arrayBuffer()) : null;
   } catch { return null; }
 }
@@ -82,7 +119,7 @@ async function faviconIco(info) {
   const src = source(info);
   if (!isCloudinary(src)) return null;
   return cached(`ico:${src}`, async () => {
-    const t = await tonesFor(info, '#ffffff');
+    const t = await tonesFor(info);
     const sizes = [16, 32, 48];
     const bufs = await Promise.all(sizes.map(s => grab(tabUrl(src, t.tabLight, s))));
     if (bufs.some(b => !b)) return null;
@@ -97,7 +134,7 @@ async function faviconSvg(info) {
   const src = source(info);
   if (isCloudinary(src)) {
     const svg = await cached(`svg:${src}`, async () => {
-      const t = await tonesFor(info, '#ffffff');
+      const t = await tonesFor(info);
       const lightUrl = tabUrl(src, t.tabLight, 128), darkUrl = tabUrl(src, t.tabDark, 128);
       const [l, d] = await Promise.all([grab(lightUrl), lightUrl === darkUrl ? null : grab(darkUrl)]);
       if (!l) return null;
@@ -115,12 +152,21 @@ async function faviconSvg(info) {
     + `<rect class="t" width="64" height="64" rx="14"/><text class="m" x="32" y="45" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-weight="700" font-size="38">${letter}</text></svg>`;
 }
 
-/** <link>/<meta> tags for the tab, home screen, install prompt and browser chrome. */
-async function headTags(info, { admin = false, bg = '#ffffff' } = {}) {
+/** URL of the 180px Apple touch icon (solid tile), or '' if there is no logo. */
+async function appleTouchUrl(info, bg = '#ffffff', { admin = false, fg } = {}) {
+  const src = source(info);
+  if (!src) return '';
+  if (!isCloudinary(src)) return src;
+  const tile = await appTile(info, { admin, bg, fg });
+  return solidUrl(src, tile.tone, 180, 0.8, tile.bg, admin ? 'ADMIN' : '');
+}
+
+/** <link>/<meta> tags for the tab, home screen, install prompt and browser chrome — for the store, or for the admin app. */
+async function headTags(info, { admin = false, bg = '#ffffff', fg } = {}) {
   const src = source(info);
   const bgHex = hex6(bg, 'ffffff');
-  const t = await tonesFor(info, bg);
-  const apple = src ? (isCloudinary(src) ? solidUrl(src, t.solid, 180, 0.8, bgHex) : src) : '';
+  const apple = await appleTouchUrl(info, bg, { admin, fg });
+  const name = String(info?.name || 'Others.');
   const themeMetas = admin
     // The admin has a light and a dark theme (and a manual switch); the page keeps these in step at runtime too.
     ? ['<meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">', '<meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">', '<meta name="color-scheme" content="light dark">']
@@ -130,39 +176,43 @@ async function headTags(info, { admin = false, bg = '#ffffff' } = {}) {
     src && isCloudinary(src) ? '<link rel="icon" href="/favicon.ico" sizes="48x48">' : '',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">',
     apple ? `<link rel="apple-touch-icon" href="${esc(apple)}">` : '',
-    '<link rel="manifest" href="/manifest.webmanifest">',
+    `<link rel="manifest" href="${admin ? '/admin.webmanifest' : '/manifest.webmanifest'}">`,
     ...themeMetas,
     '<meta name="mobile-web-app-capable" content="yes">',
-    `<meta name="apple-mobile-web-app-title" content="${esc((info?.name || 'Others.').slice(0, 20))}">`,
+    `<meta name="apple-mobile-web-app-title" content="${esc((admin ? `${name} Admin` : name).slice(0, 24))}">`,
   ].filter(Boolean).join('\n  ');
 }
 
-/** The web app manifest. `site` is the stored Settings document. */
+/** The icon list shared by both manifests: normal + maskable at 192 and 512 on the tile chosen for the logo. */
+async function appIcons(info, opts) {
+  const src = source(info);
+  if (isCloudinary(src)) {
+    const tile = await appTile(info, opts);
+    const badge = opts.admin ? 'ADMIN' : '';
+    return [
+      { src: solidUrl(src, tile.tone, 192, 0.8, tile.bg, badge), sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: solidUrl(src, tile.tone, 512, 0.8, tile.bg, badge), sizes: '512x512', type: 'image/png', purpose: 'any' },
+      // Maskable icons get cropped to a circle/squircle by the OS: keep the logo (and the label) inside the central safe zone.
+      { src: solidUrl(src, tile.tone, 192, 0.55, tile.bg, ''), sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: solidUrl(src, tile.tone, 512, 0.55, tile.bg, ''), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ];
+  }
+  if (src) return [{ src, sizes: 'any', type: /\.svg(\?|$)/i.test(src) ? 'image/svg+xml' : 'image/png', purpose: 'any' }];
+  return [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }];
+}
+
+const infoOf = (site) => ({ name: site?.name, logo: site?.logo, favicon: site?.favicon, bg: site?.colors?.background, fg: site?.colors?.foreground });
+const shortName = (s) => (s.length > 12 ? s.slice(0, 12).trim() : s);
+
+/** The STORE's web app manifest. `site` is the stored Settings document. */
 async function manifest(site) {
-  const info = { name: site?.name, logo: site?.logo, favicon: site?.favicon, bg: site?.colors?.background, fg: site?.colors?.foreground };
+  const info = infoOf(site);
   const name = site?.name || 'Others.';
   const bg = isHex(site?.colors?.background) ? site.colors.background : '#ffffff';
-  const bgHex = hex6(bg, 'ffffff');
-  const src = source(info);
-  let icons;
-  if (isCloudinary(src)) {
-    const t = await tonesFor(info, bg);
-    icons = [
-      { src: solidUrl(src, t.solid, 192, 0.8, bgHex), sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: solidUrl(src, t.solid, 512, 0.8, bgHex), sizes: '512x512', type: 'image/png', purpose: 'any' },
-      // Maskable icons get cropped to a circle/squircle by the OS: keep the logo inside the central safe zone.
-      { src: solidUrl(src, t.solid, 192, 0.6, bgHex), sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-      { src: solidUrl(src, t.solid, 512, 0.6, bgHex), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-    ];
-  } else if (src) {
-    icons = [{ src, sizes: 'any', type: /\.svg(\?|$)/i.test(src) ? 'image/svg+xml' : 'image/png', purpose: 'any' }];
-  } else {
-    icons = [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }];
-  }
   return {
     id: '/',
     name,
-    short_name: name.length > 12 ? name.slice(0, 12).trim() : name,
+    short_name: shortName(name),
     description: site?.tagline || site?.description || `Shop ${name}`,
     lang: 'en-ZA',
     dir: 'ltr',
@@ -172,7 +222,7 @@ async function manifest(site) {
     categories: ['shopping'],
     background_color: bg,
     theme_color: bg,                     // matches the page (the navbar is the page colour), not the dark primary
-    icons,
+    icons: await appIcons(info, { admin: false, bg, fg: site?.colors?.foreground }),
     shortcuts: [
       { name: 'Shop', url: '/shop' },
       { name: 'Cart', url: '/cart' },
@@ -180,13 +230,30 @@ async function manifest(site) {
   };
 }
 
-/** URL of the 180px Apple touch icon (solid background), or '' if there is no logo. */
-async function appleTouchUrl(info, bg = '#ffffff') {
-  const src = source(info);
-  if (!src) return '';
-  if (!isCloudinary(src)) return src;
-  const t = await tonesFor(info, bg);
-  return solidUrl(src, t.solid, 180, 0.8, hex6(bg, 'ffffff'));
+/** The ADMIN's web app manifest: its own identity, so it installs (and updates) as a different app from the store. */
+async function adminManifest(site) {
+  const info = infoOf(site);
+  const name = site?.name || 'Others.';
+  return {
+    id: '/admin/',
+    name: `${name} Admin`,
+    short_name: name.length > 6 ? 'Admin' : `${name} Admin`.slice(0, 12),
+    description: `Manage products, orders and settings for ${name}.`,
+    lang: 'en-ZA',
+    dir: 'ltr',
+    start_url: '/admin/',
+    scope: '/admin/',
+    display: 'standalone',
+    categories: ['business', 'productivity'],
+    background_color: '#fafafa',
+    theme_color: '#fafafa',
+    icons: await appIcons(info, { admin: true }),
+    shortcuts: [
+      { name: 'Orders', url: '/admin/orders' },
+      { name: 'Products', url: '/admin/products' },
+      { name: 'Site status', url: '/admin/status' },
+    ],
+  };
 }
 
-module.exports = { appleTouchUrl, faviconIco, faviconSvg, headTags, manifest, buildIco, hexLum, hex6, tabUrl, solidUrl, TAB };
+module.exports = { appleTouchUrl, appTile, chooseTile, faviconIco, faviconSvg, headTags, manifest, adminManifest, buildIco, hexLum, hex6, tabUrl, solidUrl, TAB, UNKNOWN_TILE };

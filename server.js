@@ -1528,23 +1528,27 @@ app.get('/favicon.svg', async (_req, res) => {
 // iOS asks for this exact path by itself when a page doesn't name an icon (e.g. from a bookmark).
 app.get('/apple-touch-icon.png', async (_req, res) => {
   const info = await getBrandInfo();
-  const url = await brandIcon.appleTouchUrl(info, info.bg);
+  const url = await brandIcon.appleTouchUrl(info, info.bg, { fg: info.fg });
   if (!url) return res.status(404).end();
   res.set('Cache-Control', 'public, max-age=3600').redirect(302, url);
 });
 
-async function manifestHandler(_req, res) {
+// The store and the admin are installable as separate web apps, each with its own manifest (identity, scope, start
+// URL, name, icon, shortcuts). The admin's lives outside /admin so the SPA catch-all can't swallow it; it holds nothing
+// private (just the store's name and logo), which the public site shows anyway.
+const manifestHandler = (build) => async (_req, res) => {
   let site = null;
   try { if (getIsConnected()) site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1500).lean(); } catch { /* defaults */ }
   try {
-    res.type('application/manifest+json').set('Cache-Control', 'public, max-age=3600').send(JSON.stringify(await brandIcon.manifest(site || {})));
+    res.type('application/manifest+json').set('Cache-Control', 'public, max-age=3600').send(JSON.stringify(await build(site || {})));
   } catch (err) {
     console.warn('manifest failed:', err.message);
     res.status(500).json({ error: 'Failed to generate manifest.' });
   }
-}
-app.get('/manifest.webmanifest', manifestHandler);
-app.get('/manifest.json', manifestHandler); // the original path, kept for installs that already use it
+};
+app.get('/manifest.webmanifest', manifestHandler(brandIcon.manifest));
+app.get('/manifest.json', manifestHandler(brandIcon.manifest)); // the original path, kept for installs that already use it
+app.get('/admin.webmanifest', manifestHandler(brandIcon.adminManifest));
 
 app.get('/api/data', async (req, res) => {
   try {
@@ -2604,7 +2608,7 @@ async function getBrandInfo() {
 }
 
 /** <link>/<meta> tags for the browser tab, home-screen and PWA install — always the store's own icon. */
-const iconHead = (info, bg, admin = false) => brandIcon.headTags(info, { admin, bg });
+const iconHead = (info, bg, admin = false) => brandIcon.headTags(info, { admin, bg, fg: info.fg });
 
 async function bootBrand(admin) {
   const slot = admin ? 'admin' : 'store';
