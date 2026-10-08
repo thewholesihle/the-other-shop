@@ -19,6 +19,7 @@ const zlib = require('zlib');
 const compression = require('compression');
 const { parseUserAgent } = require('./src/device');
 const crypto = require('crypto');
+const fonts = require('./src/fonts');
 const { EventEmitter } = require('events');
 const { isDeepStrictEqual } = require('util');
 const auth = require('./src/auth');
@@ -143,7 +144,7 @@ app.use((req, res, next) => {
         "default-src 'self'",
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
+        "font-src 'self' https://fonts.gstatic.com https://res.cloudinary.com",
         "img-src 'self' data: blob: https:",
         "media-src 'self' blob: https:",
         `connect-src 'self' ${CLOUDINARY_UPLOAD_ORIGIN}`,
@@ -1144,6 +1145,54 @@ app.get('/api/upload/video/:id', requireAdmin, (req, res) => {
 
 app.delete('/api/upload/video/:id', requireAdmin, (req, res) => { videoService.cancel(String(req.params.id)); res.json({ ok: true }); });
 
+// ─── API: Fonts (Settings → Typography) ──────────────────────────────────────
+// Looks a Google Font up so the admin gets an instant "found / not found" and a live preview before saving.
+app.post('/api/admin/fonts/resolve', requireAdmin, async (req, res) => {
+  try {
+    const f = await fonts.resolveGoogleFont(req.body?.family);
+    res.json({ family: f.family, url: f.url, weights: f.weights });
+  } catch (e) {
+    if (e instanceof fonts.FontError) return res.status(400).json({ error: e.message });
+    console.error('POST /api/admin/fonts/resolve', e);
+    res.status(500).json({ error: 'Could not check that font.' });
+  }
+});
+
+// A font file the admin uploads (.woff2, .woff, .ttf, .otf; up to 2 MB). Kept in memory, content-checked, then stored as a raw
+// Cloudinary file (or in the dev folder when VIDEO_LOCAL_DIR is set outside production).
+const fontUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024, files: 1 } });
+app.post('/api/upload/font', requireAdmin, (req, res, next) => {
+  fontUpload.single('font')(req, res, (err) => {
+    if (!err) return next();
+    res.status(err.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'That font file is larger than 2 MB. Use a .woff2 version, which is much smaller.' : 'Upload failed.' });
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
+    const ext = (path.extname(req.file.originalname || '').slice(1) || '').toLowerCase();
+    if (!['woff2', 'woff', 'ttf', 'otf'].includes(ext) || !fonts.looksLikeFont(req.file.buffer, ext)) {
+      return res.status(400).json({ error: 'That is not a font file. Upload a .woff2, .woff, .ttf or .otf file.' });
+    }
+    const stem = (path.basename(req.file.originalname, path.extname(req.file.originalname)).replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'font').slice(0, 40);
+    const unique = `${stem}_${crypto.randomBytes(3).toString('hex')}`;
+    let url;
+    if (DEV_UPLOAD_DIR) {
+      fs.writeFileSync(path.join(DEV_UPLOAD_DIR, `${unique}.${ext}`), req.file.buffer);
+      url = `/dev-uploads/${unique}.${ext}`;
+    } else {
+      if (!cloudinaryConfigured()) return res.status(503).json({ error: 'File storage (Cloudinary) is not configured on this server.' });
+      url = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({ resource_type: 'raw', folder: 'others-store/fonts', public_id: `${unique}.${ext}`, use_filename: false, unique_filename: false, overwrite: false }, (e, r) => (e ? reject(e) : resolve(r.secure_url)));
+        stream.end(req.file.buffer);
+      });
+    }
+    res.json({ url, family: fonts.familyFromFile(url), format: ext });
+  } catch (e) {
+    console.error('POST /api/upload/font', e);
+    res.status(500).json({ error: 'Could not store the font file.' });
+  }
+});
+
 // ─── API: Admin sign-in / session ────────────────────────────────────────────
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -1726,6 +1775,15 @@ app.post('/api/data', requireAdmin, async (req, res) => {
         if (clean.bad.length) return res.status(400).json({ error: `${label}: "${clean.bad[0]}" is not a valid email address${clean.bad.length > 1 ? ` (and ${clean.bad.length - 1} more)` : ''}.` });
         if (clean.tooMany) return res.status(400).json({ error: `${label}: please use at most 10 addresses.` });
         req.body.site[field] = clean.value;
+      }
+    }
+    // Typography: the family is checked against Google Fonts, the uploaded file must be one we accepted, and what is stored
+    // is rebuilt from validated values only (see src/fonts.js).
+    if (req.body.site && req.body.site.fonts !== undefined) {
+      try { req.body.site.fonts = await fonts.normalizeFonts(req.body.site.fonts); }
+      catch (e) {
+        if (e instanceof fonts.FontError) return res.status(400).json({ error: e.message });
+        throw e;
       }
     }
     await writeData(req.body);
@@ -2736,7 +2794,7 @@ let bootCache = { at: 0, admin: null, store: null };
 let brandInfoCache = { at: 0, info: null };
 async function getBrandInfo() {
   if (brandInfoCache.info && Date.now() - brandInfoCache.at < 60000) return brandInfoCache.info;
-  const info = { name: 'Others.', logo: '', favicon: '', bg: '#f8f5f2', fg: '#211c1a' };
+  const info = { name: 'Others.', logo: '', favicon: '', bg: '#f8f5f2', fg: '#211c1a', fonts: null };
   if (getIsConnected()) {
     try {
       const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(800).lean();
@@ -2745,6 +2803,7 @@ async function getBrandInfo() {
       info.favicon = site?.favicon || '';
       info.bg = site?.colors?.background || info.bg;
       info.fg = site?.colors?.foreground || info.fg;
+      info.fonts = site?.fonts || null;
     } catch { /* defaults */ }
   }
   brandInfoCache = { at: Date.now(), info };
@@ -2761,6 +2820,7 @@ async function bootBrand(admin) {
   const { name, logo, bg, fg } = info;
   const safeColor = (c, d) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : d);
   const brand = {
+    fonts: admin ? '' : fonts.buildFontHead(info.fonts),   // '' = the built-in typeface, nothing to change
     icons: await iconHead(info, admin ? '#fafafa' : safeColor(bg, '#f8f5f2'), admin),
     style: admin ? 'background:#fafafa;color:#09090b' : `background:${safeColor(bg, '#f8f5f2')};color:${safeColor(fg, '#211c1a')}`,
     inner: logo
@@ -2778,6 +2838,8 @@ async function sendShell(res, { admin = false, head = '' } = {}) {
     let html = fs.readFileSync(path.resolve(__dirname, 'public', 'index.html'), 'utf-8');
     html = html.replace('__BOOT_STYLE__', () => brand.style).replace('<!--BOOT-->', () => brand.inner);
     html = html.replace('<head>', () => `<head>\n  ${brand.icons}`);
+    // Custom typography replaces the built-in Space Grotesk stylesheet (kept only while a slot still uses it).
+    if (brand.fonts) html = html.replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=Space\+Grotesk[^>]*>/, () => brand.fonts);
     if (admin) html = html.replace('<div id="boot"', '<div id="boot" class="boot-admin"');
     if (head) { html = html.replace('<title>The Other Shop</title>', '').replace('<head>', () => `<head>${head}`); }
     res.send(html);

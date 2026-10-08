@@ -31,7 +31,7 @@
     /* Static brand loading screen: painted from the first HTML byte, before any JS runs, and
        removed by the app once it has something to show (see hideBoot in src/lib/brand.js).
        The server fills in the store's real logo, name and colours. */
-    #boot{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:hsl(40 20% 97%);color:hsl(30 10% 12%);font-family:'Space Grotesk',system-ui,sans-serif;transition:opacity .3s ease}
+    #boot{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:hsl(40 20% 97%);color:hsl(30 10% 12%);font-family:var(--font-body,'Space Grotesk'),system-ui,sans-serif;transition:opacity .3s ease}
     #boot.boot-admin{font-family:'Geist',ui-sans-serif,system-ui,sans-serif}
     #boot.boot-out{opacity:0;pointer-events:none}
     #boot .boot-mark{font-size:clamp(30px,5vw,40px);font-weight:700;letter-spacing:-.02em;line-height:1}

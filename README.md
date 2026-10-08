@@ -116,6 +116,15 @@ Every one of these has a matching server-side route in `server.js` (not just the
 - **Promote a category** (Settings → Homepage): switch it on, pick a category and it gets its own section on the home page, with a customisable small line, heading, message and button text (blanks fall back to the category name and "Shop <category>"), 4 to 10 products, and a choice of sitting below New Drops or below the featured editorial. In-stock products are shown first, newest first. The section stays hidden while the category is empty or has been deleted, and the settings page says so.
 - **Settings side list:** the list of sections beside the settings form highlights the one you are scrolled to (and the one you just clicked).
 
+## Custom fonts
+
+**Settings → Typography** sets the storefront's fonts, one for **headings** and one for **body text**. Each can be the built-in Space Grotesk, (for headings) "same as body text", **any Google Font**, or **a font file you upload** (.woff2 is best; .woff, .ttf and .otf also work, up to 2 MB).
+
+- **Google Fonts:** type the name exactly as it appears on fonts.google.com (suggestions are offered) and press **Check**. The server confirms the font exists, picks the weights it actually has (300–700 where available, regular only for single-weight fonts) and the preview updates straight away. It is checked again on save, and a name Google doesn't know is refused with a clear message.
+- **Uploaded fonts:** the file's contents are checked (a renamed image or program is refused) and it is stored on Cloudinary. One file is used for every weight, so a variable font gives true bold; with a regular-only file, bold text appears at that file's weight.
+- **How it's applied:** the server writes the font links, `@font-face` rules and two CSS variables (`--font-heading`, `--font-body`) into the page's `<head>`, so the first paint already uses the right font with no flash of the old one. The built-in font is only downloaded while a slot still uses it. Nothing in the page is copied from what the browser sent: names and file addresses are validated and rebuilt (`src/fonts.js`). A store that never touches this setting is served exactly as before.
+- **Not affected:** the admin panel keeps its own typeface, and emails keep standard system fonts, since most email apps ignore web fonts.
+
 ## Admin panel
 
 Eleven sections, all behind the sign-in page:

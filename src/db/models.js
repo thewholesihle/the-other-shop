@@ -80,6 +80,17 @@ const SettingsSchema = new mongoose.Schema({
     count:    { type: Number, default: 4, enum: [4, 6, 8, 10] },
     position: { type: String, default: 'after-drops', enum: ['after-drops', 'after-editorial'] },
   },
+  // Typography (Settings → Typography). Each slot: source 'default' | 'body' (headings only) | 'google' | 'upload'.
+  fonts: {
+    heading: {
+      source: { type: String, default: 'default' }, family: { type: String, default: '' },
+      url: { type: String, default: '' }, file: { type: String, default: '' }, format: { type: String, default: '' },
+    },
+    body: {
+      source: { type: String, default: 'default' }, family: { type: String, default: '' },
+      url: { type: String, default: '' }, file: { type: String, default: '' }, format: { type: String, default: '' },
+    },
+  },
   navLogoSize:    { type: Number, default: 28 },
   favicon:       { type: String, default: '' },
   emailLogo:     { type: String, default: '' },

@@ -13,8 +13,9 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
-        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        // The admin can swap either one in Settings → Typography; the server then defines these two variables.
+        sans: ['var(--font-body, "Space Grotesk")', 'system-ui', 'sans-serif'],
+        display: ['var(--font-heading, "Space Grotesk")', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

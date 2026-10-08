@@ -2,6 +2,7 @@
   import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import ImageUpload from './ImageUpload.svelte';
   import VideoUpload from './VideoUpload.svelte';
+  import FontSettings from './FontSettings.svelte';
   import Button from '../ui/Button.svelte';
   import Card from '../ui/Card.svelte';
   import Badge from '../ui/Badge.svelte';
@@ -41,6 +42,8 @@
     f.featuredLookbook ??= '';
     f.featuredEditorialType ??= 'lookbook';
     f.featuredEditorialEnabled ??= true;
+    const slot = (v) => ({ source: 'default', family: '', url: '', file: '', format: '', ...(v || {}) });
+    f.fonts = { heading: slot(f.fonts?.heading), body: slot(f.fonts?.body) };
     f.promotedCategory = { enabled: false, category: '', label: '', heading: '', message: '', cta: '', count: 4, position: 'after-drops', ...(f.promotedCategory || {}) };
     f.colors ??= { background: '#f8f5f2', foreground: '#211c1a', primary: '#211c1a', border: '#dbd8d4', hover: '#ff4400' };
     f.colors.hover ??= f.colors.primary || '#ff4400';
@@ -109,6 +112,7 @@
   const SECTIONS = [
     { id: 'identity', label: 'Store identity' },
     { id: 'appearance', label: 'Appearance' },
+    { id: 'typography', label: 'Typography' },
     { id: 'storefront', label: 'Homepage' },
     { id: 'shipping', label: 'Shipping' },
     { id: 'payments', label: 'Payments' },
@@ -282,6 +286,11 @@
             <p class="mt-3 text-sm"><span class="underline" style="color:{theme.hex.hover}">A link in its hover colour</span></p>
           </div>
         </div>
+      </Card>
+
+      <!-- Typography -->
+      <Card id="settings-typography" title="Typography" description="The fonts used across the storefront. Choose a Google Font or upload your own." class="scroll-mt-20">
+        <FontSettings bind:fonts={form.fonts} />
       </Card>
 
       <!-- Homepage -->

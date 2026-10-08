@@ -314,3 +314,62 @@ test('home page: promoted category section', async () => {
   assert.equal(pickPromoted(prods.filter(p => p.category !== 'c2'), cats, { ...on, category: 'c2' }), null); // empty category: hidden
   assert.equal(pickPromoted(prods, cats, { ...on, count: 99 }).items.length, 4);              // unknown count: the default
 });
+
+test('fonts: Google Fonts names are checked, weights step down, nothing unsafe reaches the page', async () => {
+  const f = require('../src/fonts');
+  const calls = [];
+  // pretend Google: "Playfair Display" supports every weight, "Bebas Neue" only regular, anything else doesn't exist
+  const google = async (url) => {
+    calls.push(url);
+    const fam = decodeURIComponent(/family=([^:&]+)/.exec(url)[1].replace(/\+/g, ' '));
+    const weighted = /:wght@/.test(url);
+    if (fam === 'Playfair Display') return { ok: true, status: 200 };
+    if (fam === 'Bebas Neue' && !weighted) return { ok: true, status: 200 };
+    return { ok: false, status: 400 };
+  };
+  const pf = await f.resolveGoogleFont('  playfair  display ', google).catch(e => e);
+  assert.ok(pf instanceof f.FontError);                                                     // names are case-sensitive on Google
+  const ok = await f.resolveGoogleFont('Playfair Display', google);
+  assert.equal(ok.url, 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300;400;500;600;700&display=swap');
+  const bebas = await f.resolveGoogleFont('Bebas Neue', google);
+  assert.equal(bebas.url, 'https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap'); // fell back to regular only
+  assert.equal(bebas.weights, '400');
+  await assert.rejects(() => f.resolveGoogleFont('Not A Real Font', google), /no font called/);
+  await assert.rejects(() => f.resolveGoogleFont('x"><script>', google), /exactly as it appears/);   // never reaches Google, let alone the page
+  await assert.rejects(() => f.resolveGoogleFont('Offline Font', async () => { throw new Error('ENOTFOUND'); }), /Could not reach Google/);
+});
+test('fonts: saving keeps only validated values, and the head markup is built from them', async () => {
+  const f = require('../src/fonts');
+  const google = async () => ({ ok: true, status: 200 });
+  const cloud = 'https://res.cloudinary.com/demo/raw/upload/v1/others-store/fonts/Brand-Sans_ab12cd.woff2';
+  const clean = await f.normalizeFonts({ heading: { source: 'upload', file: cloud, family: 'Brand Sans', url: 'javascript:alert(1)' }, body: { source: 'google', family: 'Inter', file: 'evil' } }, google);
+  assert.deepEqual([clean.heading.source, clean.heading.url, clean.heading.format, clean.body.source, clean.body.file], ['upload', '', 'woff2', 'google', '']);
+  await assert.rejects(() => f.normalizeFonts({ body: { source: 'upload', file: 'https://evil.example/a.woff2' } }, google), /upload a \.woff2/);   // only our own storage
+  await assert.rejects(() => f.normalizeFonts({ body: { source: 'upload', file: 'https://res.cloudinary.com/x/a.woff2"); } body{display:none' } }, google), /upload a/);
+  assert.equal((await f.normalizeFonts({ heading: { source: 'body' }, body: { source: 'default' } }, google)).heading.source, 'body');
+  assert.equal((await f.normalizeFonts({ body: { source: 'body' } }, google)).body.source, 'default');       // "same as body" only makes sense for headings
+  assert.equal((await f.normalizeFonts(undefined, google)).heading.source, 'default');
+
+  assert.equal(f.buildFontHead(null), '');
+  assert.equal(f.buildFontHead({ heading: { source: 'default' }, body: { source: 'default' } }), '');       // untouched store: served exactly as before
+  const head = f.buildFontHead(clean);
+  assert.match(head, /@font-face\{font-family:"Brand Sans";src:url\("https:\/\/res\.cloudinary\.com[^"]+\.woff2"\) format\("woff2"\)/);
+  assert.match(head, /--font-heading:"Brand Sans"/);
+  assert.match(head, /--font-body:"Inter"/);
+  assert.match(head, /rel="preload"[^>]+as="font"[^>]+crossorigin/);
+  assert.ok(!/Space\+Grotesk/.test(head));                                                                  // both slots custom: the default font isn't downloaded
+  const mixed = f.buildFontHead({ heading: { source: 'google', family: 'Inter', url: 'https://fonts.googleapis.com/css2?family=Inter&display=swap' }, body: { source: 'default' } });
+  assert.match(mixed, /Space\+Grotesk/);                                                                    // body still uses it
+  assert.ok(!/--font-body/.test(mixed));
+  assert.match(f.buildFontHead({ heading: { source: 'body' }, body: { source: 'google', family: 'Inter', url: 'https://fonts.googleapis.com/css2?family=Inter&display=swap' } }), /--font-heading:var\(--font-body\)/);
+  assert.equal(f.buildFontHead({ heading: { source: 'google', family: 'Bad"Name', url: 'https://x.test/a' }, body: { source: 'default' } }).includes('Bad"Name'), false);
+});
+test('fonts: an upload must really be a font', () => {
+  const f = require('../src/fonts');
+  const pad = (s) => Buffer.concat([Buffer.from(s, 'latin1'), Buffer.alloc(32)]);
+  assert.ok(f.looksLikeFont(pad('wOF2'), 'woff2') && f.looksLikeFont(pad('wOFF'), 'woff') && f.looksLikeFont(pad('OTTO'), 'otf'));
+  assert.ok(f.looksLikeFont(Buffer.concat([Buffer.from([0, 1, 0, 0]), Buffer.alloc(32)]), 'ttf'));
+  assert.equal(f.looksLikeFont(pad('<svg'), 'woff2'), false);
+  assert.equal(f.looksLikeFont(pad('MZ\x90\x00'), 'ttf'), false);                                           // a renamed program
+  assert.equal(f.looksLikeFont(pad('wOF2'), 'ttf'), false);
+});
