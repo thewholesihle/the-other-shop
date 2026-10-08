@@ -1,6 +1,7 @@
 <script>
   import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import ImageUpload from './ImageUpload.svelte';
+  import VideoUpload from './VideoUpload.svelte';
   import Button from '../ui/Button.svelte';
   import Card from '../ui/Card.svelte';
   import Badge from '../ui/Badge.svelte';
@@ -57,6 +58,9 @@
       cancelled: 'Your order {orderId} has been cancelled. If you have any questions, please contact our support team.'
     };
     f.adminNotificationEmails ??= 'othersworldwide@gmail.com';
+    // Two lists now; a store that only had the single one starts with that address in both.
+    f.orderNotificationEmails ||= f.adminNotificationEmails;
+    f.systemAlertEmails ||= f.adminNotificationEmails;
     return f;
   }
 
@@ -66,10 +70,14 @@
   // svelte-ignore state_referenced_locally
   let snapshot = $state(JSON.stringify(form));
   let saving = $state(false);
-  let uploadingVideo = $state(false);
   let dirty = $derived(JSON.stringify(form) !== snapshot);
 
   // What the storefront will actually render: the picked colours, adjusted where needed so text stays readable.
+  // Live check of the two recipient lists (the server validates again when saving).
+  const parseEmails = (v) => String(v || '').split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+  const badEmails = (v) => parseEmails(v).filter(e => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+  let badOrderEmails = $derived(badEmails(form.orderNotificationEmails));
+  let badSystemEmails = $derived(badEmails(form.systemAlertEmails));
   let theme = $derived(buildTheme(form.colors));
   let adjusted = $derived(theme.checks.filter(c => !c.pass).length);
 
@@ -95,25 +103,6 @@
     if (!ok) return;
     form = normalize(site);
     snapshot = JSON.stringify(form);
-  }
-
-  async function uploadHeroVideo(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    uploadingVideo = true;
-    try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' });
-      if (!res.ok) throw new Error('Upload failed');
-      const { url } = await res.json();
-      form.hero.video = url;
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      uploadingVideo = false;
-      e.target.value = '';
-    }
   }
 
   const SECTIONS = [
@@ -301,19 +290,7 @@
             <div class="space-y-4">
               <p class="text-sm text-muted-foreground">Upload an image <em>or</em> a video/GIF. If both are set, the video takes priority.</p>
               <ImageUpload label="Background image" value={form.hero.image} onChange={(url) => (form.hero.image = url)} />
-              <div>
-                <p class={labelCls}>Background video / GIF</p>
-                {#if form.hero.video}
-                  <div class="mb-2 flex items-center gap-3 text-sm">
-                    <span class="max-w-[260px] truncate text-muted-foreground">{form.hero.video}</span>
-                    <button type="button" onclick={() => (form.hero.video = '')} class="text-xs text-destructive hover:underline">Remove</button>
-                  </div>
-                {/if}
-                <label class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium shadow-xs transition-colors hover:bg-accent focus-within:ring-2 focus-within:ring-ring/50">
-                  {#if uploadingVideo}<LoaderCircle size={15} class="animate-spin" /> Uploading…{:else}<Upload size={15} /> Upload video or GIF{/if}
-                  <input type="file" accept="video/mp4,video/webm,image/gif" class="sr-only" onchange={uploadHeroVideo} />
-                </label>
-              </div>
+              <VideoUpload label="Background video / GIF" value={form.hero.video} stripAudio onChange={(url) => (form.hero.video = url)} />
             </div>
             {/if}
           </div>
@@ -454,9 +431,16 @@
       <Card id="settings-emails" title="Emails & alerts" description="Who is notified, and what customers are told when an order changes." class="scroll-mt-20">
         <div class="space-y-5 p-6 pt-4">
           <div>
-            <label for="s-admin-emails" class={labelCls}>Admin notification emails</label>
-            <input id="s-admin-emails" bind:value={form.adminNotificationEmails} placeholder="you@store.com, partner@store.com" class={inputCls} />
-            <p class={hintCls}>Separate several addresses with commas. They receive new-order and system alerts.</p>
+            <label for="s-order-emails" class={labelCls}>Order notification emails</label>
+            <input id="s-order-emails" bind:value={form.orderNotificationEmails} placeholder="orders@store.com, packing@store.com" aria-invalid={badOrderEmails.length > 0} class={inputCls} />
+            <p class={hintCls}>Who is emailed when a customer pays for an order. Separate several addresses with commas (up to 10). The first one is also shown to customers as the address to write to.</p>
+            {#if badOrderEmails.length}<p role="alert" class="mt-1.5 text-[0.8rem] text-destructive">Not a valid email address: {badOrderEmails.join(', ')}</p>{/if}
+          </div>
+          <div>
+            <label for="s-system-emails" class={labelCls}>System alert emails</label>
+            <input id="s-system-emails" bind:value={form.systemAlertEmails} placeholder="you@store.com" aria-invalid={badSystemEmails.length > 0} class={inputCls} />
+            <p class={hintCls}>Who is emailed about the site itself: new admin sign-ins, errors, database outages, the weekly summary and log backups. Keep this to people who look after the site.</p>
+            {#if badSystemEmails.length}<p role="alert" class="mt-1.5 text-[0.8rem] text-destructive">Not a valid email address: {badSystemEmails.join(', ')}</p>{/if}
           </div>
           <div class="space-y-4 border-t border-border pt-5">
             <p class="text-sm text-muted-foreground">Use <code class="rounded-[0.25rem] bg-muted px-1.5 py-0.5 text-xs">{'{orderId}'}</code> to insert the order reference.</p>

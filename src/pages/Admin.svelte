@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { adminThemeClass } from '../lib/adminTheme.js';
+  import { setCsrf } from '../lib/csrf.js';
   import AdminLayout from '../components/admin/AdminLayout.svelte';
   import AdminLogin from '../components/admin/AdminLogin.svelte';
   import AdminDashboard from '../components/admin/AdminDashboard.svelte';
@@ -156,6 +157,7 @@
   // ── Session lifecycle ─────────────────────────────────────────────────────
   async function startSession(token) {
     csrf = token;
+    setCsrf(token);                // also for XMLHttpRequest uploads (video progress bar)
     authState = 'ready';
     loading = true;
     try {
@@ -175,6 +177,7 @@
   function signedOut(message) {
     stopSession();
     csrf = '';
+    setCsrf('');
     data = null;
     authState = 'login';
     if (message) toast.info(message, 6000);

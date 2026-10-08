@@ -1,6 +1,7 @@
 <script>
   import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
   import ImageUpload from './ImageUpload.svelte';
+  import VideoUpload from './VideoUpload.svelte';
   import Button from '../ui/Button.svelte';
   import Card from '../ui/Card.svelte';
   import Badge from '../ui/Badge.svelte';
@@ -182,11 +183,20 @@
             </div>
             {#if item.type === 'image'}
               <ImageUpload label="" value={item.url} onChange={(url) => updateItem(i, 'url', url)} />
+            {:else if item.type === 'video'}
+              <VideoUpload label="" value={item.url} onChange={(url) => updateItem(i, 'url', url)} />
+              <input
+                value={item.url}
+                oninput={(e) => updateItem(i, 'url', e.target.value)}
+                placeholder="…or paste a video file URL"
+                aria-label="Video URL"
+                class="{inputCls} font-mono text-[13px]"
+              />
             {:else}
               <input
                 value={item.url}
                 oninput={(e) => updateItem(i, 'url', e.target.value)}
-                placeholder={item.type === 'embed' ? 'YouTube or Vimeo URL' : 'Video file URL'}
+                placeholder="YouTube or Vimeo URL"
                 aria-label="{TYPE_LABEL[item.type]} URL"
                 class="{inputCls} font-mono text-[13px]"
               />

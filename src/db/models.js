@@ -79,7 +79,11 @@ const SettingsSchema = new mongoose.Schema({
     delivered: { type: String, default: 'Your order {orderId} has been delivered. We hope you enjoy your new pieces!' },
     cancelled: { type: String, default: 'Your order {orderId} has been cancelled. If you have any questions, please contact our support team.' },
   },
-  adminNotificationEmails: { type: String, default: 'othersworldwide@gmail.com' },
+  // Who receives what. Order emails (a new paid order) and system alerts (security, errors, database, weekly summary) have
+  // their own lists. Empty = fall back to the older single list below, then to ADMIN_EMAIL.
+  orderNotificationEmails: { type: String, default: '' },
+  systemAlertEmails:       { type: String, default: '' },
+  adminNotificationEmails: { type: String, default: 'othersworldwide@gmail.com' }, // the original single list (kept as the fallback)
 }, { strict: true, _id: false, versionKey: false });
 
 // ── Category ──────────────────────────────────────────────────────────────────

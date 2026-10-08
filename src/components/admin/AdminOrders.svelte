@@ -291,7 +291,7 @@
     }
     const sender = [
       ...String(contactAddress || '').split(/\n|,/).map(t => t.trim()).filter(Boolean).slice(0, 3),
-      (site?.adminNotificationEmails || '').split(',')[0]?.trim(),
+      (site?.orderNotificationEmails || site?.adminNotificationEmails || '').split(',')[0]?.trim(),
     ].filter(Boolean);
     type('semibold', 9.5, FG);
     doc.text(siteName, R, y + 3.5, { align: 'right' });

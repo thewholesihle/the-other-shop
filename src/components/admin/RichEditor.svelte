@@ -2,6 +2,7 @@
   // A contenteditable rich text editor with toolbar
   // Emits HTML via onChange
   import { toast } from '../../lib/toast.js';
+  import { uploadVideo, describeStats } from '../../lib/videoUpload.js';
   import { confirmDialog } from '../../lib/confirm.js';
   import Bold from 'lucide-svelte/icons/bold';
   import Italic from 'lucide-svelte/icons/italic';
@@ -27,6 +28,7 @@
 
   let editor;
   let uploading = false;
+  let uploadNote = '';
 
   // Sync initial value once
   let initialized = false;
@@ -143,20 +145,19 @@
   async function insertVideo() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'video/mp4,video/webm';
+    input.accept = 'video/mp4,video/quicktime,video/webm';
     input.click();
     input.onchange = async () => {
       const file = input.files[0];
       if (!file) return;
       uploading = true;
+      uploadNote = 'Uploading video…';
       try {
-        const fd = new FormData();
-        fd.append('image', file); // server accepts video too via updated mimetype filter
-        const res = await fetch('/api/upload', { method: 'POST', body: fd });
-        if (!res.ok) throw new Error('Upload failed');
-        const { url } = await res.json();
-        exec('insertHTML', `<video src="${url}" controls style="max-width:100%;height:auto;margin:1rem 0;"></video>`);
-      } catch (err) { toast.error(err.message); } finally { uploading = false; }
+        // Compressed for the web on the server first (smaller, faster, no GPS/device data); this can take a little while.
+        const { url, stats } = await uploadVideo(file, { audio: 'keep', onUpdate: (u) => { uploadNote = u.message; } });
+        exec('insertHTML', `<video src="${url}" controls playsinline preload="metadata" style="max-width:100%;height:auto;margin:1rem 0;"></video>`);
+        toast.success(`Video added. ${describeStats(stats)}`);
+      } catch (err) { toast.error(err.message); } finally { uploading = false; uploadNote = ''; }
     };
   }
 
@@ -216,6 +217,7 @@
       {#if uploading}<LoaderCircle size={15} class="animate-spin" />{:else}<ImageIcon size={15} />{/if} Image
     </button>
     <button type="button" title="Insert video file" onclick={insertVideo} class={btnCls}><Video size={15} /> Video</button>
+    {#if uploadNote}<span class="px-2 text-xs text-muted-foreground" role="status">{uploadNote}</span>{/if}
     <button type="button" title="Embed YouTube or Vimeo" onclick={insertEmbed} class={btnCls}><Youtube size={15} /> Embed</button>
   </div>
 

@@ -84,7 +84,8 @@ See [`.env.example`](.env.example) for the full annotated list. Summary:
 ### Optional — feature-gated
 | Variable | Enables |
 |---|---|
-| `RESEND_API_KEY`, `SMTP_FROM`, `ADMIN_EMAIL`, `UNSUBSCRIBE_SECRET` | Order-status emails, admin notifications, newsletter broadcasts, critical-error alerts |
+| `RESEND_API_KEY`, `SMTP_FROM`, `ADMIN_EMAIL`, `UNSUBSCRIBE_SECRET` | Order-status emails, admin notifications, newsletter broadcasts, critical-error alerts. `ADMIN_EMAIL` is the last-resort recipient when no addresses are set in **Settings → Emails & alerts** |
+| `VIDEO_MAX_MB` (500), `VIDEO_MAX_MINUTES` (20), `FFMPEG_PATH` | Video upload limits, and a custom ffmpeg binary (otherwise the bundled `ffmpeg-static` or `ffmpeg` on the PATH is used) — see **Video uploads** below |
 | `PAYFAST_MERCHANT_ID_*`, `PAYFAST_MERCHANT_KEY_*` (`_SANDBOX` / `_LIVE`, chosen by `PAYFAST_SANDBOX`) | PayFast at checkout |
 | `PAYFAST_PASSPHRASE_SANDBOX` / `_LIVE` | Only if your PayFast account has a passphrase configured |
 | `YOCO_SECRET_KEY_*`, `YOCO_WEBHOOK_SECRET_*` (`_TEST` / `_LIVE`, chosen by `YOCO_SANDBOX`) | Yoco at checkout — see **Payments** below |
@@ -164,6 +165,7 @@ Every email is a [React Email](https://react.email) template in `emails/`, built
 - `npm run build` compiles them (`emails/dist/`, git-ignored); `npm run emails:preview` renders all of them with sample data into `emails/preview/index.html` at phone and desktop width, with the plain-text version beside each. If the templates were never built the server still sends a plain-text message rather than dropping an order alert.
 - **Fewer spam flags, built in:** every email has a real plain-text part rendered from the same template; subjects are sentence case with no brackets, capitals or emoji; no images are embedded as data URIs (the old social icons were); logos and product photos are capped-size PNG/JPG over absolute https URLs with alt text and set dimensions; messages stay under Gmail's ~102 KB clipping limit (6–16 KB today); every email says why you received it; the postal address is in the footer; admin/system mail carries `Auto-Submitted` so auto-responders leave it alone; the newsletter keeps the one-click `List-Unsubscribe` headers and refuses to send without a postal address. Newsletter bodies are sanitised (no scripts, embeds, forms or event handlers, links made absolute), and the admin gets deliverability tips after a send if the subject is shouting, has stacked punctuation, is too long or uses typical spam words.
 - Customer-facing text is escaped (product names and notes can no longer inject HTML), and the internal "needs a look" order note is never emailed.
+- **Who receives what:** **Settings → Emails & alerts** has two separate lists, each up to 10 addresses separated by commas. **Order notification emails** get the "new paid order" email (the first address is also the contact address shown to customers). **System alert emails** get everything about the site itself: new-device sign-ins, error and database-outage alerts, the weekly summary and log backups. An empty list falls back to the older single list (`adminNotificationEmails`, still honoured for existing stores) and then to `ADMIN_EMAIL`. Addresses are checked as you type and again on the server (a bad one is named in the error and nothing is saved), tidied (lower-cased, de-duplicated) and never exposed to the public site data. The **Send test email** button sends one test to each list.
 - **The biggest spam factor is not in the code:** send from a domain you own. `onboarding@resend.dev` is a shared test sender that lands in spam and only delivers to your own address. Verify your domain in Resend (it adds the SPF and DKIM DNS records), add a DMARC record, then set `SMTP_FROM`. The test-email button in Site status tells you if you are still on the sandbox sender.
 
 ---
@@ -236,6 +238,20 @@ The Community page has an **Events & Pop-ups** section at the top. It is managed
 - **Uploads:** the browser re-encodes photos over ~1.2 MB to WebP (max 2560px) before uploading; Cloudinary also caps stored images at 2560px and pre-generates the video renditions the site requests.
 - **Emails** use size-capped JPEG/PNG renditions (no WebP/AVIF, which many mail clients can't show). The admin uses small thumbnails everywhere.
 - **Delivery:** responses are gzip/brotli-compressed, the JS bundle is minified (~1 MB → ~330 KB), vendor libs are cached for 30 days, and the Cloudinary connection is opened early with `preconnect`.
+
+## Video uploads
+
+Phone and camera video is made for editing, not streaming (30–100 Mbps, 4K, 60 fps, GPS in the metadata). Every video uploaded in the admin (homepage hero, lookbook items, the article editor) is therefore compressed on the server **before** it is published, using ffmpeg (`src/videoPipeline.js`):
+
+- **Format:** H.264 High, constant-quality (CRF 23–25) held under a bitrate ceiling (about 5 Mbps at 1080p, 2.8 at 720p), so quality is steady and busy footage can't balloon. It plays in every browser and on every phone.
+- **Size:** fitted inside 1920×1080 (portrait: 1080×1920), never upscaled, frame rate capped at 30 fps, `yuv420p` with BT.709 colour tags. iPhone / HDR footage is tone-mapped to SDR so it doesn't look washed out (if the tone-mapping chain fails on a given file it retries without it).
+- **Streaming:** `+faststart` so playback begins before the download ends, a keyframe every 2 s so seeking is quick. Slower, better presets are used for short clips and faster ones for long clips.
+- **Privacy:** all metadata, chapters, subtitles and data tracks are stripped (no GPS or device info). The admin can also remove the audio track, which suits muted background videos (about 10% smaller).
+- **Smart skipping:** an MP4 that is already web-ready (H.264, within 1080p, 30 fps or less) is published as it is when re-encoding would not make it meaningfully smaller. GIFs become MP4s.
+- **Result:** typical camera footage comes out 80–95% smaller (a 29.5 MB 4K/60 clip became 1.6 MB, SSIM 0.996). After publishing, Cloudinary also pre-generates 1280/1920 renditions and the site serves the best codec per browser (`f_auto`: VP9/AV1/H.264).
+- **In the admin:** drag a file onto the uploader. It shows upload progress, then compression progress, then "29.5 MB → 1.6 MB (95% smaller) · 1080p · 30 fps". Jobs run one at a time in a queue (compression is CPU-heavy), the upload returns immediately and the admin follows the job, so a long video never hits a request timeout. Limits: `VIDEO_MAX_MB` (default 500) and `VIDEO_MAX_MINUTES` (default 20). Errors are phrased for people ("That file could not be read as a video").
+- **ffmpeg:** comes from the `ffmpeg-static` optional dependency (installed by `npm install` on Render and most hosts), or set `FFMPEG_PATH`, or have `ffmpeg` on the PATH. If none is available the uploader says so and falls back to publishing the original (Cloudinary's 100 MB single-video limit applies).
+- **Developing without Cloudinary:** set `VIDEO_LOCAL_DIR=./tmp-videos` (ignored when `NODE_ENV=production`) to keep the compressed files locally and serve them from `/dev-uploads`.
 
 ## Logs & backups
 

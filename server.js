@@ -51,6 +51,8 @@ const apiLimiter = rateLimit({
   max: 300, // 300 requests per IP — plenty for normal admin panel polling (~45/15min)
   standardHeaders: true,
   legacyHeaders: false,
+  // The admin checks on a video that is being compressed about once a second; that must not count against the limit.
+  skip: (req) => req.method === 'GET' && req.path.startsWith('/upload/video'),
   message: { error: 'Too many requests, please try again later.' },
 });
 
@@ -337,7 +339,7 @@ async function sendEmail({ from, to, subject, html, text, replyTo, headers, atta
  * sent "from" a no-reply sandbox address (see EMAIL_FROM), so without this, hitting
  * reply on any customer-facing email goes nowhere. */
 function primaryContactEmail(site) {
-  const raw = site?.adminNotificationEmails || process.env.ADMIN_EMAIL || '';
+  const raw = site?.orderNotificationEmails || site?.adminNotificationEmails || process.env.ADMIN_EMAIL || '';
   return raw.split(',').map(s => s.trim()).filter(Boolean)[0] || undefined;
 }
 
@@ -430,15 +432,22 @@ async function sendTemplate(name, props, mail, fallbackText = '') {
   return sendEmail({ ...mail, ...rendered });
 }
 
-/** Who gets admin emails: Settings → Emails & alerts when the DB is up, else ADMIN_EMAIL. */
-async function getAdminRecipients() {
-  const split = (v) => String(v || '').split(',').map(s => s.trim()).filter(Boolean);
-  let recipients = split(process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com');
+const splitEmails = (v) => String(v || '').split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/**
+ * Who gets admin emails, by kind: 'orders' (a new paid order) or 'system' (security alerts, errors, database, the weekly
+ * summary and log backups). Each has its own list in Settings → Emails & alerts. A kind with no list of its own falls back
+ * to the older single list, then to ADMIN_EMAIL, so nothing is ever sent to nobody.
+ */
+async function getAdminRecipients(kind = 'system') {
+  let recipients = splitEmails(process.env.ADMIN_EMAIL || 'othersworldwide@gmail.com');
   if (mongoose.connection.readyState === 1) {
     try {
       const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(1000).lean();
-      const fromSettings = split(site?.adminNotificationEmails);
-      if (fromSettings.length) recipients = fromSettings;
+      const own = splitEmails(kind === 'orders' ? site?.orderNotificationEmails : site?.systemAlertEmails);
+      const legacy = splitEmails(site?.adminNotificationEmails);
+      if (own.length) recipients = own; else if (legacy.length) recipients = legacy;
     } catch (e) {
       console.error('Failed to fetch admin emails from DB (using defaults):', e.message);
     }
@@ -446,8 +455,15 @@ async function getAdminRecipients() {
   return recipients;
 }
 
+/** Validates and tidies a comma-separated recipient list from the admin: lower-cased, de-duplicated, at most 10. */
+function cleanEmailList(value) {
+  const list = [...new Set(splitEmails(value).map(e => e.toLowerCase()))];
+  const bad = list.filter(e => !EMAIL_RE.test(e) || e.length > 254);
+  return { value: list.slice(0, 10).join(', '), bad, tooMany: list.length > 10 };
+}
+
 async function sendOrderNotification(order, baseUrl = '') {
-  const recipients = await getAdminRecipients();
+  const recipients = await getAdminRecipients('orders');
 
   // Never fail silently: a skipped notification is recorded where the admin can see it.
   if (recipients.length === 0 || !process.env.RESEND_API_KEY) {
@@ -1014,6 +1030,71 @@ app.post('/api/upload/multi', requireAdmin, upload.array('images', 20), (req, re
   res.json({ urls: req.files.map(f => f.path) }); // Cloudinary: .path = secure_url
 });
 
+// ─── API: Video upload (compressed for the web first — see src/videoPipeline.js) ──────────────────────────
+// Compressing a video takes seconds to minutes, so this is a job: POST the file, get a job id, poll it for progress.
+// The file goes to disk (not memory), is transcoded by ffmpeg, and only the small result is sent to Cloudinary.
+const { createVideoService, MAX_MB: VIDEO_MAX_MB } = require('./src/videoPipeline');
+
+// Development only: with VIDEO_LOCAL_DIR set (and not in production), finished videos are kept in that folder and served
+// from /dev-uploads, so the whole upload flow can be tried without a Cloudinary account (or filling one with test clips).
+const VIDEO_LOCAL_DIR = process.env.NODE_ENV !== 'production' ? process.env.VIDEO_LOCAL_DIR : '';
+if (VIDEO_LOCAL_DIR) { fs.mkdirSync(VIDEO_LOCAL_DIR, { recursive: true }); app.use('/dev-uploads', express.static(VIDEO_LOCAL_DIR)); }
+
+async function publishVideoToCloudinary(file) {
+  if (VIDEO_LOCAL_DIR) {
+    const name = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}${path.extname(file)}`;
+    fs.copyFileSync(file, path.join(VIDEO_LOCAL_DIR, name));
+    return `/dev-uploads/${name}`;
+  }
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) throw new Error('Cloudinary is not configured on this server.');
+  const result = await cloudinary.uploader.upload_large(file, {
+    resource_type: 'video',
+    folder: 'others-store',
+    chunk_size: 6000000,
+    // Warm the two sizes the storefront asks for, so the first visitor doesn't wait for an on-demand transcode.
+    eager: [1280, 1920].map(w => ({ width: w, crop: 'limit', quality: 'auto', fetch_format: 'auto' })),
+    eager_async: true,
+  });
+  return result.secure_url;
+}
+const videoService = createVideoService({ publish: publishVideoToCloudinary });
+
+const VIDEO_MIME = /^(video\/(mp4|quicktime|webm|x-m4v|3gpp2?|x-matroska|mpeg)|image\/gif)$/;
+const videoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, videoService.tmpDir),
+    filename: (_req, file, cb) => {
+      const ext = (path.extname(file.originalname || '').toLowerCase().match(/^\.[a-z0-9]{1,5}$/) || ['.bin'])[0];
+      cb(null, `in_${Date.now()}_${crypto.randomBytes(6).toString('hex')}${ext}`);
+    },
+  }),
+  limits: { fileSize: VIDEO_MAX_MB * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => cb(VIDEO_MIME.test(file.mimetype) ? null : new Error('That is not a video file (use MP4, MOV, WebM or GIF).'), VIDEO_MIME.test(file.mimetype)),
+});
+
+app.get('/api/upload/video-capabilities', requireAdmin, (_req, res) => res.json(videoService.capabilities()));
+
+app.post('/api/upload/video', requireAdmin, (req, res, next) => {
+  videoUpload.single('video')(req, res, (err) => {
+    if (!err) return next();
+    const tooBig = err.code === 'LIMIT_FILE_SIZE';
+    res.status(tooBig ? 413 : 400).json({ error: tooBig ? `That video is larger than ${VIDEO_MAX_MB} MB. Trim it or export it at a lower quality first.` : (err.message || 'Upload failed.') });
+  });
+}, (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No video uploaded.' });
+  const audio = req.body?.audio === 'strip' ? 'strip' : 'keep';   // (the form sends this field before the file, so it is parsed by now)
+  res.status(202).json(videoService.submit({ file: req.file.path, name: req.file.originalname, size: req.file.size, audio }));
+});
+
+app.get('/api/upload/video/:id', requireAdmin, (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const job = videoService.get(String(req.params.id));
+  if (!job) return res.status(404).json({ error: 'That upload is no longer being processed (the server may have restarted). Please upload it again.' });
+  res.json(job);
+});
+
+app.delete('/api/upload/video/:id', requireAdmin, (req, res) => { videoService.cancel(String(req.params.id)); res.json({ ok: true }); });
+
 // ─── API: Admin sign-in / session ────────────────────────────────────────────
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -1416,18 +1497,21 @@ app.get('/api/admin/events', requireAdmin, (req, res) => {
 // ─── API: Admin notification test ────────────────────────────────────────────
 app.post('/api/admin/test-email', requireAdmin, async (_req, res) => {
   if (!process.env.RESEND_API_KEY) return res.status(400).json({ error: 'RESEND_API_KEY is not set on the server, so no email can be sent.' });
-  const recipients = await getAdminRecipients();
-  if (recipients.length === 0) return res.status(400).json({ error: 'No notification email address is configured (Settings → Emails & alerts).' });
+  const lists = [['orders', 'order emails', await getAdminRecipients('orders')], ['system', 'system alerts', await getAdminRecipients('system')]];
+  if (lists.every(l => l[2].length === 0)) return res.status(400).json({ error: 'No notification email address is configured (Settings → Emails & alerts).' });
   try {
     const { site, contactAddress } = await getEmailBranding();
-    await sendTemplate('TestEmail', {
-      brand: await emailBrand(site, contactAddress, _req ? `${_req.protocol}://${_req.get('host')}` : ''),
-      from: EMAIL_FROM, sandbox: /resend\.dev$/i.test(EMAIL_FROM),
-    }, {
-      from: `${site?.name || 'Others.'} Alerts <${EMAIL_FROM}>`, to: recipients,
-      subject: 'Test email: notifications are working', headers: AUTO_HEADERS,
-    }, 'This is a test message from your admin panel. Notifications are working.');
-    res.json({ ok: true, to: recipients, from: EMAIL_FROM });
+    const brand = await emailBrand(site, contactAddress, publicBaseUrl(_req));
+    // One test per list, so each inbox can confirm that IT receives what it should (an address on both lists gets two).
+    for (const [, label, to] of lists) {
+      if (!to.length) continue;
+      await sendTemplate('TestEmail', { brand, kind: label, from: EMAIL_FROM, sandbox: /resend\.dev$/i.test(EMAIL_FROM) }, {
+        from: `${site?.name || 'Others.'} Alerts <${EMAIL_FROM}>`, to,
+        subject: `Test email: ${label} are working`, headers: AUTO_HEADERS,
+      }, `This is a test message from your admin panel. This address receives ${label}.`);
+    }
+    const all = [...new Set(lists.flatMap(l => l[2]))];
+    res.json({ ok: true, to: all, lists: Object.fromEntries(lists.map(l => [l[0], l[2]])), from: EMAIL_FROM });
   } catch (err) {
     const sandbox = /resend\.dev$/i.test(EMAIL_FROM);
     res.status(502).json({
@@ -1566,7 +1650,7 @@ app.get('/api/data', async (req, res) => {
     // (notification emails, email templates) are only
     // included when the request carries valid admin credentials.
     if (!hasValidAdminAuth(req)) {
-      const { adminNotificationEmails, emailTemplates, ...publicSite } = data.site || {};
+      const { adminNotificationEmails, orderNotificationEmails, systemAlertEmails, emailTemplates, ...publicSite } = data.site || {};
       data.site = publicSite;
       data.orders = [];
       data.subscribers = [];
@@ -1583,6 +1667,17 @@ app.post('/api/data', requireAdmin, async (req, res) => {
   try {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
       return res.status(400).json({ error: 'Invalid data payload.' });
+    }
+    // The recipient lists are checked and tidied here, so a typo is caught at save time with a clear message
+    // instead of silently losing an order alert later.
+    if (req.body.site) {
+      for (const [field, label] of [['orderNotificationEmails', 'Order notification emails'], ['systemAlertEmails', 'System alert emails']]) {
+        if (typeof req.body.site[field] !== 'string') continue;
+        const clean = cleanEmailList(req.body.site[field]);
+        if (clean.bad.length) return res.status(400).json({ error: `${label}: "${clean.bad[0]}" is not a valid email address${clean.bad.length > 1 ? ` (and ${clean.bad.length - 1} more)` : ''}.` });
+        if (clean.tooMany) return res.status(400).json({ error: `${label}: please use at most 10 addresses.` });
+        req.body.site[field] = clean.value;
+      }
     }
     await writeData(req.body);
     // A changed logo, favicon or palette shows up in the tab, the loading screen and the manifest right away,

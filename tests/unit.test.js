@@ -206,3 +206,38 @@ test('store and admin are separate web apps', async () => {
   assert.match(tags, /href="\/admin\.webmanifest"/);
   assert.match(tags, /apple-mobile-web-app-title" content="Others\. Admin"/);
 });
+
+const video = require('../src/videoPipeline');
+test('video: reads size, fps, rotation, HDR and audio from ffmpeg output', () => {
+  const info = video.parseInfo([
+    'Input #0, mov,mp4, from \'a.mov\':',
+    '  Duration: 00:01:05.50, start: 0.000000, bitrate: 41233 kb/s',
+    '  Stream #0:0[0x1](und): Video: hevc (Main 10), yuv420p10le(tv, bt2020nc/bt2020/smpte2084), 3840x2160, 41000 kb/s, 59.94 fps, 59.94 tbr',
+    '  Stream #0:1[0x2](und): Audio: aac (LC), 48000 Hz, stereo, fltp, 128 kb/s',
+  ].join('\n'));
+  assert.equal(info.seconds, 65.5);
+  assert.deepEqual([info.video.width, info.video.height, info.video.fps, info.video.hdr, info.audio], [3840, 2160, 59.94, true, 'aac']);
+  assert.equal(video.parseInfo('Input #0\n  Duration: N/A\n  Stream #0:0: Audio: mp3, 44100 Hz'), null); // audio only: not a video
+  const phone = video.parseInfo('  Duration: 00:00:10.00, bitrate: 9000 kb/s\n  Stream #0:0: Video: h264 (High), yuv420p, 1920x1080, 8900 kb/s, 30 fps\n    displaymatrix: rotation of -90.00 degrees');
+  assert.deepEqual([phone.video.width, phone.video.height], [1080, 1920]); // a sideways file is a portrait video
+});
+test('video: output is fitted into 1080p, never upscaled, always even', () => {
+  assert.deepEqual(video.outputSize(3840, 2160), { width: 1920, height: 1080, short: 1080 });
+  assert.deepEqual(video.outputSize(2160, 3840), { width: 1080, height: 1920, short: 1080 });
+  const small = video.outputSize(641, 359);
+  assert.deepEqual([small.width, small.height], [642, 360]);              // small stays small (odd sizes rounded up to even)
+  assert.ok(video.outputSize(1234, 777).width % 2 === 0 && video.outputSize(1234, 777).height % 2 === 0);
+});
+test('video: bitrate ceilings shrink with the picture, slow presets only for short clips', () => {
+  assert.ok(video.tierFor(1080).maxKbps > video.tierFor(720).maxKbps && video.tierFor(720).maxKbps > video.tierFor(360).maxKbps);
+  assert.deepEqual([60, 200, 600, 3000].map(video.presetFor), ['slow', 'medium', 'fast', 'veryfast']);
+});
+test('video: ffmpeg arguments are web-safe (H.264 High, yuv420p, faststart, no metadata, 30 fps cap)', () => {
+  const info = { seconds: 20, bitrateKbps: 40000, video: { codec: 'h264', width: 3840, height: 2160, fps: 60, hdr: false }, audio: 'aac' };
+  const a = video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: false }).args.join(' ');
+  for (const need of ['libx264', '-profile:v high', '-movflags +faststart', '-map_metadata -1', 'yuv420p', 'fps=30', '-c:a aac']) assert.ok(a.includes(need), 'missing ' + need);
+  const mute = video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'strip', tonemap: false }).args;
+  assert.ok(mute.includes('-an') && !mute.join(' ').includes('-c:a'));
+  const hdr = video.buildArgs({ ...info, video: { ...info.video, hdr: true } }, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: true }).args.join(' ');
+  assert.ok(hdr.includes('tonemap=') && hdr.includes('bt709'));
+});
