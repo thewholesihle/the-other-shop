@@ -69,6 +69,17 @@ const SettingsSchema = new mongoose.Schema({
   featuredEditorialHeading: { type: String, default: '' },
   featuredEditorialMessage: { type: String, default: '' },
   featuredEditorialCta:     { type: String, default: '' },
+  // Home page section that promotes one category. Every piece of text is optional; blanks fall back to the category's name.
+  promotedCategory: {
+    enabled:  { type: Boolean, default: false },
+    category: { type: String, default: '' },
+    label:    { type: String, default: '', maxlength: 60 },
+    heading:  { type: String, default: '', maxlength: 100 },
+    message:  { type: String, default: '', maxlength: 300 },
+    cta:      { type: String, default: '', maxlength: 40 },
+    count:    { type: Number, default: 4, enum: [4, 6, 8, 10] },
+    position: { type: String, default: 'after-drops', enum: ['after-drops', 'after-editorial'] },
+  },
   navLogoSize:    { type: Number, default: 28 },
   favicon:       { type: String, default: '' },
   emailLogo:     { type: String, default: '' },

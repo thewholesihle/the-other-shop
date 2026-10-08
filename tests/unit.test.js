@@ -280,3 +280,37 @@ test('video: a small server gets a lighter profile (720p, fast preset, one threa
   assert.equal(plan.preset, 'veryfast');
   assert.ok(!video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: false, lite: false }).args.includes('-threads'));
 });
+
+test('home page: New Drops falls back to available products when nothing is new', async () => {
+  const { pickDrops, isAvailable } = await import('../src/lib/homepage.js');
+  const P = (id, extra = {}) => ({ id, stock: 5, ...extra });
+  const mixed = [P('a'), P('b', { stock: 0 }), P('c'), P('d', { isNew: true }), P('e', { isFeatured: true })];
+  assert.deepEqual(pickDrops(mixed, 'featured').items.map(p => p.id), ['e']);               // curated Featured products win…
+  assert.equal(pickDrops(mixed, 'featured').source, 'featured');
+  const noFeatured = mixed.filter(p => p.id !== 'e');
+  assert.deepEqual(pickDrops(noFeatured, 'featured').items.map(p => p.id), ['d']);           // …then ones marked New
+  const plain = [P('a'), P('b', { stock: 0 }), P('c')];
+  const fallback = pickDrops(plain, 'featured');
+  assert.equal(fallback.source, 'available');
+  assert.deepEqual(fallback.items.map(p => p.id), ['c', 'a']);                                // sold-out left out, newest first
+  assert.deepEqual(pickDrops([P('x', { stock: 0 })], 'featured').items.map(p => p.id), ['x']); // everything sold out: still not empty
+  assert.deepEqual(pickDrops(mixed, 'arrivals').items.map(p => p.id), ['d']);                // hero off: New first
+  assert.equal(pickDrops(plain, 'arrivals').source, 'available');
+  assert.deepEqual(pickDrops([], 'featured'), { source: 'available', items: [] });
+  assert.equal(isAvailable({}), true);
+});
+test('home page: promoted category section', async () => {
+  const { pickPromoted } = await import('../src/lib/homepage.js');
+  const cats = [{ id: 'c1', name: 'Hoodies' }, { id: 'c2', name: 'Caps' }];
+  const prods = [1, 2, 3, 4, 5, 6].map(i => ({ id: 'p' + i, category: i === 6 ? 'c2' : 'c1', stock: i === 5 ? 0 : 3 }));
+  const on = { enabled: true, category: 'c1', count: 4 };
+  const r = pickPromoted(prods, cats, on);
+  assert.equal(r.category.name, 'Hoodies');
+  assert.deepEqual(r.items.map(p => p.id), ['p4', 'p3', 'p2', 'p1']);                         // in stock, newest first, capped at the count
+  assert.deepEqual(pickPromoted(prods, cats, { ...on, count: 6 }).items.map(p => p.id), ['p4', 'p3', 'p2', 'p1', 'p5']); // sold out goes last
+  assert.equal(pickPromoted(prods, cats, { ...on, enabled: false }), null);
+  assert.equal(pickPromoted(prods, cats, { ...on, category: '' }), null);
+  assert.equal(pickPromoted(prods, cats, { ...on, category: 'gone' }), null);                 // the category was deleted
+  assert.equal(pickPromoted(prods.filter(p => p.category !== 'c2'), cats, { ...on, category: 'c2' }), null); // empty category: hidden
+  assert.equal(pickPromoted(prods, cats, { ...on, count: 99 }).items.length, 4);              // unknown count: the default
+});

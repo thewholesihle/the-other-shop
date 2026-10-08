@@ -6,6 +6,8 @@
   import ProductGrid from '../components/ProductGrid.svelte';
   import LookbookSection from '../components/LookbookSection.svelte';
   import ArticleSection from '../components/ArticleSection.svelte';
+  import CategoryPromo from '../components/CategoryPromo.svelte';
+  import { pickPromoted } from '../lib/homepage.js';
   import Footer from '../components/Footer.svelte';
   import Loader from '../components/Loader.svelte';
   import { loadStoreData } from '../lib/storeData.js';
@@ -28,6 +30,10 @@
   $: featuredId = data?.site?.featuredLookbook;
   $: editorialType = data?.site?.featuredEditorialType || 'lookbook';
   
+  // Settings → Homepage can promote one category in its own section (null when off, or the category has no products).
+  $: promo = data ? pickPromoted(data.products, data.categories, data.site.promotedCategory) : null;
+  $: promoAfterEditorial = data?.site?.promotedCategory?.position === 'after-editorial';
+
   $: allLookbooks = data?.lookbooks ?? [];
   $: allArticles = data?.community ?? [];
   
@@ -69,12 +75,20 @@
         <ProductGrid products={data.products} currency={data.site.currency} mode="arrivals" />
       {/if}
 
+      {#if promo && !promoAfterEditorial}
+        <CategoryPromo category={promo.category} products={promo.items} currency={data.site.currency} label={data.site.promotedCategory.label || ''} heading={data.site.promotedCategory.heading || ''} message={data.site.promotedCategory.message || ''} cta={data.site.promotedCategory.cta || ''} />
+      {/if}
+
       {#if !editorialEnabled}
         <!-- featured editorial switched off -->
       {:else if editorialType === 'article'}
         <ArticleSection article={featuredArticle} {allArticles} heading={data.site.featuredEditorialHeading} message={data.site.featuredEditorialMessage} cta={data.site.featuredEditorialCta} />
       {:else}
         <LookbookSection lookbook={featuredLookbook} {allLookbooks} />
+      {/if}
+
+      {#if promo && promoAfterEditorial}
+        <CategoryPromo category={promo.category} products={promo.items} currency={data.site.currency} label={data.site.promotedCategory.label || ''} heading={data.site.promotedCategory.heading || ''} message={data.site.promotedCategory.message || ''} cta={data.site.promotedCategory.cta || ''} />
       {/if}
     </div>
 

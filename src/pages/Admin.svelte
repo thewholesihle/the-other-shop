@@ -326,7 +326,7 @@
     {:else if activeSection === 'status'}
       <AdminStatus />
     {:else if activeSection === 'settings'}
-      <AdminSettings site={data.site} lookbooks={data.lookbooks} articles={data.community} onUpdate={updateSite} />
+      <AdminSettings site={data.site} lookbooks={data.lookbooks} articles={data.community} categories={data.categories} products={data.products} onUpdate={updateSite} />
     {/if}
   </AdminLayout>
 {/if}

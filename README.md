@@ -110,6 +110,12 @@ Every one of these has a matching server-side route in `server.js` (not just the
 
 ---
 
+## Home page sections
+
+- **New Drops:** shows the products marked *Featured* (up to 6); if none are, the ones marked *New*; and if nothing is marked at all, it falls back to the products that are **in stock** (newest first) instead of going empty, with the heading changing to "Available Now" so it stays honest. With the hero switched off the strip is "New Arrivals" and prefers *New* over *Featured* before falling back the same way. The rules live in `src/lib/homepage.js`.
+- **Promote a category** (Settings → Homepage): switch it on, pick a category and it gets its own section on the home page, with a customisable small line, heading, message and button text (blanks fall back to the category name and "Shop <category>"), 4 to 10 products, and a choice of sitting below New Drops or below the featured editorial. In-stock products are shown first, newest first. The section stays hidden while the category is empty or has been deleted, and the settings page says so.
+- **Settings side list:** the list of sections beside the settings form highlights the one you are scrolled to (and the one you just clicked).
+
 ## Admin panel
 
 Eleven sections, all behind the sign-in page:

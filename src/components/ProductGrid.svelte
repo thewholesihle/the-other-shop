@@ -2,22 +2,19 @@
   import { cutReveal } from '../lib/cutReveal.js';
   import { onMount } from 'svelte';
   import ProductCard from './ProductCard.svelte';
+  import { pickDrops } from '../lib/homepage.js';
 
   export let products = [];
   export let currency = '€';
-  // 'featured' → the home page's usual "New Drops" strip (featured products, max 6).
-  // 'arrivals' → used when the hero is switched off: this grid leads the page and shows the newest
-  //   products (marked New, newest first), falling back to featured and then to the latest added.
+  // 'featured' → the home page's usual "New Drops" strip (products marked Featured, max 6).
+  // 'arrivals' → used when the hero is switched off: this grid leads the page and shows the newest products (marked New).
+  // Either way, when nothing qualifies the strip shows what is available instead of going empty (see lib/homepage.js).
   export let mode = 'featured';
 
-  $: featured = mode === 'arrivals'
-    ? (() => {
-        const fresh = products.filter(p => p.isNew).reverse();
-        const pool = fresh.length ? fresh : products.some(p => p.isFeatured) ? products.filter(p => p.isFeatured) : [...products].reverse();
-        return pool.slice(0, 10);
-      })()
-    : products.filter(p => p.isFeatured).slice(0, 6);
-  $: viewAllHref = mode === 'arrivals' && products.some(p => p.isNew) ? '/shop?filter=new' : '/shop';
+  $: picked = pickDrops(products, mode);
+  $: featured = picked.items;
+  $: nothingNew = picked.source === 'available';
+  $: viewAllHref = picked.source === 'new' ? '/shop?filter=new' : '/shop';
 
   let visible = false;
   let ref;
@@ -36,11 +33,12 @@
   }
 </script>
 
+{#if featured.length}
 <section id="products" bind:this={ref} class="px-6 md:px-10 {mode === 'arrivals' ? 'pt-10 pb-16 md:pt-14 md:pb-24' : 'py-20 md:py-32'}">
   <div class="flex items-end justify-between mb-12">
     <div>
-      <p class="text-label mb-2">{mode === 'arrivals' ? 'Just landed' : 'Latest'}</p>
-      <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight md:leading-[1.1111]">{mode === 'arrivals' ? 'New Arrivals' : 'New Drops'}</h2>
+      <p class="text-label mb-2">{nothingNew ? 'In stock' : mode === 'arrivals' ? 'Just landed' : 'Latest'}</p>
+      <h2 use:cutReveal class="text-3xl md:text-4xl font-display font-bold leading-tight md:leading-[1.1111]">{nothingNew ? 'Available Now' : mode === 'arrivals' ? 'New Arrivals' : 'New Drops'}</h2>
     </div>
     <a href={viewAllHref} onclick={shopAll} class="text-label hover:text-foreground transition-colors border-b border-current pb-0.5">VIEW ALL</a>
   </div>
@@ -60,3 +58,4 @@
     </a>
   </div>
 </section>
+{/if}

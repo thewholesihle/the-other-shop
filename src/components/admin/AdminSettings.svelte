@@ -18,7 +18,7 @@
   import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
   import { onMount } from 'svelte';
 
-  let { site = {}, onUpdate = () => {}, lookbooks = [], articles = [] } = $props();
+  let { site = {}, onUpdate = () => {}, lookbooks = [], articles = [], categories = [], products = [] } = $props();
 
   /** Fills in defaults for settings that older databases don't have yet. */
   function normalize(src) {
@@ -41,6 +41,7 @@
     f.featuredLookbook ??= '';
     f.featuredEditorialType ??= 'lookbook';
     f.featuredEditorialEnabled ??= true;
+    f.promotedCategory = { enabled: false, category: '', label: '', heading: '', message: '', cta: '', count: 4, position: 'after-drops', ...(f.promotedCategory || {}) };
     f.colors ??= { background: '#f8f5f2', foreground: '#211c1a', primary: '#211c1a', border: '#dbd8d4', hover: '#ff4400' };
     f.colors.hover ??= f.colors.primary || '#ff4400';
     f.footerLogo ??= '';
@@ -138,9 +139,34 @@
     catch { toast.error('Copy failed — select the text and copy it manually.'); }
   }
 
+  // The side list follows the page: the section whose card is under the top of the screen is highlighted, and clicking a
+  // name highlights it straight away (the scroll then takes a moment to arrive).
+  let activeSection = $state(SECTIONS[0].id);
+  let lockUntil = 0;
   function jump(id) {
+    activeSection = id;
+    lockUntil = Date.now() + 900;
     document.getElementById(`settings-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  function spy() {
+    if (Date.now() < lockUntil) return;
+    const line = 120;                                                            // just under the sticky header
+    let current = SECTIONS[0].id;
+    for (const s of SECTIONS) {
+      const el = document.getElementById(`settings-${s.id}`);
+      if (el && el.getBoundingClientRect().top <= line) current = s.id;
+    }
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) current = SECTIONS[SECTIONS.length - 1].id;
+    activeSection = current;
+  }
+  onMount(() => {
+    let raf = 0;
+    const onScroll = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(spy); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    spy();
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); cancelAnimationFrame(raf); };
+  });
 
   const COLOR_FIELDS = [
     ['background', 'Background'], ['foreground', 'Text'], ['primary', 'Primary'], ['border', 'Borders'], ['hover', 'Hover'],
@@ -177,7 +203,8 @@
   <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-[180px_minmax(0,1fr)]">
     <nav aria-label="Settings sections" class="hidden lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-0.5">
       {#each SECTIONS as s}
-        <button type="button" onclick={() => jump(s.id)} class="rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">{s.label}</button>
+        <button type="button" onclick={() => jump(s.id)} aria-current={activeSection === s.id ? 'true' : undefined}
+          class="rounded-md px-3 py-2 text-left text-sm font-medium transition-colors {activeSection === s.id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'}">{s.label}</button>
       {/each}
     </nav>
 
@@ -258,7 +285,7 @@
       </Card>
 
       <!-- Homepage -->
-      <Card id="settings-storefront" title="Homepage" description="The announcement bar, hero and featured editorial." class="scroll-mt-20">
+      <Card id="settings-storefront" title="Homepage" description="The announcement bar, hero, featured editorial and promoted category." class="scroll-mt-20">
         <div class="space-y-6 p-6 pt-4">
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]">
             <div><label for="s-ann" class={labelCls}>Announcement bar</label><input id="s-ann" bind:value={form.announcement} class={inputCls} /></div>
@@ -338,6 +365,61 @@
               <div><label for="fe-msg" class={labelCls}>Message override (optional)</label><textarea id="fe-msg" bind:value={form.featuredEditorialMessage} rows={2} class={textareaCls} placeholder="e.g. Read the full story behind the collection…"></textarea></div>
               <div><label for="fe-cta" class={labelCls}>Button text (optional)</label><input id="fe-cta" bind:value={form.featuredEditorialCta} class={inputCls} placeholder="e.g. Read article" /></div>
             {/if}
+            {/if}
+          </div>
+
+          <div class="space-y-4 border-t border-border pt-6">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-semibold">Promote a category</p>
+                <p class="text-sm text-muted-foreground">Give one category its own section on the home page, with your own heading. It stays hidden while the category has no products.</p>
+              </div>
+              <Switch bind:checked={form.promotedCategory.enabled} aria-label="Promote a category on the home page" />
+            </div>
+            {#if form.promotedCategory.enabled}
+              {@const chosen = categories.find(c => c.id === form.promotedCategory.category)}
+              {@const inCat = chosen ? products.filter(p => p.category === chosen.id).length : 0}
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label for="pc-cat" class={labelCls}>Category</label>
+                  {#if !categories.length}
+                    <p class="py-2 text-sm italic text-muted-foreground">No categories yet. Create one under Categories first.</p>
+                  {:else}
+                    <select id="pc-cat" bind:value={form.promotedCategory.category} class={selectCls}>
+                      <option value="">Choose a category…</option>
+                      {#each categories as c}<option value={c.id}>{c.name}</option>{/each}
+                    </select>
+                  {/if}
+                </div>
+                <div>
+                  <label for="pc-count" class={labelCls}>Products to show</label>
+                  <select id="pc-count" bind:value={form.promotedCategory.count} class={selectCls}>
+                    {#each [4, 6, 8, 10] as n}<option value={n}>{n}</option>{/each}
+                  </select>
+                </div>
+              </div>
+              {#if !form.promotedCategory.category && categories.length}
+                <p class="text-xs text-muted-foreground">Choose a category and the section appears on the home page.</p>
+              {:else if chosen && inCat === 0}
+                <p class="flex items-start gap-1.5 text-xs text-destructive"><TriangleAlert size={13} class="mt-px shrink-0" /> “{chosen.name}” has no products yet, so the section stays hidden until it does.</p>
+              {:else if chosen}
+                <p class="text-xs text-muted-foreground">{inCat} product{inCat === 1 ? '' : 's'} in “{chosen.name}”. In-stock ones are shown first, newest first.</p>
+              {/if}
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div><label for="pc-label" class={labelCls}>Small line above the heading</label><input id="pc-label" bind:value={form.promotedCategory.label} maxlength="60" class={inputCls} placeholder="e.g. Winter essentials" /></div>
+                <div><label for="pc-heading" class={labelCls}>Heading</label><input id="pc-heading" bind:value={form.promotedCategory.heading} maxlength="100" class={inputCls} placeholder={chosen?.name || 'Defaults to the category name'} /></div>
+              </div>
+              <div><label for="pc-msg" class={labelCls}>Message (optional)</label><textarea id="pc-msg" bind:value={form.promotedCategory.message} maxlength="300" rows={2} class={textareaCls} placeholder="e.g. Heavyweight layers built for the cold."></textarea></div>
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div><label for="pc-cta" class={labelCls}>Button text</label><input id="pc-cta" bind:value={form.promotedCategory.cta} maxlength="40" class={inputCls} placeholder={chosen ? `Shop ${chosen.name}` : 'Shop the collection'} /></div>
+                <div>
+                  <label for="pc-pos" class={labelCls}>Where it appears</label>
+                  <select id="pc-pos" bind:value={form.promotedCategory.position} class={selectCls}>
+                    <option value="after-drops">Below New Drops</option>
+                    <option value="after-editorial">Below the featured editorial</option>
+                  </select>
+                </div>
+              </div>
             {/if}
           </div>
         </div>
