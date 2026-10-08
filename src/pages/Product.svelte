@@ -36,8 +36,10 @@
   onMount(async () => {
     try {
       data = await loadStoreData();
-      product = data.products.find(p => p.id === productId) ?? null;
+      // The address can be the slug, an old prod-… id, or a slug the product used to have.
+      product = data.products.find(p => p.slug === productId) ?? data.products.find(p => p.id === productId) ?? data.products.find(p => p.oldSlugs?.includes(productId)) ?? null;
       if (product) {
+        if (product.slug && product.slug !== productId) history.replaceState(history.state, '', `/shop/${encodeURIComponent(product.slug)}${window.location.search}`);
         selectedSize = product.sizes?.length === 1 ? product.sizes[0] : '';
         selectedColor = product.colors?.length === 1 ? product.colors[0] : '';
         // Arriving from a product card where a colour was already picked.

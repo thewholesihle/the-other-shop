@@ -133,6 +133,9 @@ const ColorImageSchema = new mongoose.Schema({
 const ProductSchema = new mongoose.Schema({
   id:          { type: String, required: true, unique: true },
   name:        { type: String, required: true, trim: true },
+  // The product's web address (/shop/<slug>). `id` stays the permanent internal key; see src/slugs.js.
+  slug:        { type: String, default: '', index: true },
+  oldSlugs:    [{ type: String }],      // earlier addresses, kept so links already out there still work
   category:    { type: String, required: true },
   price:       { type: Number, required: true, min: 0 },
   image:       { type: String, default: '' },

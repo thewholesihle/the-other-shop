@@ -100,7 +100,7 @@ Missing MongoDB doesn't crash the server — see **Resilience** below.
 |---|---|
 | `/` | Home |
 | `/shop` | Product listing — category, size, "new arrivals", and price-sort filters, all synced to the URL query string (shareable/bookmarkable) |
-| `/shop/:id` | Product detail — per-variant (size × color) stock, per-color image galleries |
+| `/shop/:slug` | Product detail, e.g. `/shop/heavyweight-hoodie` — per-variant (size × color) stock, per-color image galleries. Old `/shop/prod-…` links still work (see below) |
 | `/lookbook`, `/lookbook/:id` | Lookbook grid + detail with lightbox |
 | `/community`, `/community/:slug` | Editorial articles |
 | `/cart` | Cart → checkout → PayFast redirect → success/cancel |
@@ -131,6 +131,12 @@ Every one of these has a matching server-side route in `server.js` (not just the
 - **Mobile menu:** the hamburger turns into a cross, the menu unrolls from the top with the links sliding in one after another, the page behind doesn't scroll while it's open, and Escape or tapping a link closes it. All of it is switched off for visitors who prefer reduced motion.
 - **Colour options on product cards:** a card shows a small swatch for each colour (the colour's own first photo, otherwise a dot if the name is a CSS colour such as "Red", otherwise its initial; up to 5 plus "+N"; sold-out colours are crossed out). Hovering or focusing a swatch previews that colour's photo on the card; clicking or tapping keeps it, and the product page then opens with that colour already selected.
 - **Lookbooks** no longer show dates or item counts on the storefront (the admin still shows them).
+
+## Product web addresses
+
+Products have readable addresses (`/shop/heavyweight-hoodie`) instead of `/shop/prod-1717171717171`. The address is made from the product's name when it is created, shown in the product editor as **Web address** (editable, letters, numbers and hyphens only), and made unique automatically (`-2`, `-3`…). Renaming a product does **not** move its address. If you change the address by hand, the old one is remembered.
+
+Nothing that already exists breaks: the internal `id` (used by carts, orders and stock) never changes, products created before this get an address made from their name the first time the server starts, and any old `/shop/prod-…` link or retired address answers with a permanent (301) redirect to the current one, query string included, so bookmarks and Google's index follow along. The sitemap lists the new addresses. See `src/slugs.js`.
 
 ## Admin panel
 

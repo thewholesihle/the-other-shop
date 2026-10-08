@@ -373,3 +373,28 @@ test('fonts: an upload must really be a font', () => {
   assert.equal(f.looksLikeFont(pad('MZ\x90\x00'), 'ttf'), false);                                           // a renamed program
   assert.equal(f.looksLikeFont(pad('wOF2'), 'ttf'), false);
 });
+
+test('product slugs: readable, safe, unique, and the old addresses keep working', async () => {
+  const { slugify, uniqueSlug, decideSlug } = require('../src/slugs');
+  assert.equal(slugify("Men's Heavyweight Hoodie – Black"), 'mens-heavyweight-hoodie-black');
+  assert.equal(slugify('Crème Brûlée Tee'), 'creme-brulee-tee');                          // accents folded
+  assert.equal(slugify('Tees & Tops'), 'tees-and-tops');
+  assert.equal(slugify('  --Oversized   Cargo Pants!!  '), 'oversized-cargo-pants');
+  assert.equal(slugify('<script>alert(1)</script>'), 'script-alert-1-script');              // nothing but letters, digits and hyphens survive
+  assert.equal(slugify('日本語'), '');                                                       // nothing usable: the caller falls back
+  assert.ok(slugify('word '.repeat(40)).length <= 60 && !slugify('word '.repeat(40)).endsWith('-'));
+  assert.equal(uniqueSlug('tee', new Set(['tee', 'tee-2'])), 'tee-3');
+  assert.equal(uniqueSlug('', new Set()), 'product');
+
+  const owners = new Map([['hoodie', 'p1'], ['tee', 'p2']]);
+  assert.deepEqual(decideSlug({ id: 'p3', name: 'Hoodie' }, null, owners), { slug: 'hoodie-2', oldSlugs: [] });           // a clash gets a number
+  assert.deepEqual(decideSlug({ id: 'p1', name: 'Hoodie' }, { slug: 'hoodie' }, owners), { slug: 'hoodie', oldSlugs: [] }); // its own slug is never "taken"
+  assert.deepEqual(decideSlug({ id: 'p1', name: 'Renamed product' }, { slug: 'hoodie' }, owners), { slug: 'hoodie', oldSlugs: [] }); // renaming doesn't move the address
+  const moved = decideSlug({ id: 'p1', name: 'Hoodie', slug: 'Heavy Hoodie' }, { slug: 'hoodie' }, owners);
+  assert.deepEqual(moved, { slug: 'heavy-hoodie', oldSlugs: ['hoodie'] });                                                  // changed by hand: the old one is remembered
+  assert.deepEqual(decideSlug({ id: 'p1', name: 'x', slug: 'hoodie', oldSlugs: ['hoodie', 'tee', 'older'] }, { slug: 'heavy-hoodie', oldSlugs: [] }, owners).oldSlugs, ['older', 'heavy-hoodie']); // never an address someone else owns, nor the current one
+  assert.equal(decideSlug({ id: 'p9', name: '日本語' }, null, owners).slug, 'product');
+
+  const client = await import('../src/lib/slug.js');                                        // the admin's preview must give the same answers
+  for (const s of ["Men's Heavyweight Hoodie – Black", 'Crème Brûlée Tee', 'Tees & Tops', '  --A  b!!  ', '日本語', 'word '.repeat(40), '']) assert.equal(client.slugify(s), slugify(s));
+});

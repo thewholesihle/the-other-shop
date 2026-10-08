@@ -20,6 +20,7 @@ const compression = require('compression');
 const { parseUserAgent } = require('./src/device');
 const crypto = require('crypto');
 const fonts = require('./src/fonts');
+const { decideSlug } = require('./src/slugs');
 const { EventEmitter } = require('events');
 const { isDeepStrictEqual } = require('util');
 const auth = require('./src/auth');
@@ -628,11 +629,11 @@ app.get('/sitemap.xml', async (req, res) => {
   try {
     const base = siteBase(req);
     const [products, lookbooks, articles] = await Promise.all([
-      Product.find().select('id').lean(), Lookbook.find().select('id').lean(), Article.find({ published: true }).select('slug id').lean(),
+      Product.find().select('id slug').lean(), Lookbook.find().select('id').lean(), Article.find({ published: true }).select('slug id').lean(),
     ]);
     const urls = [
       ...['/', '/shop', '/lookbook', '/community', '/contact', '/faq', '/shipping-returns'],
-      ...products.map(p => `/shop/${encodeURIComponent(p.id)}`),
+      ...products.map(p => `/shop/${encodeURIComponent(p.slug || p.id)}`),
       ...lookbooks.map(l => `/lookbook/${encodeURIComponent(l.id)}`),
       ...articles.map(a => `/community/${encodeURIComponent(a.slug || a.id)}`),
     ];
@@ -719,9 +720,17 @@ const { mergeProductStock } = require('./src/stockMerge');
 /** Writes admin product edits. Each product is read, merged with its live stock, and written only if its revision
  *  hasn't moved in between (a sale bumps it); if it has, it is re-read and merged again. */
 async function writeProducts(list) {
+  // Web addresses: every product gets a readable, unique slug (see src/slugs.js).
+  const existing = await Product.find().select('id slug oldSlugs').lean();
+  const storedMeta = new Map(existing.map(p => [p.id, p]));
+  const slugOwner = new Map(existing.filter(p => p.slug).map(p => [p.slug, p.id]));
   for (const raw of list) {
     if (!raw || !raw.id) continue;
     const { _base: base, rev: _rev, _id, ...incoming } = raw;
+    const { slug, oldSlugs } = decideSlug(incoming, storedMeta.get(incoming.id), slugOwner);
+    for (const [s, id] of [...slugOwner]) if (id === incoming.id) slugOwner.delete(s);
+    slugOwner.set(slug, incoming.id);
+    incoming.slug = slug; incoming.oldSlugs = oldSlugs;
     let done = false;
     for (let attempt = 0; attempt < 6 && !done; attempt++) {
       const stored = await Product.findOne({ id: incoming.id }).lean();
@@ -738,6 +747,29 @@ async function writeProducts(list) {
     }
     if (!done) throw new Error(`"${raw.name || raw.id}" was changing too quickly to save safely. Try again.`);
   }
+}
+
+/** Gives every product that has no slug yet one made from its name (older products only have their `prod-…` id). Runs once the
+ *  database is connected; products already named keep their address. */
+async function backfillProductSlugs() {
+  try {
+    const all = await Product.find().sort({ _id: 1 }).select('id name slug oldSlugs').lean();
+    const owner = new Map(all.filter(p => p.slug).map(p => [p.slug, p.id]));
+    let n = 0;
+    for (const p of all.filter(p => !p.slug)) {
+      const { slug, oldSlugs } = decideSlug(p, null, owner);
+      owner.set(slug, p.id);
+      await Product.updateOne({ id: p.id }, { $set: { slug, oldSlugs } });
+      n++;
+    }
+    if (n) console.log(`[Slugs] Gave ${n} product${n === 1 ? '' : 's'} a readable web address.`);
+  } catch (e) { console.warn('[Slugs] backfill failed:', e.message); }
+}
+
+/** Finds a product from whatever is in its URL: the current slug, the old `prod-…` id, or an earlier slug. */
+async function findProductByRef(ref) {
+  const r = String(ref || '');
+  return (await Product.findOne({ slug: r }).lean()) || (await Product.findOne({ id: r }).lean()) || (await Product.findOne({ oldSlugs: r }).lean());
 }
 
 /** Persist (parts of) the admin's data blob back to MongoDB.
@@ -2911,8 +2943,13 @@ app.get('/shop', async (req, res) => {
 app.get('/shop/:id', async (req, res) => {
   const [d, product] = await Promise.all([
     getSeoDefaults(),
-    Product.findOne({ id: req.params.id }).lean().catch(() => null),
+    findProductByRef(req.params.id).catch(() => null),
   ]);
+  // An old `prod-…` link or a retired slug: one permanent redirect to the product's current address.
+  if (product?.slug && req.params.id !== product.slug) {
+    const q = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+    return res.redirect(301, `/shop/${encodeURIComponent(product.slug)}${q}`);
+  }
   serveWithMeta(res, {
     siteName: d.siteName,
     title: product ? `${product.name} — ${d.siteName}` : `Product — ${d.siteName}`,
@@ -3098,6 +3135,7 @@ const dbBackUp = () => {
 };
 mongoose.connection.on('reconnected', dbBackUp);
 mongoose.connection.on('connected', dbBackUp);
+mongoose.connection.on('connected', () => { backfillProductSlugs(); });
 
 // ─── Error Notification ──────────────────────────────────────────────────────
 let lastErrorEmailTime = 0;

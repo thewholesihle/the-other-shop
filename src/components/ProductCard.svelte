@@ -12,7 +12,7 @@
 
   function goToProduct() {
     const q = picked ? `?color=${encodeURIComponent(picked)}` : '';
-    if (window.__navigate) window.__navigate(`/shop/${product.id}${q}`);
+    if (window.__navigate) window.__navigate(`/shop/${encodeURIComponent(product.slug || product.id)}${q}`);
   }
 
   const photosOf = (c) => product.colorImages?.find(ci => ci.color === c)?.images?.filter(Boolean) || [];

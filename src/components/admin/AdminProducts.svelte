@@ -1,5 +1,6 @@
 <script>
   import { thumb, getOptimizedUrl } from '../../lib/cloudinary.js';
+  import { slugify } from '../../lib/slug.js';
   import ImageUpload from './ImageUpload.svelte';
   import Button from '../ui/Button.svelte';
   import Badge from '../ui/Badge.svelte';
@@ -25,9 +26,13 @@
   let saving = $state(false);
   let query = $state('');
   let snapshot = $state('');
+  // A new product's web address follows its name until the admin edits the address by hand.
+  let slugTouched = $state(false);
+  let slugClash = $derived(editing && slugify(editing.slug) ? products.find(p => p.id !== editing.id && p.slug === slugify(editing.slug)) : null);
+  const siteHost = typeof window !== 'undefined' ? window.location.host : '';
 
   const emptyProduct = () => ({
-    id: '', name: '', category: '', price: 0,
+    id: '', slug: '', name: '', category: '', price: 0,
     image: '', images: [], colorImages: [],
     description: '',
     sizes: ['S', 'M', 'L', 'XL'], colors: [], stock: 0, variants: [],
@@ -86,6 +91,7 @@
       variants: buildVariants(sizes, colors, base.variants || []),
     };
     isNew = creating;
+    slugTouched = false;
     snapshot = JSON.stringify(editing);
   }
 
@@ -257,7 +263,21 @@
           <div class="space-y-4 p-6 pt-4">
             <div>
               <label for="edit-name" class={labelCls}>Name</label>
-              <input id="edit-name" bind:value={editing.name} class={inputCls} />
+              <input id="edit-name" bind:value={editing.name} oninput={() => { if (isNew && !slugTouched) editing.slug = slugify(editing.name); }} class={inputCls} />
+            </div>
+            <div>
+              <label for="edit-slug" class={labelCls}>Web address</label>
+              <div class="flex items-center overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring/40">
+                <span class="shrink-0 select-none border-r border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground">{siteHost}/shop/</span>
+                <input id="edit-slug" bind:value={editing.slug} placeholder={slugify(editing.name) || 'product-name'} maxlength="60" autocomplete="off" spellcheck="false"
+                  oninput={() => (slugTouched = true)} onblur={() => (editing.slug = slugify(editing.slug))}
+                  aria-describedby="edit-slug-hint" class="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none" />
+              </div>
+              <p id="edit-slug-hint" class="{hintCls} {slugClash ? '!text-destructive' : ''}">
+                {#if slugClash}“{slugClash.name}” already uses this address, so a number will be added to keep it unique.
+                {:else if isNew}Made from the name; change it if you like. Letters, numbers and hyphens only.
+                {:else}Changing it is safe: the old address keeps working and forwards to the new one.{/if}
+              </p>
             </div>
             <div>
               <label for="edit-desc" class={labelCls}>Description</label>
