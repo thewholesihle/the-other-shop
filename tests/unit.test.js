@@ -230,15 +230,15 @@ test('video: output is fitted into 1080p, never upscaled, always even', () => {
 });
 test('video: bitrate ceilings shrink with the picture, slow presets only for short clips', () => {
   assert.ok(video.tierFor(1080).maxKbps > video.tierFor(720).maxKbps && video.tierFor(720).maxKbps > video.tierFor(360).maxKbps);
-  assert.deepEqual([60, 200, 600, 3000].map(video.presetFor), ['slow', 'medium', 'fast', 'veryfast']);
+  assert.deepEqual([60, 200, 600, 3000].map(n => video.presetFor(n)), ['slow', 'medium', 'fast', 'veryfast']);
 });
 test('video: ffmpeg arguments are web-safe (H.264 High, yuv420p, faststart, no metadata, 30 fps cap)', () => {
   const info = { seconds: 20, bitrateKbps: 40000, video: { codec: 'h264', width: 3840, height: 2160, fps: 60, hdr: false }, audio: 'aac' };
-  const a = video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: false }).args.join(' ');
+  const a = video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: false, lite: false }).args.join(' ');
   for (const need of ['libx264', '-profile:v high', '-movflags +faststart', '-map_metadata -1', 'yuv420p', 'fps=30', '-c:a aac']) assert.ok(a.includes(need), 'missing ' + need);
-  const mute = video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'strip', tonemap: false }).args;
+  const mute = video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'strip', tonemap: false, lite: false }).args;
   assert.ok(mute.includes('-an') && !mute.join(' ').includes('-c:a'));
-  const hdr = video.buildArgs({ ...info, video: { ...info.video, hdr: true } }, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: true }).args.join(' ');
+  const hdr = video.buildArgs({ ...info, video: { ...info.video, hdr: true } }, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: true, lite: false }).args.join(' ');
   assert.ok(hdr.includes('tonemap=') && hdr.includes('bt709'));
 });
 
@@ -267,4 +267,16 @@ test('lookbook: media keeps its own shape, whether it is vertical or wide', asyn
   assert.deepEqual(describeShape(1600, 900), { shape: 'Horizontal', label: '16:9' });
   assert.deepEqual(describeShape(1000, 1000), { shape: 'Square', label: '1:1' });
   assert.equal(describeShape(0, 0), null);
+});
+
+test('video: a small server gets a lighter profile (720p, fast preset, one thread)', () => {
+  assert.deepEqual(video.outputSize(3840, 2160, true), { width: 1280, height: 720, short: 720 });
+  assert.deepEqual(video.outputSize(2160, 3840, true), { width: 720, height: 1280, short: 720 });
+  assert.deepEqual(video.outputSize(1280, 720, true), { width: 1280, height: 720, short: 720 });   // never upscaled
+  assert.deepEqual([30, 400].map(n => video.presetFor(n, true)), ['veryfast', 'superfast']);
+  const info = { seconds: 20, bitrateKbps: 40000, video: { codec: 'h264', width: 3840, height: 2160, fps: 60, hdr: false }, audio: 'aac' };
+  const { args, plan } = video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: false, lite: true });
+  assert.ok(args.join(' ').includes('-threads 1') && args.join(' ').includes('1280') && !args.join(' ').includes('1920'));
+  assert.equal(plan.preset, 'veryfast');
+  assert.ok(!video.buildArgs(info, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: false, lite: false }).args.includes('-threads'));
 });

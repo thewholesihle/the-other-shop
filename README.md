@@ -85,7 +85,7 @@ See [`.env.example`](.env.example) for the full annotated list. Summary:
 | Variable | Enables |
 |---|---|
 | `RESEND_API_KEY`, `SMTP_FROM`, `ADMIN_EMAIL`, `UNSUBSCRIBE_SECRET` | Order-status emails, admin notifications, newsletter broadcasts, critical-error alerts. `ADMIN_EMAIL` is the last-resort recipient when no addresses are set in **Settings → Emails & alerts** |
-| `VIDEO_MAX_MB` (500), `VIDEO_MAX_MINUTES` (20), `FFMPEG_PATH` | Video upload limits, and a custom ffmpeg binary (otherwise the bundled `ffmpeg-static` or `ffmpeg` on the PATH is used) — see **Video uploads** below |
+| `VIDEO_MODE` (`auto`), `VIDEO_MAX_MB`, `VIDEO_MAX_MINUTES`, `VIDEO_LITE`, `FFMPEG_PATH` | How videos are optimised (`cloudinary` = Cloudinary does it, `server` = ffmpeg here), upload limits (100 MB in `cloudinary` mode; 500, or 150 on a small server, in `server` mode), forcing the lighter 720p profile, and a custom ffmpeg binary. See **Video uploads** below |
 | `PAYFAST_MERCHANT_ID_*`, `PAYFAST_MERCHANT_KEY_*` (`_SANDBOX` / `_LIVE`, chosen by `PAYFAST_SANDBOX`) | PayFast at checkout |
 | `PAYFAST_PASSPHRASE_SANDBOX` / `_LIVE` | Only if your PayFast account has a passphrase configured |
 | `YOCO_SECRET_KEY_*`, `YOCO_WEBHOOK_SECRET_*` (`_TEST` / `_LIVE`, chosen by `YOCO_SANDBOX`) | Yoco at checkout — see **Payments** below |
@@ -248,7 +248,16 @@ The Community page has an **Events & Pop-ups** section at the top. It is managed
 
 ## Video uploads
 
-Phone and camera video is made for editing, not streaming (30–100 Mbps, 4K, 60 fps, GPS in the metadata). Every video uploaded in the admin (homepage hero, lookbook items, the article editor) is therefore compressed on the server **before** it is published, using ffmpeg (`src/videoPipeline.js`):
+Phone and camera video is made for editing, not streaming (30–100 Mbps, 4K, 60 fps, GPS in the metadata), so every video uploaded in the admin (homepage hero, lookbook items, the article editor) is optimised for the web. **Where that work happens depends on your server** (`VIDEO_MODE`):
+
+| Mode | How it works | Use it when |
+|---|---|---|
+| `cloudinary` (default whenever Cloudinary is configured) | The browser uploads the original **straight to Cloudinary** in signed 6 MB chunks (a dropped connection retries just that chunk) and Cloudinary prepares the web versions: capped at 1280/1920 px, best codec per browser, automatic quality. **Your server does no video work at all**: no ffmpeg, no large upload through it, no memory or CPU spike. | A small instance such as **Render's 512 MB / 0.5 CPU**. This is the recommended setup. |
+| `server` | The file is uploaded to your server and compressed with ffmpeg (below) before only the small result goes to Cloudinary. On a server with under about 1.5 GB of memory it automatically switches to a **lite profile**: 720p, a fast preset, one thread, and smaller limits (150 MB, 5 minutes). | A server with real CPU and RAM, or local development without Cloudinary. |
+
+In `cloudinary` mode the limit is `VIDEO_MAX_MB` (default **100**, which is Cloudinary's free-plan limit per video; raise it if your plan allows more). The admin shows "Uploaded (13.4 MB · 1080×1920). Optimised web versions are prepared in the background"; large videos can take a minute or two to be ready, and until then a visitor is simply given the original file, so nothing breaks. The sound-removal option and the compression statistics only exist in `server` mode. Cloudinary also keeps your original upload, but the site only ever links to the optimised versions. GIFs are uploaded as animated images. On Render you can add `--omit=optional` to the build's `npm install` to skip downloading ffmpeg if you only use `cloudinary` mode.
+
+The `server` mode pipeline (`src/videoPipeline.js`):
 
 - **Format:** H.264 High, constant-quality (CRF 23–25) held under a bitrate ceiling (about 5 Mbps at 1080p, 2.8 at 720p), so quality is steady and busy footage can't balloon. It plays in every browser and on every phone.
 - **Size:** fitted inside 1920×1080 (portrait: 1080×1920), never upscaled, frame rate capped at 30 fps, `yuv420p` with BT.709 colour tags. iPhone / HDR footage is tone-mapped to SDR so it doesn't look washed out (if the tone-mapping chain fails on a given file it retries without it).

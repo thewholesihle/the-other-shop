@@ -134,6 +134,8 @@ if (!auth.totpEnabled()) {
 
 // Admin pages and admin API responses: strict CSP (scripts only from this site), no framing, no indexing, never cached. The public storefront keeps
 // its existing, looser headers.
+// The admin uploads videos straight to Cloudinary (VIDEO_MODE=cloudinary), so its API origin must be allowed to connect.
+const CLOUDINARY_UPLOAD_ORIGIN = (process.env.CLOUDINARY_UPLOAD_PREFIX || 'https://api.cloudinary.com').replace(/\/+$/, '');
 app.use((req, res, next) => {
   if (req.path === '/admin' || req.path.startsWith('/admin/') || req.path.startsWith('/api/admin')) {
     res.set({
@@ -143,8 +145,8 @@ app.use((req, res, next) => {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https:",
-        "media-src 'self' https:",
-        "connect-src 'self'",
+        "media-src 'self' blob: https:",
+        `connect-src 'self' ${CLOUDINARY_UPLOAD_ORIGIN}`,
         "frame-src https://www.youtube.com https://player.vimeo.com",
         "object-src 'none'",
         "base-uri 'self'",
@@ -1044,10 +1046,29 @@ app.post('/api/upload/multi', requireAdmin, upload.array('images', 20), (req, re
   res.json({ urls: req.files.map(f => f.path) }); // Cloudinary: .path = secure_url
 });
 
-// ─── API: Video upload (compressed for the web first — see src/videoPipeline.js) ──────────────────────────
-// Compressing a video takes seconds to minutes, so this is a job: POST the file, get a job id, poll it for progress.
-// The file goes to disk (not memory), is transcoded by ffmpeg, and only the small result is sent to Cloudinary.
-const { createVideoService, MAX_MB: VIDEO_MAX_MB } = require('./src/videoPipeline');
+// ─── API: Video upload ────────────────────────────────────────────────────────────────────────────────────
+// Two ways to get a video optimised for the web, chosen by VIDEO_MODE (default "auto"):
+//
+//   cloudinary  The browser uploads the original straight to Cloudinary (signed here, in chunks, so a flaky phone connection
+//               can resume) and Cloudinary compresses it. THIS SERVER DOES NO VIDEO WORK, so it suits a small instance such
+//               as Render's 512 MB / 0.5 CPU: no ffmpeg, no big upload through the server, no memory spike.
+//   server      The file comes here and ffmpeg compresses it (src/videoPipeline.js; a lighter 720p profile on small servers)
+//               before only the small result is sent to Cloudinary. Better control, but needs CPU and RAM.
+//
+// "auto" uses cloudinary whenever it is configured, and the server path otherwise (local development).
+const { createVideoService, MAX_MB: VIDEO_MAX_MB, LITE: VIDEO_LITE } = require('./src/videoPipeline');
+const cloudinaryConfigured = () => Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+function videoMode() {
+  const want = String(process.env.VIDEO_MODE || 'auto').toLowerCase();
+  if (want === 'server') return 'server';
+  if (want === 'cloudinary') return cloudinaryConfigured() ? 'cloudinary' : 'server';
+  return cloudinaryConfigured() && !DEV_UPLOAD_DIR ? 'cloudinary' : 'server';
+}
+// Cloudinary's free plan accepts videos up to 100 MB (paid plans more): raise VIDEO_MAX_MB if yours allows it.
+const cloudVideoMaxMb = () => Number(process.env.VIDEO_MAX_MB) || 100;
+// The renditions the storefront asks for (see getVideoUrl in src/lib/cloudinary.js), prepared in the background so the
+// first visitor doesn't wait for an on-demand transcode. Kept identical to the delivery URLs on purpose.
+const VIDEO_EAGER = [1280, 1920].map(w => `c_limit,f_auto,q_auto,w_${w}`).join('|');
 
 // Development only: with VIDEO_LOCAL_DIR set (and not in production), finished videos are kept in that folder and served
 // from /dev-uploads, so the whole upload flow can be tried without a Cloudinary account (or filling one with test clips).
@@ -1065,8 +1086,7 @@ async function publishVideoToCloudinary(file) {
     resource_type: 'video',
     folder: 'others-store',
     chunk_size: 6000000,
-    // Warm the two sizes the storefront asks for, so the first visitor doesn't wait for an on-demand transcode.
-    eager: [1280, 1920].map(w => ({ width: w, crop: 'limit', quality: 'auto', fetch_format: 'auto' })),
+    eager: VIDEO_EAGER,
     eager_async: true,
   });
   return result.secure_url;
@@ -1086,7 +1106,22 @@ const videoUpload = multer({
   fileFilter: (_req, file, cb) => cb(VIDEO_MIME.test(file.mimetype) ? null : new Error('That is not a video file (use MP4, MOV, WebM or GIF).'), VIDEO_MIME.test(file.mimetype)),
 });
 
-app.get('/api/upload/video-capabilities', requireAdmin, (_req, res) => res.json(videoService.capabilities()));
+app.get('/api/upload/video-capabilities', requireAdmin, (_req, res) => {
+  const mode = videoMode();
+  if (mode === 'cloudinary') return res.json({ mode, compression: true, maxMb: cloudVideoMaxMb(), maxMinutes: 0, uncompressedLimitMb: cloudVideoMaxMb() });
+  res.json({ mode, ...videoService.capabilities() });
+});
+
+// Cloudinary mode: hands the browser a short-lived signed upload. The API secret never leaves the server, and the signature
+// only covers the folder and renditions below, so it can't be used to upload anywhere else.
+app.post('/api/upload/video-signature', requireAdmin, (_req, res) => {
+  if (videoMode() !== 'cloudinary') return res.status(409).json({ error: 'Direct video upload is not enabled on this server.' });
+  const toSign = { folder: 'others-store', eager: VIDEO_EAGER, eager_async: 'true', timestamp: Math.floor(Date.now() / 1000) };
+  const signature = cloudinary.utils.api_sign_request(toSign, process.env.CLOUDINARY_API_SECRET);
+  const prefix = (process.env.CLOUDINARY_UPLOAD_PREFIX || 'https://api.cloudinary.com').replace(/\/$/, '');   // (regional / private endpoints)
+  res.set('Cache-Control', 'no-store');
+  res.json({ url: `${prefix}/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/video/upload`, apiKey: process.env.CLOUDINARY_API_KEY, params: toSign, signature, maxMb: cloudVideoMaxMb() });
+});
 
 app.post('/api/upload/video', requireAdmin, (req, res, next) => {
   videoUpload.single('video')(req, res, (err) => {

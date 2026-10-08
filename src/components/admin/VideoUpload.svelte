@@ -1,6 +1,6 @@
 <script>
-  // Upload a video in the admin. The server compresses it for the web (smaller, faster, no GPS/device data) before it is
-  // published; this shows the upload, the compression progress and what was saved.
+  // Upload a video in the admin. It is optimised for the web (smaller, faster) either on the server or, on a small server,
+  // by Cloudinary: see src/lib/videoUpload.js. This shows the upload, the progress and what came of it.
   import { onMount } from 'svelte';
   import { uploadVideo, videoCapabilities, describeStats } from '../../lib/videoUpload.js';
   import Upload from 'lucide-svelte/icons/upload';
@@ -50,7 +50,7 @@
 <div class="space-y-3">
   {#if label}<p class="text-sm font-medium leading-none">{label}</p>{/if}
 
-  {#if allowAudioChoice}
+  {#if allowAudioChoice && caps?.mode !== 'cloudinary'}
     <label class="flex items-start gap-2 text-sm">
       <input type="checkbox" bind:checked={removeAudio} disabled={busy} class="mt-0.5 h-4 w-4 rounded-[0.25rem] border-input accent-primary" />
       <span>Remove the audio track <span class="text-muted-foreground">— best for muted background videos (about 10% smaller)</span></span>
@@ -76,7 +76,7 @@
       <span class="text-sm text-muted-foreground"><span class="font-medium text-foreground">Click to upload</span> or drag a video here</span>
       <span class="mt-0.5 text-xs text-muted-foreground">
         MP4, MOV, WebM or GIF{caps ? `, up to ${caps.maxMb} MB` : ''}.
-        {#if caps?.compression === false}Not compressed on this server (up to {caps.uncompressedLimitMb} MB).{:else}Compressed for the web automatically.{/if}
+        {#if caps?.compression === false}Not compressed on this server (up to {caps.uncompressedLimitMb} MB).{:else if caps?.mode === 'cloudinary'}Optimised for the web automatically.{:else}Compressed for the web automatically.{/if}
       </span>
     {/if}
   </label>

@@ -11,10 +11,13 @@
 
   let el = $state(null);
   let still = $state(false);
+  // A freshly uploaded video is optimised in the background; until a size is ready the CDN may refuse it. Rather than
+  // showing a dead player, fall back to the original file for that viewer.
+  let useOriginal = $state(false);
 
   // Pick a rendition that matches the screen instead of always shipping the largest.
   const width = typeof window !== 'undefined' && window.innerWidth > 1280 ? 1920 : 1280;
-  let videoSrc = $derived(getVideoUrl(src, width));
+  let videoSrc = $derived(useOriginal ? src : getVideoUrl(src, width));
   let posterSrc = $derived(poster ? getOptimizedUrl(poster, width) : getVideoPoster(src, width));
 
   onMount(() => {
@@ -44,6 +47,7 @@
       src={videoSrc}
       poster={posterSrc || undefined}
       class={className}
+      onerror={() => (useOriginal = true)}
       autoplay muted loop playsinline
       preload="auto"
       aria-hidden="true"
@@ -52,7 +56,7 @@
     </video>
   {/if}
 {:else}
-  <video src={videoSrc} poster={posterSrc || undefined} controls playsinline preload="none" class={className} aria-label={label || undefined}>
+  <video src={videoSrc} poster={posterSrc || undefined} controls playsinline preload="none" class={className} aria-label={label || undefined} onerror={() => (useOriginal = true)}>
     <track kind="captions" />
   </video>
 {/if}

@@ -1,7 +1,8 @@
 <script>
   import { thumb, getOptimizedUrl, getVideoPoster } from '../../lib/cloudinary.js';
   import { uploadImage } from '../../lib/imageUpload.js';
-  import { uploadVideo } from '../../lib/videoUpload.js';
+  import { onMount } from 'svelte';
+  import { uploadVideo, videoCapabilities } from '../../lib/videoUpload.js';
   import { itemKind, lookbookCover, describeShape, measureImage, measureVideo } from '../../lib/lookbook.js';
   import ImageUpload from './ImageUpload.svelte';
   import VideoUpload from './VideoUpload.svelte';
@@ -150,6 +151,8 @@
   const VIDEO_OK = /^video\/(mp4|quicktime|webm|x-m4v|3gpp2?|x-matroska|mpeg)$/;
   let dragging = $state(false);
   let stripAudio = $state(false);
+  let videoCaps = $state(null);
+  onMount(async () => { videoCaps = await videoCapabilities(); });
   let uploading = $derived(editing ? editing.items.filter(i => i._up && !i._up.error).length : 0);
   let failedCount = $derived(editing ? editing.items.filter(i => i._up?.error).length : 0);
 
@@ -298,12 +301,14 @@
           <input id="lb-batch" type="file" multiple class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" onchange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
           <Upload size={22} class="mb-2 text-muted-foreground" />
           <span class="text-sm text-muted-foreground"><span class="font-medium text-foreground">Click to upload</span> or drag photos and videos here</span>
-          <span class="mt-0.5 text-xs text-muted-foreground">Select as many as you like at once. Videos are compressed for the web automatically.</span>
+          <span class="mt-0.5 text-xs text-muted-foreground">Select as many as you like at once. Videos are optimised for the web automatically{videoCaps ? ` (up to ${videoCaps.maxMb} MB each)` : ''}.</span>
         </label>
+        {#if videoCaps?.mode !== 'cloudinary'}
         <label class="flex items-start gap-2 text-sm">
           <input type="checkbox" bind:checked={stripAudio} class="mt-0.5 h-4 w-4 rounded-[0.25rem] border-input accent-primary" />
           <span>Remove the sound from videos I upload <span class="text-muted-foreground">(applies to videos added from now on)</span></span>
         </label>
+        {/if}
 
         {#if uploading > 0}
           <p class="flex items-center gap-2 text-sm text-muted-foreground" role="status"><LoaderCircle size={14} class="animate-spin" /> {uploading} upload{uploading > 1 ? 's' : ''} in progress. You can keep editing, but wait for them to finish before saving.</p>

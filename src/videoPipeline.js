@@ -7,7 +7,7 @@
 //
 //   • H.264 High profile with constant-quality encoding (CRF) held under a bitrate ceiling (VBV), so quality is steady
 //     and the file can never balloon on busy footage. Ceilings follow the output size: ~5 Mbps for 1080p, 2.8 for 720p…
-//   • Fits inside 1920×1080 (portrait: 1080×1920), never upscaled, even dimensions; frame rate capped at 30 fps.
+//   • Fits inside 1920×1080 (portrait: 1080×1920; 1280×720 on a small server), never upscaled, even dimensions; frame rate capped at 30 fps.
 //   • yuv420p with BT.709 colour tags, so it plays everywhere; HDR (iPhone HLG / HDR10) is tone-mapped to SDR instead of
 //     looking washed out.
 //   • AAC-LC 128 kbps stereo audio, or no audio track at all for muted background videos (saves ~10%).
@@ -25,8 +25,14 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
-const MAX_MB = Number(process.env.VIDEO_MAX_MB) || 500;
-const MAX_MINUTES = Number(process.env.VIDEO_MAX_MINUTES) || 20;
+// A small server (Render's 512 MB / 0.5 CPU, a tiny VPS) can't run x264 at 1080p: it runs out of memory or takes longer than
+// the clip. "Lite" mode encodes at 720p with a fast preset on one thread and accepts smaller uploads. For small servers the
+// better answer is to let Cloudinary do the work (VIDEO_MODE=cloudinary, see server.js); this keeps the server path usable.
+const memoryLimit = (typeof process.constrainedMemory === 'function' && process.constrainedMemory()) || 0;
+const memoryBytes = memoryLimit > 0 && memoryLimit < os.totalmem() ? memoryLimit : os.totalmem();
+const LITE = process.env.VIDEO_LITE ? process.env.VIDEO_LITE === 'true' : memoryBytes < 1.5 * 1024 ** 3;
+const MAX_MB = Number(process.env.VIDEO_MAX_MB) || (LITE ? 150 : 500);
+const MAX_MINUTES = Number(process.env.VIDEO_MAX_MINUTES) || (LITE ? 5 : 20);
 const JOB_TIMEOUT_MS = 30 * 60 * 1000;
 const UNCOMPRESSED_LIMIT_MB = 100;                   // Cloudinary's own cap on a single video when we can't shrink it first
 
@@ -99,10 +105,11 @@ async function probe(file) {
 }
 
 // ── the compression profile ──────────────────────────────────────────────────
-/** Output size after fitting in 1920×1080 (or 1080×1920), never upscaling. */
-function outputSize(w, h) {
+/** Output size after fitting in 1920×1080 (or 1080×1920; 1280×720 in lite mode), never upscaling. */
+function outputSize(w, h, lite = false) {
   const landscape = w >= h;
-  const maxW = landscape ? 1920 : 1080, maxH = landscape ? 1080 : 1920;
+  const [long, short] = lite ? [1280, 720] : [1920, 1080];
+  const maxW = landscape ? long : short, maxH = landscape ? short : long;
   const s = Math.min(1, maxW / w, maxH / h);
   const even = (n) => Math.max(2, Math.round(n * s / 2) * 2);
   return { width: even(w), height: even(h), short: Math.min(even(w), even(h)) };
@@ -117,15 +124,18 @@ function tierFor(shortSide) {
 }
 
 /** Slower preset = smaller file at the same quality, so use it where the job is short enough to afford it. */
-function presetFor(seconds) {
+function presetFor(seconds, lite = false) {
+  if (lite) return seconds <= 120 ? 'veryfast' : 'superfast';
   if (seconds <= 90) return 'slow';
   if (seconds <= 300) return 'medium';
   if (seconds <= 900) return 'fast';
   return 'veryfast';
 }
 
-function buildArgs(info, { input, output, audio, tonemap }) {
-  const out = outputSize(info.video.width, info.video.height);
+function buildArgs(info, { input, output, audio, tonemap, lite = LITE }) {
+  const out = outputSize(info.video.width, info.video.height, lite);
+  const [long, short] = lite ? [1280, 720] : [1920, 1080];
+  const preset = presetFor(info.seconds, lite);
   const { crf, maxKbps } = tierFor(out.short);
   const fps = info.video.fps > 30.5 ? 30 : (info.video.fps || 30);
   const gop = Math.round(Math.max(24, fps * 2));
@@ -134,7 +144,7 @@ function buildArgs(info, { input, output, audio, tonemap }) {
     // HDR → SDR: linearise, map the highlights (Hable keeps detail without a grey wash), back to BT.709.
     filters.push('zscale=t=linear:npl=100', 'format=gbrpf32le', 'zscale=p=bt709', 'tonemap=tonemap=hable:desat=0', 'zscale=t=bt709:m=bt709:r=tv');
   }
-  filters.push(`scale=w='min(iw,if(gt(iw,ih),1920,1080))':h='min(ih,if(gt(iw,ih),1080,1920))':force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos`);
+  filters.push(`scale=w='min(iw,if(gt(iw,ih),${long},${short}))':h='min(ih,if(gt(iw,ih),${short},${long}))':force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos`);
   if (info.video.fps > 30.5) filters.push('fps=30');
   filters.push('format=yuv420p');
   const args = [
@@ -143,7 +153,8 @@ function buildArgs(info, { input, output, audio, tonemap }) {
     ...(audio === 'keep' && info.audio ? ['-map', '0:a:0'] : []),
     '-sn', '-dn', '-map_metadata', '-1', '-map_chapters', '-1',      // no subtitles/data/metadata/chapters: nothing personal travels
     '-vf', filters.join(','),
-    '-c:v', 'libx264', '-profile:v', 'high', '-preset', presetFor(info.seconds),
+    ...(lite ? ['-threads', '1'] : []),
+    '-c:v', 'libx264', '-profile:v', 'high', '-preset', preset,
     '-crf', String(crf), '-maxrate', `${maxKbps}k`, '-bufsize', `${maxKbps * 2}k`,
     '-g', String(gop), '-keyint_min', String(Math.round(gop / 2)),
     '-pix_fmt', 'yuv420p', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
@@ -151,7 +162,7 @@ function buildArgs(info, { input, output, audio, tonemap }) {
     '-movflags', '+faststart', '-f', 'mp4',
     '-progress', 'pipe:1', '-nostats', output,
   ];
-  return { args, plan: { ...out, crf, maxKbps, fps, preset: presetFor(info.seconds), tonemapped: Boolean(info.video.hdr && tonemap) } };
+  return { args, plan: { ...out, crf, maxKbps, fps, preset, lite, tonemapped: Boolean(info.video.hdr && tonemap) } };
 }
 
 /** Runs ffmpeg for one file. Resolves { ok, plan, error? }; `onProgress` gets 0–100. */
@@ -296,7 +307,7 @@ function createVideoService({ publish, tmpDir = path.join(os.tmpdir(), 'others-v
     });
   }
 
-  return { submit, get, cancel, tmpDir, capabilities: () => ({ compression: Boolean(ffmpegBinary()), maxMb: MAX_MB, maxMinutes: MAX_MINUTES, uncompressedLimitMb: UNCOMPRESSED_LIMIT_MB, tonemap: features.tonemap }) };
+  return { submit, get, cancel, tmpDir, capabilities: () => ({ compression: Boolean(ffmpegBinary()), maxMb: MAX_MB, maxMinutes: MAX_MINUTES, uncompressedLimitMb: UNCOMPRESSED_LIMIT_MB, tonemap: features.tonemap, lite: LITE }) };
 }
 
-module.exports = { createVideoService, parseInfo, probe, outputSize, tierFor, presetFor, buildArgs, transcode, ffmpegBinary, MAX_MB };
+module.exports = { LITE, createVideoService, parseInfo, probe, outputSize, tierFor, presetFor, buildArgs, transcode, ffmpegBinary, MAX_MB };
