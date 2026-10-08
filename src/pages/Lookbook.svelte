@@ -43,7 +43,6 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8 md:gap-6">
           {#each data.lookbooks as lb}
             {@const cover = lookbookCover(lb)}
-            {@const count = (lb.items ?? lb.images ?? []).length}
             <button
               onclick={() => goLookbook(lb.id)}
               class="group text-left"
@@ -62,17 +61,10 @@
                 {:else}
                   <div class="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No cover</div>
                 {/if}
-                <!-- Count badge -->
-                {#if count > 0}
-                  <span class="absolute bottom-3 right-3 bg-background/90 backdrop-blur-xs text-foreground text-[10px] tracking-[0.15em] uppercase px-2 py-1">
-                    {count} {count === 1 ? 'item' : 'items'}
-                  </span>
-                {/if}
               </div>
 
               <div>
                 <h2 class="font-display font-bold text-lg group-hover:underline underline-offset-2 transition-all">{lb.title}</h2>
-                <p class="text-xs text-muted-foreground mt-0.5">{lb.date}</p>
                 {#if lb.description}
                   <p class="text-sm text-muted-foreground mt-1 line-clamp-2">{lb.description}</p>
                 {/if}

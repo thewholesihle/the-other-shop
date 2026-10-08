@@ -42,6 +42,7 @@
     f.featuredLookbook ??= '';
     f.featuredEditorialType ??= 'lookbook';
     f.featuredEditorialEnabled ??= true;
+    f.navStyle = f.navStyle === 'blend' ? 'blend' : 'solid';
     const slot = (v) => ({ source: 'default', family: '', url: '', file: '', format: '', ...(v || {}) });
     f.fonts = { heading: slot(f.fonts?.heading), body: slot(f.fonts?.body) };
     f.promotedCategory = { enabled: false, category: '', label: '', heading: '', message: '', cta: '', count: 4, position: 'after-drops', ...(f.promotedCategory || {}) };
@@ -113,6 +114,7 @@
     { id: 'identity', label: 'Store identity' },
     { id: 'appearance', label: 'Appearance' },
     { id: 'typography', label: 'Typography' },
+    { id: 'navigation', label: 'Navigation bar' },
     { id: 'storefront', label: 'Homepage' },
     { id: 'shipping', label: 'Shipping' },
     { id: 'payments', label: 'Payments' },
@@ -291,6 +293,36 @@
       <!-- Typography -->
       <Card id="settings-typography" title="Typography" description="The fonts used across the storefront. Choose a Google Font or upload your own." class="scroll-mt-20">
         <FontSettings bind:fonts={form.fonts} />
+      </Card>
+
+      <!-- Navigation bar -->
+      <Card id="settings-navigation" title="Navigation bar" description="How the bar at the top of every storefront page looks." class="scroll-mt-20">
+        <fieldset class="grid grid-cols-1 gap-4 p-6 pt-4 sm:grid-cols-2">
+          <legend class="sr-only">Navigation bar style</legend>
+          {#each [['solid', 'Solid', 'A frosted bar with a background, so the links always sit on a clean strip.'], ['blend', 'Blended', 'No background. Logo, links and icons are white and blended with the page behind them (mix-blend-mode: difference), so they stay readable over any image or colour.']] as [value, name, blurb]}
+            <label class="flex cursor-pointer flex-col gap-3 rounded-lg border p-3 transition-colors focus-within:ring-2 focus-within:ring-ring/40 {form.navStyle === value ? 'border-foreground bg-accent/40' : 'border-border hover:bg-accent/30'}">
+              <input type="radio" name="nav-style" {value} bind:group={form.navStyle} class="sr-only" />
+              <!-- a small drawing of the result -->
+              <div class="relative h-24 overflow-hidden rounded-md border border-border" style="background: linear-gradient(100deg, #1c1917 0 38%, #f5f1ec 38% 100%)" aria-hidden="true">
+                {#if value === 'solid'}
+                  <div class="absolute inset-x-0 top-0 flex items-center justify-between border-b border-black/10 bg-white/80 px-3 py-2 backdrop-blur-sm">
+                    <span class="h-2 w-8 rounded-sm bg-neutral-900"></span>
+                    <span class="flex gap-2"><span class="h-1.5 w-6 rounded-sm bg-neutral-900"></span><span class="h-1.5 w-6 rounded-sm bg-neutral-900"></span><span class="h-1.5 w-6 rounded-sm bg-neutral-900"></span></span>
+                  </div>
+                {:else}
+                  <div class="absolute inset-x-0 top-0 flex items-center justify-between px-3 py-2 mix-blend-difference">
+                    <span class="h-2 w-8 rounded-sm bg-white"></span>
+                    <span class="flex gap-2"><span class="h-1.5 w-6 rounded-sm bg-white"></span><span class="h-1.5 w-6 rounded-sm bg-white"></span><span class="h-1.5 w-6 rounded-sm bg-white"></span></span>
+                  </div>
+                {/if}
+              </div>
+              <div>
+                <p class="flex items-center gap-2 text-sm font-semibold">{name}{#if form.navStyle === value}<Check size={14} />{/if}</p>
+                <p class="mt-0.5 text-sm text-muted-foreground">{blurb}</p>
+              </div>
+            </label>
+          {/each}
+        </fieldset>
       </Card>
 
       <!-- Homepage -->

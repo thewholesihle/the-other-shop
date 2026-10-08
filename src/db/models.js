@@ -91,6 +91,9 @@ const SettingsSchema = new mongoose.Schema({
       url: { type: String, default: '' }, file: { type: String, default: '' }, format: { type: String, default: '' },
     },
   },
+  // Navigation bar treatment on the storefront: 'solid' (frosted bar with a background) or 'blend' (no background, white
+  // elements with mix-blend-mode: difference).
+  navStyle:       { type: String, default: 'solid', enum: ['solid', 'blend'] },
   navLogoSize:    { type: Number, default: 28 },
   favicon:       { type: String, default: '' },
   emailLogo:     { type: String, default: '' },

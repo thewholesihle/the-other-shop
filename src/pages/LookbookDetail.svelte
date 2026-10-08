@@ -86,7 +86,6 @@
       </nav>
 
       <div class="mb-8 md:mb-12 px-1 sm:px-0">
-        <p class="text-label text-muted-foreground mb-2">{lb.date}</p>
         <h1 use:cutReveal class="text-4xl md:text-5xl font-display font-bold mb-4">{lb.title}</h1>
         {#if lb.description}
           <p class="text-muted-foreground max-w-xl">{lb.description}</p>

@@ -1777,6 +1777,7 @@ app.post('/api/data', requireAdmin, async (req, res) => {
         req.body.site[field] = clean.value;
       }
     }
+    if (req.body.site && req.body.site.navStyle !== undefined && !['solid', 'blend'].includes(req.body.site.navStyle)) req.body.site.navStyle = 'solid';
     // Typography: the family is checked against Google Fonts, the uploaded file must be one we accepted, and what is stored
     // is rebuilt from validated values only (see src/fonts.js).
     if (req.body.site && req.body.site.fonts !== undefined) {
@@ -2794,7 +2795,7 @@ let bootCache = { at: 0, admin: null, store: null };
 let brandInfoCache = { at: 0, info: null };
 async function getBrandInfo() {
   if (brandInfoCache.info && Date.now() - brandInfoCache.at < 60000) return brandInfoCache.info;
-  const info = { name: 'Others.', logo: '', favicon: '', bg: '#f8f5f2', fg: '#211c1a', fonts: null };
+  const info = { name: 'Others.', logo: '', favicon: '', bg: '#f8f5f2', fg: '#211c1a', fonts: null, navStyle: 'solid' };
   if (getIsConnected()) {
     try {
       const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(800).lean();
@@ -2804,6 +2805,7 @@ async function getBrandInfo() {
       info.bg = site?.colors?.background || info.bg;
       info.fg = site?.colors?.foreground || info.fg;
       info.fonts = site?.fonts || null;
+      info.navStyle = site?.navStyle === 'blend' ? 'blend' : 'solid';
     } catch { /* defaults */ }
   }
   brandInfoCache = { at: Date.now(), info };
@@ -2820,6 +2822,7 @@ async function bootBrand(admin) {
   const { name, logo, bg, fg } = info;
   const safeColor = (c, d) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : d);
   const brand = {
+    navStyle: admin ? 'solid' : info.navStyle,
     fonts: admin ? '' : fonts.buildFontHead(info.fonts),   // '' = the built-in typeface, nothing to change
     icons: await iconHead(info, admin ? '#fafafa' : safeColor(bg, '#f8f5f2'), admin),
     style: admin ? 'background:#fafafa;color:#09090b' : `background:${safeColor(bg, '#f8f5f2')};color:${safeColor(fg, '#211c1a')}`,
@@ -2840,6 +2843,8 @@ async function sendShell(res, { admin = false, head = '' } = {}) {
     html = html.replace('<head>', () => `<head>\n  ${brand.icons}`);
     // Custom typography replaces the built-in Space Grotesk stylesheet (kept only while a slot still uses it).
     if (brand.fonts) html = html.replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=Space\+Grotesk[^>]*>/, () => brand.fonts);
+    // The navigation bar's treatment is known before any script runs, so it never flashes the other style.
+    if (brand.navStyle === 'blend') html = html.replace('<html lang="en">', () => '<html lang="en" data-nav-style="blend">');
     if (admin) html = html.replace('<div id="boot"', '<div id="boot" class="boot-admin"');
     if (head) { html = html.replace('<title>The Other Shop</title>', '').replace('<head>', () => `<head>${head}`); }
     res.send(html);

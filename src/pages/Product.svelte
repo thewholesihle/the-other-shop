@@ -40,6 +40,9 @@
       if (product) {
         selectedSize = product.sizes?.length === 1 ? product.sizes[0] : '';
         selectedColor = product.colors?.length === 1 ? product.colors[0] : '';
+        // Arriving from a product card where a colour was already picked.
+        const wanted = new URLSearchParams(window.location.search).get('color');
+        if (wanted && product.colors?.includes(wanted)) selectedColor = wanted;
       }
     } finally { loading = false; }
     // Let the gallery mount at its hidden start state first, then reveal it.

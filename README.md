@@ -125,6 +125,13 @@ Every one of these has a matching server-side route in `server.js` (not just the
 - **How it's applied:** the server writes the font links, `@font-face` rules and two CSS variables (`--font-heading`, `--font-body`) into the page's `<head>`, so the first paint already uses the right font with no flash of the old one. The built-in font is only downloaded while a slot still uses it. Nothing in the page is copied from what the browser sent: names and file addresses are validated and rebuilt (`src/fonts.js`). A store that never touches this setting is served exactly as before.
 - **Not affected:** the admin panel keeps its own typeface, and emails keep standard system fonts, since most email apps ignore web fonts.
 
+## Navigation bar & product cards
+
+- **Two navigation bar styles** (Settings → Navigation bar): **Solid** is the original frosted bar with a background. **Blended** has no background at all: the logo, links and cart are white with `mix-blend-mode: difference`, so they invert against whatever is behind them (light page, dark photo, hero image) and stay readable. The choice is written onto `<html data-nav-style>` by the server, so the first paint is already right with no flash of the other style. In the blended style the mobile menu is a full-screen sheet; in the solid style it drops down under the bar.
+- **Mobile menu:** the hamburger turns into a cross, the menu unrolls from the top with the links sliding in one after another, the page behind doesn't scroll while it's open, and Escape or tapping a link closes it. All of it is switched off for visitors who prefer reduced motion.
+- **Colour options on product cards:** a card shows a small swatch for each colour (the colour's own first photo, otherwise a dot if the name is a CSS colour such as "Red", otherwise its initial; up to 5 plus "+N"; sold-out colours are crossed out). Hovering or focusing a swatch previews that colour's photo on the card; clicking or tapping keeps it, and the product page then opens with that colour already selected.
+- **Lookbooks** no longer show dates or item counts on the storefront (the admin still shows them).
+
 ## Admin panel
 
 Eleven sections, all behind the sign-in page:
