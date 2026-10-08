@@ -238,10 +238,7 @@
             </div>
             {@render imageField('emaillogo', 'Email logo (optional)', 'A dedicated logo for order emails. Falls back to the main logo.', () => form.emailLogo, (v) => (form.emailLogo = v))}
             <div>
-              {@render imageField('favicon', 'Favicon', 'The browser tab icon. A square image works best; falls back to the logo.', () => form.favicon, (v) => (form.favicon = v), 'square')}
-              {#if form.logo && !form.favicon}
-                <Button variant="outline" size="sm" class="mt-3" onclick={() => (form.favicon = form.logo)}>Use logo as favicon</Button>
-              {/if}
+              {@render imageField('favicon', 'Favicon', 'Optional. Leave empty to use the built-in Others. icons (tab, home screen and app). Upload an image here only to replace them.', () => form.favicon, (v) => (form.favicon = v), 'square')}
             </div>
           </div>
         </div>

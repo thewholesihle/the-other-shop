@@ -1,7 +1,16 @@
 'use strict';
-// The icons for the store and for the admin, derived from the logo (or favicon) uploaded in Settings. Nothing is bundled
-// with the project. The store and the admin are installable as SEPARATE web apps, so each has its own manifest, name,
-// scope, start URL, shortcuts and home-screen icon.
+// The favicon and app icons for the store and for the admin. The store and the admin are installable as SEPARATE web apps,
+// so each has its own manifest, name, scope, start URL, shortcuts and home-screen icon.
+//
+// WHERE THE ARTWORK COMES FROM
+//  • By default, the brand's own vector logo: public/brand/others-logo.svg is rendered into a ready-made icon set
+//    (public/brand/, built by `npm run icons`, see scripts/build-brand-icons.js). Exact artwork at every size, crisp
+//    16/32/48 tab icons, an SVG favicon that is black on light tabs and white on dark ones, solid-tile Apple and
+//    192/512 icons, maskable icons with the logo inside the safe zone, and a separate dark "ADMIN" set for the admin app.
+//  • If an explicit Favicon is uploaded in Settings, that image wins and everything below the "custom favicon" marks
+//    derives from it, as before. (The logo field no longer drives icons: it is for the page, not for the tab.)
+//
+// THE REST OF THIS NOTE DESCRIBES THE CUSTOM-FAVICON PATH
 //
 //  • Sharp at every size: real 16/32/48 renditions packed into /favicon.ico (not one downscaled 64px image), an SVG
 //    favicon for browsers that take it, a solid-background Apple touch icon (iOS turns transparency black), and
@@ -15,7 +24,17 @@
 //    tile came out as a blank square on iOS. If the logo can't be analysed, the tile is a neutral mid-grey that shows
 //    both black and white logos.
 // Resizing needs the logo on Cloudinary; a logo hosted elsewhere is used as it is.
+const fs = require('node:fs');
+const path = require('node:path');
 const { analyze, toneFor, isCloudinary, withTransform } = require('./emailLogo');
+
+// ── the built-in brand icon set ──────────────────────────────────────────────
+const BRAND_DIR = path.join(__dirname, '..', 'public', 'brand');
+const brandFile = (name) => { try { return fs.readFileSync(path.join(BRAND_DIR, name)); } catch { return null; } };
+let brandVersion = '';
+try { brandVersion = fs.readFileSync(path.join(BRAND_DIR, 'version.txt'), 'utf8').trim(); } catch { /* not built yet */ }
+const brandUrl = (name) => `/brand/${name}${brandVersion ? `?v=${brandVersion}` : ''}`;
+const hasBrandIcons = () => Boolean(brandFile('favicon.svg'));
 
 // Relative luminance of a browser tab in light and in dark mode (light-grey strip / dark-grey tab).
 const TAB = { light: 0.85, dark: 0.035 };
@@ -34,7 +53,8 @@ function hexLum(c, fallback = 'ffffff') {
 }
 const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 
-const source = (info) => info?.favicon || info?.logo || '';
+/** The custom favicon, if one was uploaded in Settings. Empty means "use the built-in brand icons". */
+const source = (info) => info?.favicon || '';
 const colorize = (tone) => (tone === 'asis' ? '' : `e_colorize:100,co_rgb:${tone === 'white' ? 'ffffff' : '000000'}/`);
 
 /** Square, transparent-background PNG for a browser tab. */
@@ -117,6 +137,7 @@ function buildIco(images) {
 /** /favicon.ico — 16, 32 and 48px, or null if it can't be built (the route then redirects). */
 async function faviconIco(info) {
   const src = source(info);
+  if (!src && hasBrandIcons()) return brandFile('favicon.ico');
   if (!isCloudinary(src)) return null;
   return cached(`ico:${src}`, async () => {
     const t = await tonesFor(info);
@@ -132,6 +153,7 @@ const esc = (s) => String(s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;
 /** /favicon.svg — adapts to light/dark tabs; falls back to a monogram when there's no readable logo. */
 async function faviconSvg(info) {
   const src = source(info);
+  if (!src && hasBrandIcons()) return brandFile('favicon.svg').toString('utf8');
   if (isCloudinary(src)) {
     const svg = await cached(`svg:${src}`, async () => {
       const t = await tonesFor(info);
@@ -155,7 +177,7 @@ async function faviconSvg(info) {
 /** URL of the 180px Apple touch icon (solid tile), or '' if there is no logo. */
 async function appleTouchUrl(info, bg = '#ffffff', { admin = false, fg } = {}) {
   const src = source(info);
-  if (!src) return '';
+  if (!src) return hasBrandIcons() ? brandUrl(admin ? 'admin-apple-touch-icon.png' : 'apple-touch-icon.png') : '';
   if (!isCloudinary(src)) return src;
   const tile = await appTile(info, { admin, bg, fg });
   return solidUrl(src, tile.tone, 180, 0.8, tile.bg, admin ? 'ADMIN' : '');
@@ -173,8 +195,9 @@ async function headTags(info, { admin = false, bg = '#ffffff', fg } = {}) {
     // The storefront has the palette the owner chose, so the browser bar matches the page, and form controls / scrollbars follow its brightness.
     : [`<meta name="theme-color" content="#${bgHex}">`, `<meta name="color-scheme" content="${hexLum(bg) < 0.35 ? 'dark' : 'light'}">`];
   return [
-    src && isCloudinary(src) ? '<link rel="icon" href="/favicon.ico" sizes="48x48">' : '',
-    '<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">',
+    (src ? isCloudinary(src) : hasBrandIcons()) ? `<link rel="icon" href="/favicon.ico${src ? '' : `?v=${brandVersion}`}" sizes="48x48">` : '',
+    !src && hasBrandIcons() ? `<link rel="icon" type="image/png" sizes="32x32" href="${brandUrl('favicon-32.png')}">` : '',
+    `<link rel="icon" href="/favicon.svg${!src && brandVersion ? `?v=${brandVersion}` : ''}" type="image/svg+xml" sizes="any">`,
     apple ? `<link rel="apple-touch-icon" href="${esc(apple)}">` : '',
     `<link rel="manifest" href="${admin ? '/admin.webmanifest' : '/manifest.webmanifest'}">`,
     ...themeMetas,
@@ -186,6 +209,15 @@ async function headTags(info, { admin = false, bg = '#ffffff', fg } = {}) {
 /** The icon list shared by both manifests: normal + maskable at 192 and 512 on the tile chosen for the logo. */
 async function appIcons(info, opts) {
   const src = source(info);
+  if (!src && hasBrandIcons()) {
+    const pre = opts.admin ? 'admin-' : '';
+    return [
+      { src: brandUrl(`${pre}icon-192.png`), sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: brandUrl(`${pre}icon-512.png`), sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: brandUrl(`${pre}icon-maskable-192.png`), sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: brandUrl(`${pre}icon-maskable-512.png`), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ];
+  }
   if (isCloudinary(src)) {
     const tile = await appTile(info, opts);
     const badge = opts.admin ? 'ADMIN' : '';
@@ -256,4 +288,4 @@ async function adminManifest(site) {
   };
 }
 
-module.exports = { appleTouchUrl, appTile, chooseTile, faviconIco, faviconSvg, headTags, manifest, adminManifest, buildIco, hexLum, hex6, tabUrl, solidUrl, TAB, UNKNOWN_TILE };
+module.exports = { hasBrandIcons, appleTouchUrl, appTile, chooseTile, faviconIco, faviconSvg, headTags, manifest, adminManifest, buildIco, hexLum, hex6, tabUrl, solidUrl, TAB, UNKNOWN_TILE };

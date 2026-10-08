@@ -654,6 +654,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
     // Pinned third-party libs never change under the same URL; the app bundle revalidates (ETag)
     // on each load so a deploy is picked up immediately.
     if (filePath.includes(`${path.sep}vendor${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+    else if (filePath.includes(`${path.sep}brand${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=86400'); // icons: their URLs carry ?v=<hash>, which changes when they do
     else if (/\.(?:js|css)$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
   },
 }));
@@ -1722,8 +1723,9 @@ app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
 // ─── API: Store Data ──────────────────────────────────────────────────────────
 
 // ─── Favicon, app icons & web app manifest ────────────────────────────────────
-// Everything here comes from the logo / favicon uploaded in Settings (see src/brandIcon.js): a multi-size
-// .ico, an SVG that follows the browser's light/dark theme, an Apple touch icon, and a manifest with maskable icons.
+// The brand's own icon set (public/brand, built from the vector logo by `npm run icons`; see src/brandIcon.js): a multi-size
+// .ico, an SVG that follows the browser's light/dark theme, an Apple touch icon, and a manifest with maskable icons. An
+// explicit Favicon uploaded in Settings takes over from the built-in set.
 const brandIcon = require('./src/brandIcon');
 
 app.get('/favicon.ico', async (_req, res) => {

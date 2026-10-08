@@ -152,21 +152,46 @@ test('icon urls: transparent padded tab icons vs solid maskable-safe app icons (
   assert.match(icons.solidUrl(src, 'asis', 512, 0.6, 'f8f5f2'), /c_fit,w_307,h_307\/c_pad,w_512,h_512,b_rgb:f8f5f2/);
   assert.equal(icons.tabUrl('/uploads/logo.png', 'white', 32), '/uploads/logo.png');   // not on Cloudinary: used as it is
 });
-test('manifest: page-coloured theme, usable name, shortcuts, and a fallback icon with no logo', async () => {
+test('manifest: page-coloured theme, usable name, shortcuts, and the built-in brand icons', async () => {
   const m = await icons.manifest({ name: 'The Very Long Store Name', colors: { background: '#f8f5f2', primary: '#111111' }, tagline: 'Streetwear' });
   assert.equal(m.theme_color, '#f8f5f2');          // the page colour, not the dark primary
   assert.equal(m.background_color, '#f8f5f2');
   assert.ok(m.short_name.length <= 12);
   assert.equal(m.description, 'Streetwear');
   assert.equal(m.shortcuts.length, 2);
-  assert.equal(m.icons[0].src, '/favicon.svg');
+  assert.match(m.icons[0].src, /^\/brand\/icon-192\.png/);        // the brand's own artwork, not something derived from a logo upload
   const empty = await icons.manifest({});
   assert.equal(empty.theme_color, '#ffffff');      // never an invalid colour
 });
-test('favicon svg without a logo: a monogram that flips for dark tabs', async () => {
+test('favicon svg: the real brand logo, black on light tabs and white on dark ones', async () => {
   const svg = await icons.faviconSvg({ name: 'Others.', bg: '#f8f5f2', fg: '#211c1a' });
   assert.match(svg, /prefers-color-scheme:dark/);
-  assert.match(svg, />O<\/text>/);
+  assert.match(svg, /<path d="M547\.31,64\.94/);                                  // the actual artwork
+  assert.ok(!/<text/.test(svg));                                                  // not a made-up monogram
+  const withFavicon = await icons.faviconSvg({ name: 'Others.', favicon: 'https://example.com/own.png', bg: '#f8f5f2', fg: '#211c1a' });
+  assert.match(withFavicon, />O<\/text>/);                                        // an explicit favicon that can't be resized keeps the old safety net
+});
+test('brand icon set: every file exists at the size its name promises, and the .ico is valid', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const dir = path.join(__dirname, '..', 'public', 'brand');
+  const dims = (f) => { const b = fs.readFileSync(path.join(dir, f)); assert.equal(b.subarray(1, 4).toString(), 'PNG', f); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
+  for (const pre of ['', 'admin-']) {
+    assert.deepEqual(dims(pre + 'apple-touch-icon.png'), [180, 180]);
+    for (const n of [192, 512]) { assert.deepEqual(dims(pre + 'icon-' + n + '.png'), [n, n]); assert.deepEqual(dims(pre + 'icon-maskable-' + n + '.png'), [n, n]); }
+  }
+  assert.deepEqual(dims('favicon-32.png'), [32, 32]);
+  const ico = fs.readFileSync(path.join(dir, 'favicon.ico'));
+  assert.deepEqual([ico.readUInt16LE(0), ico.readUInt16LE(2), ico.readUInt16LE(4)], [0, 1, 3]);   // reserved, type = icon, three images
+  assert.deepEqual([0, 1, 2].map(i => ico.readUInt8(6 + 16 * i)), [16, 32, 48]);
+  assert.match(fs.readFileSync(path.join(dir, 'others-logo-white.svg'), 'utf8'), /fill: #fff/);
+  assert.match(fs.readFileSync(path.join(dir, 'version.txt'), 'utf8'), /^[0-9a-f]{8}\s*$/);
+});
+test('admin app gets its own icons (a different tile) and the same logo', async () => {
+  const store = await icons.manifest({ name: 'Others.' }), admin = await icons.adminManifest({ name: 'Others.' });
+  assert.ok(store.icons.every(i => !/admin-/.test(i.src)) && admin.icons.every(i => /\/brand\/admin-icon/.test(i.src)));
+  assert.deepEqual(store.icons.map(i => i.purpose), ['any', 'any', 'maskable', 'maskable']);
+  const apple = await icons.appleTouchUrl({ name: 'Others.' }, '#f8f5f2', { admin: true });
+  assert.match(apple, /\/brand\/admin-apple-touch-icon\.png\?v=[0-9a-f]{8}/);
 });
 test('head tags: store uses its own palette, admin gets light + dark browser-bar colours', async () => {
   const store = await icons.headTags({ name: 'Others.' }, { bg: '#111111' });
