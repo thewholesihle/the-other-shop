@@ -542,8 +542,22 @@ const storage = new CloudinaryStorage({
   }),
 });
 
+// Development only: with VIDEO_LOCAL_DIR set (and not in production), uploads are kept in that folder and served from
+// /dev-uploads instead of going to Cloudinary, so the admin can be tried without an account.
+const DEV_UPLOAD_DIR = process.env.NODE_ENV !== 'production' ? process.env.VIDEO_LOCAL_DIR : '';
+let devStorage = null;
+if (DEV_UPLOAD_DIR) {
+  fs.mkdirSync(DEV_UPLOAD_DIR, { recursive: true });
+  devStorage = multer.diskStorage({
+    destination: DEV_UPLOAD_DIR,
+    filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(3).toString('hex')}${path.extname(file.originalname).toLowerCase() || '.bin'}`),
+  });
+  const handle = devStorage._handleFile.bind(devStorage);
+  devStorage._handleFile = (req, file, cb) => handle(req, file, (err, info) => cb(err, info && { ...info, path: '/dev-uploads/' + info.filename }));
+}
+
 const upload = multer({
-  storage,
+  storage: devStorage || storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
   fileFilter: (_req, file, cb) => {
     const ok = /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm))$/.test(file.mimetype);
@@ -1037,8 +1051,8 @@ const { createVideoService, MAX_MB: VIDEO_MAX_MB } = require('./src/videoPipelin
 
 // Development only: with VIDEO_LOCAL_DIR set (and not in production), finished videos are kept in that folder and served
 // from /dev-uploads, so the whole upload flow can be tried without a Cloudinary account (or filling one with test clips).
-const VIDEO_LOCAL_DIR = process.env.NODE_ENV !== 'production' ? process.env.VIDEO_LOCAL_DIR : '';
-if (VIDEO_LOCAL_DIR) { fs.mkdirSync(VIDEO_LOCAL_DIR, { recursive: true }); app.use('/dev-uploads', express.static(VIDEO_LOCAL_DIR)); }
+const VIDEO_LOCAL_DIR = DEV_UPLOAD_DIR;
+if (VIDEO_LOCAL_DIR) app.use('/dev-uploads', express.static(VIDEO_LOCAL_DIR));
 
 async function publishVideoToCloudinary(file) {
   if (VIDEO_LOCAL_DIR) {

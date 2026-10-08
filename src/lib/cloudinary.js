@@ -21,21 +21,22 @@ export const DEFAULT_WIDTHS = [320, 480, 640, 960, 1280, 1600, 2000];
 /**
  * @param {string} url      Original (Cloudinary) URL
  * @param {number|'auto'} width  Max width in px (never upscales) or 'auto' to keep the original size
- * @param {{ height?: number }} [opts]  With a height, crops to that box around the subject (g_auto)
+ * @param {{ height?: number, ratio?: string }} [opts]  With a height, or a ratio like "3:4", crops to that shape around the subject (g_auto)
  */
 export function getOptimizedUrl(url, width = 'auto', opts = {}) {
   if (!isCloudinary(url)) return url;
   const t = [];
-  if (opts.height && width !== 'auto') t.push('c_fill', 'g_auto', `h_${opts.height}`, `w_${width}`);
+  if (opts.ratio && width !== 'auto') t.push('c_fill', 'g_auto', `ar_${opts.ratio}`, `w_${width}`);
+  else if (opts.height && width !== 'auto') t.push('c_fill', 'g_auto', `h_${opts.height}`, `w_${width}`);
   else if (width !== 'auto') t.push('c_limit', `w_${width}`);
   t.push('f_auto', 'q_auto');
   return withTransform(url, t.join(','));
 }
 
 /** HTML srcset string, e.g. "…w_320… 320w, …w_480… 480w". Empty for non-Cloudinary URLs. */
-export function getSrcset(url, widths = DEFAULT_WIDTHS) {
+export function getSrcset(url, widths = DEFAULT_WIDTHS, opts = {}) {
   if (!isCloudinary(url)) return '';
-  return widths.map((w) => `${getOptimizedUrl(url, w)} ${w}w`).join(', ');
+  return widths.map((w) => `${getOptimizedUrl(url, w, opts)} ${w}w`).join(', ');
 }
 
 /** Small square-ish thumbnail for admin lists and previews. */

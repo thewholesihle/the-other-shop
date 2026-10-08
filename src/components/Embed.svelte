@@ -4,13 +4,13 @@
   // YouTube/Vimeo players are heavy (hundreds of KB of JS each, before anything plays). YouTube
   // embeds are shown as a lightweight thumbnail and only load the real player on click;
   // anything else loads lazily when scrolled near.
-  let { url = '', title = 'Video' } = $props();
+  let { url = '', title = 'Video', fill = false } = $props();   // fill: sized by its parent instead of forcing 16:9
 
   let active = $state(false);
   let id = $derived(youtubeId(url));
 </script>
 
-<div class="relative aspect-video w-full bg-black">
+<div class="relative w-full bg-black {fill ? 'h-full' : 'aspect-video'}">
   {#if id && !active}
     <button type="button" class="group absolute inset-0 flex items-center justify-center" onclick={() => (active = true)} aria-label="Play video: {title}">
       <img src="https://i.ytimg.com/vi/{id}/hqdefault.jpg" alt="" loading="lazy" decoding="async" class="absolute inset-0 h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100" />

@@ -38,7 +38,7 @@
       const { url, stats } = await uploadVideo(file, { audio: removeAudio ? 'strip' : 'keep', onUpdate: (u) => { progress = u.progress; message = u.message; } });
       value = url;
       summary = describeStats(stats);
-      onChange(url);
+      onChange(url, { width: stats?.to?.width || 0, height: stats?.to?.height || 0 });
     } catch (e) {
       error = e.message;
     } finally {

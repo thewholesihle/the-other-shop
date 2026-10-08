@@ -1,5 +1,6 @@
 <script>
   import { thumb } from '../../lib/cloudinary.js';
+  import { shrinkImage as shrink } from '../../lib/imageUpload.js';
   import Upload from 'lucide-svelte/icons/upload';
   import X from 'lucide-svelte/icons/x';
   import LoaderCircle from 'lucide-svelte/icons/loader-circle';
@@ -14,23 +15,6 @@
   let uploading = false;
   let error = '';
   let dragging = false;
-
-  // Phone and camera photos are routinely 5–15 MB. Re-encode anything over ~1.2 MB as WebP capped
-  // at 2560px before it leaves the browser: a much faster upload, and no visible quality loss.
-  async function shrink(file) {
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 1.2 * 1024 * 1024) return file;
-    try {
-      const bmp = await createImageBitmap(file);
-      const scale = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(bmp.width * scale);
-      canvas.height = Math.round(bmp.height * scale);
-      canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
-      const blob = await new Promise((r) => canvas.toBlob(r, 'image/webp', 0.88));
-      if (blob && blob.size < file.size) return new File([blob], file.name.replace(/\.\w+$/, '') + '.webp', { type: 'image/webp' });
-    } catch { /* fall back to the original file */ }
-    return file;
-  }
 
   async function handleFiles(picked) {
     if (!picked.length) return;

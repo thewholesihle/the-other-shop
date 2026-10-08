@@ -191,6 +191,9 @@ const LookbookItemSchema = new mongoose.Schema({
   type:    { type: String, enum: ['image', 'video', 'embed'], default: 'image' },
   url:     { type: String, default: '' },
   caption: { type: String, default: '' },
+  // Pixel size of the media (0 = unknown). Lets the storefront lay out vertical and wide media at their true shape before they load.
+  width:   { type: Number, default: 0, min: 0, max: 20000 },
+  height:  { type: Number, default: 0, min: 0, max: 20000 },
 }, { _id: false, strict: true });
 
 const LookbookSchema = new mongoose.Schema({

@@ -6,7 +6,7 @@
   import Loader from '../components/Loader.svelte';
   import { loadStoreData } from '../lib/storeData.js';
   import Navbar from '../components/Navbar.svelte';
-  import { getSrcset, getOptimizedUrl } from '../lib/cloudinary.js';
+  import { lookbookCover } from '../lib/lookbook.js';
 
   let data = null;
   let loading = true;
@@ -33,16 +33,16 @@
   <div class="min-h-screen flex flex-col">
     <Navbar siteName={data.site.name} logo={data.site.logo} logoHeight={data.site.navLogoSize} />
 
-    <div class="flex-1 pt-28 pb-20 px-6 md:px-10 max-w-7xl mx-auto">
-      <div class="mb-12">
+    <div class="flex-1 w-full pt-24 md:pt-28 pb-16 md:pb-20 px-4 sm:px-6 md:px-10 max-w-7xl mx-auto">
+      <div class="mb-8 md:mb-12">
         <p class="text-label mb-2">Editorial</p>
         <h1 use:cutReveal class="text-4xl md:text-5xl font-display font-bold">Lookbook</h1>
       </div>
 
       {#if data.lookbooks.length}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8 md:gap-6">
           {#each data.lookbooks as lb}
-            {@const cover = lb.coverImage ?? lb.items?.find(i => i.type !== 'video')?.url ?? lb.images?.[0] ?? ''}
+            {@const cover = lookbookCover(lb)}
             {@const count = (lb.items ?? lb.images ?? []).length}
             <button
               onclick={() => goLookbook(lb.id)}
@@ -54,7 +54,8 @@
                 {#if cover}
                   <Img
                     src={cover}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    crop="3:4"
                     alt={lb.title}
                     class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
                   />
@@ -64,7 +65,7 @@
                 <!-- Count badge -->
                 {#if count > 0}
                   <span class="absolute bottom-3 right-3 bg-background/90 backdrop-blur-xs text-foreground text-[10px] tracking-[0.15em] uppercase px-2 py-1">
-                    {count} {count === 1 ? 'image' : 'images'}
+                    {count} {count === 1 ? 'item' : 'items'}
                   </span>
                 {/if}
               </div>

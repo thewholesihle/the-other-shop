@@ -13,6 +13,7 @@
     fallbackWidth = 960,
     priority = false,
     fadeIn = true,
+    crop = '',          // e.g. '3:4': Cloudinary crops to that shape around the subject, so a wide photo isn't cut through the middle
     class: className = '',
     ...rest
   } = $props();
@@ -29,7 +30,7 @@
     queueMicrotask(() => { if (el?.complete && el.naturalWidth > 0) loaded = true; });
   });
 
-  let srcset = $derived(getSrcset(src, widths));
+  let srcset = $derived(getSrcset(src, widths, crop ? { ratio: crop } : {}));
   // Priority (LCP) images paint immediately — no fade, so they're never held back at opacity 0.
   let fade = $derived(fadeIn && !priority);
   let visible = $derived(!fade || loaded || failed);
@@ -38,7 +39,7 @@
 {#if src}
   <img
     bind:this={el}
-    src={getOptimizedUrl(src, fallbackWidth)}
+    src={getOptimizedUrl(src, fallbackWidth, crop ? { ratio: crop } : {})}
     srcset={srcset || undefined}
     sizes={srcset ? sizes : undefined}
     {alt}

@@ -239,6 +239,13 @@ The Community page has an **Events & Pop-ups** section at the top. It is managed
 - **Emails** use size-capped JPEG/PNG renditions (no WebP/AVIF, which many mail clients can't show). The admin uses small thumbnails everywhere.
 - **Delivery:** responses are gzip/brotli-compressed, the JS bundle is minified (~1 MB → ~330 KB), vendor libs are cached for 30 days, and the Cloudinary connection is opened early with `preconnect`.
 
+## Lookbook
+
+- **Batch upload:** in the lookbook editor, pick or drag in any number of photos and videos at once. Each appears as a row immediately, in the order picked, and fills in as it finishes (photos upload three at a time; videos are compressed by the server one after another, see **Video uploads**). A failed file keeps its row with a **Try again** button, and saving waits until everything has finished. You can still add a single image, video or YouTube/Vimeo embed by hand.
+- **Cover image:** optional. With none uploaded, the cover is the first *image* in Media (in the order you arranged it), and failing that a still frame of the first video. The editor shows which one is being used. The same rule applies to the lookbook list, the admin list and the link preview (`og:image`).
+- **Vertical and wide media together:** each item stores its pixel size (read in the browser at upload, or from the compressed video; older lookbooks are measured the first time you open them in the admin). The storefront lays media out as a justified flow: every item keeps its own proportions (no cropping; only extreme shapes are limited to 1:2 to 2.4:1), and items pack into rows of equal height. On a phone a wide or square item takes the full width and two vertical ones sit side by side; on desktop wide and vertical items share rows. Media saved without a size is measured by the page and settles into place. The admin shows each item's shape ("Vertical · 9:16", "Horizontal · 16:9"). Lookbook cover cards are cropped to 3:4 around the subject (Cloudinary `g_auto`) rather than through the middle.
+- **Mobile:** the lookbook pages use 12–16px side margins on phones instead of 24px.
+
 ## Video uploads
 
 Phone and camera video is made for editing, not streaming (30–100 Mbps, 4K, 60 fps, GPS in the metadata). Every video uploaded in the admin (homepage hero, lookbook items, the article editor) is therefore compressed on the server **before** it is published, using ffmpeg (`src/videoPipeline.js`):
@@ -251,7 +258,7 @@ Phone and camera video is made for editing, not streaming (30–100 Mbps, 4K, 60
 - **Result:** typical camera footage comes out 80–95% smaller (a 29.5 MB 4K/60 clip became 1.6 MB, SSIM 0.996). After publishing, Cloudinary also pre-generates 1280/1920 renditions and the site serves the best codec per browser (`f_auto`: VP9/AV1/H.264).
 - **In the admin:** drag a file onto the uploader. It shows upload progress, then compression progress, then "29.5 MB → 1.6 MB (95% smaller) · 1080p · 30 fps". Jobs run one at a time in a queue (compression is CPU-heavy), the upload returns immediately and the admin follows the job, so a long video never hits a request timeout. Limits: `VIDEO_MAX_MB` (default 500) and `VIDEO_MAX_MINUTES` (default 20). Errors are phrased for people ("That file could not be read as a video").
 - **ffmpeg:** comes from the `ffmpeg-static` optional dependency (installed by `npm install` on Render and most hosts), or set `FFMPEG_PATH`, or have `ffmpeg` on the PATH. If none is available the uploader says so and falls back to publishing the original (Cloudinary's 100 MB single-video limit applies).
-- **Developing without Cloudinary:** set `VIDEO_LOCAL_DIR=./tmp-videos` (ignored when `NODE_ENV=production`) to keep the compressed files locally and serve them from `/dev-uploads`.
+- **Developing without Cloudinary:** set `VIDEO_LOCAL_DIR=./tmp-uploads` (ignored when `NODE_ENV=production`) to keep uploaded photos and compressed videos locally and serve them from `/dev-uploads`.
 
 ## Logs & backups
 

@@ -241,3 +241,30 @@ test('video: ffmpeg arguments are web-safe (H.264 High, yuv420p, faststart, no m
   const hdr = video.buildArgs({ ...info, video: { ...info.video, hdr: true } }, { input: 'in.mp4', output: 'out.mp4', audio: 'keep', tonemap: true }).args.join(' ');
   assert.ok(hdr.includes('tonemap=') && hdr.includes('bt709'));
 });
+
+test('lookbook: the cover is the uploaded one, else the first image in the media, else a video still', async () => {
+  const { lookbookCover, itemKind } = await import('../src/lib/lookbook.js');
+  const img = (url) => ({ type: 'image', url });
+  const vid = 'https://res.cloudinary.com/demo/video/upload/v1/others-store/clip.mp4';
+  assert.equal(lookbookCover({ coverImage: 'c.jpg', items: [img('a.jpg')] }), 'c.jpg');
+  assert.equal(lookbookCover({ coverImage: '', items: [img('a.jpg'), img('b.jpg')] }), 'a.jpg');               // '' counts as "no cover"
+  assert.equal(lookbookCover({ items: [{ type: 'video', url: vid }, img('b.jpg')] }), 'b.jpg');               // first IMAGE, not first item
+  assert.match(lookbookCover({ items: [{ type: 'video', url: vid }] }), /\/so_0,w_960\/.*clip\.jpg$|f_jpg.*clip\.jpg$/); // only videos: a still from the first one
+  assert.equal(lookbookCover({ images: ['old.jpg'] }), 'old.jpg');                                            // lookbooks from before items existed
+  assert.equal(lookbookCover({ items: [] }), '');
+  assert.equal(itemKind({ url: 'x.mp4' }), 'video');
+  assert.equal(itemKind({ type: 'image', url: 'https://youtu.be/abcdefghijk' }), 'embed');
+});
+test('lookbook: media keeps its own shape, whether it is vertical or wide', async () => {
+  const { layoutRatio, describeShape, RATIO_MIN, RATIO_MAX } = await import('../src/lib/lookbook.js');
+  assert.ok(Math.abs(layoutRatio({ type: 'video', url: 'a.mp4', width: 1080, height: 1920 }) - 9 / 16) < 1e-9);
+  assert.ok(Math.abs(layoutRatio({ type: 'image', url: 'a.jpg', width: 1600, height: 900 }) - 16 / 9) < 1e-9);
+  assert.equal(layoutRatio({ type: 'image', url: 'a.jpg', width: 3000, height: 100 }), RATIO_MAX);            // absurd shapes are limited
+  assert.equal(layoutRatio({ type: 'image', url: 'a.jpg', width: 100, height: 3000 }), RATIO_MIN);
+  assert.equal(layoutRatio({ type: 'image', url: 'a.jpg' }), 4 / 5);                                          // unknown size: a sensible guess…
+  assert.equal(layoutRatio({ type: 'image', url: 'a.jpg' }, 1.5), 1.5);                                       // …replaced by what the browser measured
+  assert.deepEqual(describeShape(1080, 1920), { shape: 'Vertical', label: '9:16' });
+  assert.deepEqual(describeShape(1600, 900), { shape: 'Horizontal', label: '16:9' });
+  assert.deepEqual(describeShape(1000, 1000), { shape: 'Square', label: '1:1' });
+  assert.equal(describeShape(0, 0), null);
+});
