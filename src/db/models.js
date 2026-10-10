@@ -94,6 +94,7 @@ const SettingsSchema = new mongoose.Schema({
   // Navigation bar treatment on the storefront: 'solid' (frosted bar with a background) or 'blend' (no background, white
   // elements with mix-blend-mode: difference).
   navStyle:       { type: String, default: 'solid', enum: ['solid', 'blend'] },
+  navAutoHide:    { type: Boolean, default: true },   // the bar slides away when scrolling down and returns when scrolling up
   navLogoSize:    { type: Number, default: 28 },
   favicon:       { type: String, default: '' },
   emailLogo:     { type: String, default: '' },

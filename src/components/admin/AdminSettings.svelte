@@ -43,6 +43,7 @@
     f.featuredEditorialType ??= 'lookbook';
     f.featuredEditorialEnabled ??= true;
     f.navStyle = f.navStyle === 'blend' ? 'blend' : 'solid';
+    f.navAutoHide ??= true;
     const slot = (v) => ({ source: 'default', family: '', url: '', file: '', format: '', ...(v || {}) });
     f.fonts = { heading: slot(f.fonts?.heading), body: slot(f.fonts?.body) };
     f.promotedCategory = { enabled: false, category: '', label: '', heading: '', message: '', cta: '', count: 4, position: 'after-drops', ...(f.promotedCategory || {}) };
@@ -320,6 +321,13 @@
             </label>
           {/each}
         </fieldset>
+        <div class="flex items-center justify-between gap-4 border-t border-border p-6">
+          <div>
+            <p class="text-sm font-semibold">Hide while scrolling down</p>
+            <p class="text-sm text-muted-foreground">The bar slides out of the way as visitors scroll down the page and comes straight back when they scroll up, so it never covers the content.</p>
+          </div>
+          <Switch bind:checked={form.navAutoHide} aria-label="Hide the navigation bar while scrolling down" />
+        </div>
       </Card>
 
       <!-- Homepage -->

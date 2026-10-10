@@ -2829,7 +2829,7 @@ let bootCache = { at: 0, admin: null, store: null };
 let brandInfoCache = { at: 0, info: null };
 async function getBrandInfo() {
   if (brandInfoCache.info && Date.now() - brandInfoCache.at < 60000) return brandInfoCache.info;
-  const info = { name: 'Others.', logo: '', favicon: '', bg: '#f8f5f2', fg: '#211c1a', fonts: null, navStyle: 'solid' };
+  const info = { name: 'Others.', logo: '', favicon: '', bg: '#f8f5f2', fg: '#211c1a', fonts: null, navStyle: 'solid', navAutoHide: true };
   if (getIsConnected()) {
     try {
       const site = await Settings.findOne({ _id: 'main' }).maxTimeMS(800).lean();
@@ -2840,6 +2840,7 @@ async function getBrandInfo() {
       info.fg = site?.colors?.foreground || info.fg;
       info.fonts = site?.fonts || null;
       info.navStyle = site?.navStyle === 'blend' ? 'blend' : 'solid';
+      info.navAutoHide = site?.navAutoHide !== false;
     } catch { /* defaults */ }
   }
   brandInfoCache = { at: Date.now(), info };
@@ -2857,6 +2858,7 @@ async function bootBrand(admin) {
   const safeColor = (c, d) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : d);
   const brand = {
     navStyle: admin ? 'solid' : info.navStyle,
+    navAutoHide: admin ? true : info.navAutoHide,
     fonts: admin ? '' : fonts.buildFontHead(info.fonts),   // '' = the built-in typeface, nothing to change
     icons: await iconHead(info, admin ? '#fafafa' : safeColor(bg, '#f8f5f2'), admin),
     style: admin ? 'background:#fafafa;color:#09090b' : `background:${safeColor(bg, '#f8f5f2')};color:${safeColor(fg, '#211c1a')}`,
@@ -2880,6 +2882,7 @@ async function sendShell(res, { admin = false, head = '' } = {}) {
     if (brand.fonts) html = html.replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=Space\+Grotesk[^>]*>/, () => brand.fonts);
     // The navigation bar's treatment is known before any script runs, so it never flashes the other style.
     if (brand.navStyle === 'blend') html = html.replace('<html lang="en">', () => '<html lang="en" data-nav-style="blend">');
+    if (brand.navAutoHide === false) html = html.replace('<html lang="en"', () => '<html lang="en" data-nav-hide="off"');
     if (admin) html = html.replace('<div id="boot"', '<div id="boot" class="boot-admin"');
     else if (brand.dark) html = html.replace('<div id="boot"', '<div id="boot" class="boot-dark"');
     html = html.split('/brand/loader.webp').join(brandIcon.brandUrl('loader.webp')).split('/brand/loader-still.png').join(brandIcon.brandUrl('loader-still.png'));

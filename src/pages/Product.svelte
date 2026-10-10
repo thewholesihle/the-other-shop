@@ -274,7 +274,7 @@
         </div>
 
         <!-- Product info: stays in view beside the grid on large screens, so Add to cart is never a long scroll away -->
-        <div class="space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100svh-7rem)] lg:overflow-y-auto lg:pr-1">
+        <div class="space-y-6 lg:sticky lg:top-[calc(var(--nav-visible-h,4rem)+1.5rem)] lg:transition-[top] lg:duration-300 lg:self-start lg:max-h-[calc(100svh-var(--nav-visible-h,4rem)-3rem)] lg:overflow-y-auto lg:pr-1">
           <div>
             {#if product.isNew}
               <span class="inline-block text-[10px] tracking-[0.2em] uppercase bg-foreground text-primary-foreground px-2 py-0.5 mb-3">New</span>

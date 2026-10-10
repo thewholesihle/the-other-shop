@@ -21,14 +21,35 @@
   //          whatever is behind it, light or dark.
   // The server writes the choice onto <html data-nav-style> so the first paint is already right.
   let blend = typeof document !== 'undefined' && document.documentElement.dataset.navStyle === 'blend';
-  onMount(() => { loadStoreData().then(d => { blend = d?.site?.navStyle === 'blend'; }).catch(() => {}); });
+  // Auto-hide (Settings → Navigation bar): the bar slides away as you scroll down and comes back as soon as you scroll up.
+  let autoHide = typeof document === 'undefined' || document.documentElement.dataset.navHide !== 'off';
+  onMount(() => { loadStoreData().then(d => { blend = d?.site?.navStyle === 'blend'; autoHide = d?.site?.navAutoHide !== false; }).catch(() => {}); });
 
   let mobileOpen = false;
+  let hidden = false;
+  let navH = 61;
+
+  // Direction of travel decides: down hides, up reveals. Small movements (a trackpad's wobble, iOS rubber-banding) are ignored,
+  // and the bar always shows near the top of the page, while the mobile menu is open, and when something inside it has focus.
+  let lastY = 0, frame = 0;
+  function measureScroll() {
+    frame = 0;
+    const y = Math.max(0, window.scrollY);
+    const dy = y - lastY;
+    if (y <= navH) { hidden = false; lastY = y; return; }
+    if (Math.abs(dy) < 6) return;
+    lastY = y;
+    if (!mobileOpen) hidden = dy > 0;
+  }
+  function onScroll() { if (autoHide && !frame) frame = requestAnimationFrame(measureScroll); }
+  $: if (!autoHide || mobileOpen) hidden = false;
+  // Pages that stick something below the bar can follow it: this is the bar's height while it is showing, 0 while it is away.
+  $: if (typeof document !== 'undefined') document.documentElement.style.setProperty('--nav-visible-h', hidden ? '0px' : `${navH}px`);
 
   // The bar's height depends on the logo-size setting, so publish the real value as --nav-h for pages that
   // need to start below the fixed bar (the home page without a hero). The mobile menu isn't counted.
   function publishHeight(node) {
-    const set = () => document.documentElement.style.setProperty('--nav-h', `${node.offsetHeight + 1}px`); // +1 = border
+    const set = () => { navH = node.offsetHeight + 1; document.documentElement.style.setProperty('--nav-h', `${navH}px`); }; // +1 = border
     set();
     const ro = new ResizeObserver(set);
     ro.observe(node);
@@ -39,6 +60,7 @@
     e.preventDefault();
     if (window.__navigate) window.__navigate(href);
     mobileOpen = false;
+    hidden = false;
   }
 
   // While the menu is open the page behind it doesn't scroll.
@@ -53,10 +75,13 @@
 <svelte:window
   onkeydown={(e) => { if (e.key === 'Escape') mobileOpen = false; }}
   onresize={() => { if (window.innerWidth >= 768) mobileOpen = false; }}
+  onscroll={onScroll}
 />
 
 <nav
-  class="fixed top-0 left-0 right-0 z-50 {blend ? 'mix-blend-difference' : 'bg-background/80 backdrop-blur-md border-b border-border/40'}"
+  class="fixed top-0 left-0 right-0 z-50 motion-reduce:!transition-none {blend ? 'mix-blend-difference' : 'bg-background/80 backdrop-blur-md border-b border-border/40'}"
+  style="transform: translateY({hidden ? '-100%' : '0'}); transition: transform 350ms {EASE};"
+  onfocusin={() => (hidden = false)}
 >
   <div
     use:publishHeight
