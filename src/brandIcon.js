@@ -288,4 +288,4 @@ async function adminManifest(site) {
   };
 }
 
-module.exports = { hasBrandIcons, appleTouchUrl, appTile, chooseTile, faviconIco, faviconSvg, headTags, manifest, adminManifest, buildIco, hexLum, hex6, tabUrl, solidUrl, TAB, UNKNOWN_TILE };
+module.exports = { brandUrl, hasBrandIcons, appleTouchUrl, appTile, chooseTile, faviconIco, faviconSvg, headTags, manifest, adminManifest, buildIco, hexLum, hex6, tabUrl, solidUrl, TAB, UNKNOWN_TILE };

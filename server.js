@@ -2860,9 +2860,10 @@ async function bootBrand(admin) {
     fonts: admin ? '' : fonts.buildFontHead(info.fonts),   // '' = the built-in typeface, nothing to change
     icons: await iconHead(info, admin ? '#fafafa' : safeColor(bg, '#f8f5f2'), admin),
     style: admin ? 'background:#fafafa;color:#09090b' : `background:${safeColor(bg, '#f8f5f2')};color:${safeColor(fg, '#211c1a')}`,
-    inner: logo
-      ? `<img class="boot-logo" src="${escapeHtmlAttr(logo.includes('res.cloudinary.com') && logo.includes('/upload/') ? logo.replace('/upload/', '/upload/c_limit,w_440,f_auto,q_auto/') : logo)}" alt="${escapeHtmlAttr(name)}">`
-      : `<span class="boot-mark">${escapeHtmlAttr(name)}</span>`,
+    // The loading screen is the spinning logo (public/brand/loader.webp, a transparent animation built from the brand GIF by
+    // `npm run loader`); visitors who ask for reduced motion get its first frame. On a dark palette it is shown in white.
+    dark: !admin && brandIcon.hexLum(bg) < 0.35,
+    inner: '<picture><source media="(prefers-reduced-motion: reduce)" srcset="/brand/loader-still.png"><img class="boot-spin" src="/brand/loader.webp" width="112" height="112" alt="" decoding="async"></picture>',
   };
   bootCache = { ...bootCache, at: Date.now(), [slot]: brand };
   return brand;
@@ -2880,6 +2881,8 @@ async function sendShell(res, { admin = false, head = '' } = {}) {
     // The navigation bar's treatment is known before any script runs, so it never flashes the other style.
     if (brand.navStyle === 'blend') html = html.replace('<html lang="en">', () => '<html lang="en" data-nav-style="blend">');
     if (admin) html = html.replace('<div id="boot"', '<div id="boot" class="boot-admin"');
+    else if (brand.dark) html = html.replace('<div id="boot"', '<div id="boot" class="boot-dark"');
+    html = html.split('/brand/loader.webp').join(brandIcon.brandUrl('loader.webp')).split('/brand/loader-still.png').join(brandIcon.brandUrl('loader-still.png'));
     if (head) { html = html.replace('<title>The Other Shop</title>', '').replace('<head>', () => `<head>${head}`); }
     res.send(html);
   } catch (err) {

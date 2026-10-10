@@ -423,3 +423,18 @@ test('product slugs: readable, safe, unique, and the old addresses keep working'
   const client = await import('../src/lib/slug.js');                                        // the admin's preview must give the same answers
   for (const s of ["Men's Heavyweight Hoodie – Black", 'Crème Brûlée Tee', 'Tees & Tops', '  --A  b!!  ', '日本語', 'word '.repeat(40), '']) assert.equal(client.slugify(s), slugify(s));
 });
+
+test('loading animation: transparent webp + still exist, and client/server agree when a palette is dark', async () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const dir = path.join(__dirname, '..', 'public', 'brand');
+  const webp = fs.readFileSync(path.join(dir, 'loader.webp'));
+  assert.equal(webp.subarray(0, 4).toString(), 'RIFF');
+  assert.equal(webp.subarray(8, 12).toString(), 'WEBP');
+  assert.ok(webp.includes(Buffer.from('ANIM')) && webp.includes(Buffer.from('ANMF')));            // animated, many frames
+  const { PNG } = require('pngjs');
+  const still = PNG.sync.read(fs.readFileSync(path.join(dir, 'loader-still.png')));
+  assert.equal(still.data[3], 0);                                                                 // the corner is transparent: no white box on a cream or dark page
+  assert.ok(still.data.some((v, i) => i % 4 === 3 && v > 200));                                 // and the logo itself is solid
+  const { isDarkColor } = await import('../src/lib/brand.js');
+  for (const c of ['#f8f5f2', '#ffffff', '#161412', '#000', '#0a0a0a', '#808080', '#fff', 'nonsense', '']) assert.equal(isDarkColor(c), icons.hexLum(c, 'ffffff') < 0.35 && /^#?[0-9a-f]{3}([0-9a-f]{3})?$/i.test(c));
+});

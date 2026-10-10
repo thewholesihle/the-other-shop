@@ -138,6 +138,10 @@ Products have readable addresses (`/shop/heavyweight-hoodie`) instead of `/shop/
 
 Nothing that already exists breaks: the internal `id` (used by carts, orders and stock) never changes, products created before this get an address made from their name the first time the server starts, and any old `/shop/prod-…` link or retired address answers with a permanent (301) redirect to the current one, query string included, so bookmarks and Google's index follow along. The sitemap lists the new addresses. See `src/slugs.js`.
 
+## Loading screen
+
+The loader is the spinning logo (`public/brand/loader.gif`, your original). It is the very first thing painted, before any script runs, and every page's loader uses the same animation, so there is no hand-off. The GIF was exported on a near-white background (and GIF can't do soft-edged transparency), which would show as a pale box on the store's cream colour, so `npm run loader` (`scripts/build-loader.js`, needs ffmpeg) turns it into **`loader.webp`**: the same 28 frames and speed with a genuinely transparent background (the logo is black, so each pixel's greyness becomes its opacity: identical on white, correct on any colour), at 141 KB against the GIF's 218 KB. On a **dark palette** the animation is shown in white; visitors who ask for **reduced motion** get its first frame (`loader-still.png`) instead of the spin. To change the animation, replace `loader.gif` and re-run `npm run loader` and `npm run icons` (the latter refreshes the cache-busting version).
+
 ## Admin panel
 
 Eleven sections, all behind the sign-in page:

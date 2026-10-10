@@ -114,5 +114,8 @@ for (const name of Object.keys(files).sort()) {
   fs.writeFileSync(path.join(DIR, name), files[name]);
   hash.update(name).update(files[name]);
 }
+for (const name of ['loader.webp', 'loader-still.png']) {            // the loading animation shares the version, so a new one is fetched
+  try { hash.update(name).update(fs.readFileSync(path.join(DIR, name))); } catch { /* not built yet */ }
+}
 fs.writeFileSync(path.join(DIR, 'version.txt'), hash.digest('hex').slice(0, 8) + '\n');
 console.log(`brand icons: ${Object.keys(files).length} files written to public/brand/ (logo ${BOX.w}×${BOX.h}px on a 1080 artboard)`);
